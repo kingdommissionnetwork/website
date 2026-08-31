@@ -1,2 +1,3 @@
-# Canonical redirect: www to apex domain
-https://www.kingdommissionnetwork.org/* https://kingdommissionnetwork.org/:splat 301!
+# SPA fallback routing
+/* /index.html 200
+
