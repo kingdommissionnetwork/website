@@ -18,6 +18,10 @@ const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const DonationHistory = lazy(() => import("./pages/DonationHistory"));
 const SubscriptionPortal = lazy(() => import("./pages/SubscriptionPortal"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const Accessibility = lazy(() => import("./pages/Accessibility"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoader() {
   return (
@@ -54,6 +58,9 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/about" element={<AboutUs />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/accessibility" element={<Accessibility />} />
                   <Route path="/prayer-wall" element={<PrayerWall />} />
                   <Route path="/bible" element={<BibleReader />} />
                   <Route path="/bible/:book/:chapter" element={<BibleReader />} />
@@ -69,6 +76,7 @@ export default function App() {
                       </AdminGuard>
                     }
                   />
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
             </ErrorBoundary>

@@ -100,9 +100,9 @@ export default function Footer() {
             <Heart className="w-3 h-3 text-[#d4af37] fill-[#d4af37]" />
           </p>
           <div className="flex items-center gap-4 text-xs text-white/40">
-            <Link to="/about" className="hover:text-[#d4af37] transition-colors">About Us</Link>
-            <Link to="/about#faith" className="hover:text-[#d4af37] transition-colors">Statement of Faith</Link>
-            <Link to="/about#contact" className="hover:text-[#d4af37] transition-colors">Contact</Link>
+            <Link to="/privacy" className="hover:text-[#d4af37] transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-[#d4af37] transition-colors">Terms of Service</Link>
+            <Link to="/accessibility" className="hover:text-[#d4af37] transition-colors">Accessibility</Link>
           </div>
         </div>
       </div>
