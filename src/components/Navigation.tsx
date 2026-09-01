@@ -11,7 +11,6 @@ const navLinks = [
   { label: "Sermons", path: "/sermons", icon: Headphones },
   { label: "Events", path: "/events", icon: Calendar },
   { label: "Partner", path: "/subscribe", icon: Crown },
-  { label: "Give", path: "/#give", icon: Gift },
 ];
 
 export default function Navigation() {
@@ -39,8 +38,8 @@ export default function Navigation() {
     <>
       <nav
         style={{ backgroundColor: '#FAF7F2' }}
-        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 bg-[#FAF7F2] border-b-2 border-[#d4af37] shadow-[0_4px_25px_rgba(0,0,0,0.15)] h-[92px] sm:h-[100px] md:h-[108px] ${
-          scrolled ? "shadow-[0_8px_30px_rgba(0,0,0,0.22)]" : ""
+        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 bg-[#FAF7F2] border-b-2 border-[#d4af37] shadow-[0_4px_25px_rgba(0,0,0,0.12)] h-[92px] sm:h-[100px] md:h-[108px] ${
+          scrolled ? "shadow-[0_8px_30px_rgba(0,0,0,0.18)]" : ""
         }`}
       >
         {/* Top subtle highlight */}
@@ -51,7 +50,7 @@ export default function Navigation() {
 
         <div className="container-main mx-auto h-full flex items-center justify-between px-4 sm:px-6">
           {/* High-Visibility Brand Logo & Identity */}
-          <Link to="/" className="flex items-center gap-3 sm:gap-4 group py-1">
+          <Link to="/" className="flex items-center gap-3 sm:gap-4 group py-1 shrink-0">
             <div className="relative flex items-center justify-center">
               <img
                 src={brandLogo}
@@ -71,48 +70,61 @@ export default function Navigation() {
             </div>
           </Link>
 
-          {/* Desktop Nav Links */}
-          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 bg-black/[0.04] p-1.5 rounded-full border border-black/10 shadow-inner">
-            {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                to={link.path}
-                onClick={(e) => {
-                  if (link.path === "/#give") {
-                    e.preventDefault();
-                    if (location.pathname !== "/") {
-                      window.location.hash = "#/";
-                      setTimeout(() => {
-                        document.getElementById("give")?.scrollIntoView({ behavior: "smooth" });
-                      }, 300);
-                    } else {
-                      document.getElementById("give")?.scrollIntoView({ behavior: "smooth" });
-                    }
-                  }
-                }}
-                className={`relative px-3.5 py-1.5 rounded-full text-xs xl:text-sm font-bold uppercase tracking-[0.6px] transition-all duration-200 ${
-                  isActive(link.path)
-                    ? "text-[#FAF7F2] font-black bg-[#0c1b33] shadow-[0_3px_10px_rgba(12,27,51,0.35)]"
-                    : "text-[#0c1b33] hover:text-black hover:bg-black/[0.06]"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
+          {/* Desktop Nav Links (Clean, Un-crowded, Single Line) */}
+          <div className="hidden lg:flex items-center gap-1 xl:gap-2">
+            {navLinks.map((link) => {
+              const active = isActive(link.path);
+              return (
+                <Link
+                  key={link.label}
+                  to={link.path}
+                  className={`relative px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold tracking-wide whitespace-nowrap transition-all duration-200 ${
+                    active
+                      ? "text-[#0c1b33] font-bold bg-[#d4af37]/20 shadow-sm border border-[#d4af37]/40"
+                      : "text-[#0c1b33]/85 hover:text-[#996515] hover:bg-black/[0.04]"
+                  }`}
+                >
+                  {link.label}
+                  {active && (
+                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-[#996515] rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Right Actions: Standout Give CTA, Live Button, Admin */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Standout Gold Give CTA Button */}
+            <Link
+              to="/#give"
+              onClick={(e) => {
+                e.preventDefault();
+                if (location.pathname !== "/") {
+                  window.location.hash = "#/";
+                  setTimeout(() => {
+                    document.getElementById("give")?.scrollIntoView({ behavior: "smooth" });
+                  }, 300);
+                } else {
+                  document.getElementById("give")?.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm tracking-wide shadow-md hover:shadow-[0_0_15px_rgba(212,175,55,0.4)] hover:scale-105 transition-all whitespace-nowrap"
+            >
+              <Gift className="w-4 h-4 text-[#0c1b33]" />
+              <span>Give</span>
+            </Link>
+
             {/* Live Indicator Button */}
             <Link
               to="/events"
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#dc2626] text-white text-xs sm:text-sm font-black hover:bg-[#b91c1c] transition-all shadow-[0_2px_10px_rgba(220,38,38,0.4)]"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#dc2626] text-white text-xs sm:text-sm font-bold hover:bg-[#b91c1c] transition-all shadow-[0_2px_10px_rgba(220,38,38,0.35)] whitespace-nowrap"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-200 opacity-80" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
               </span>
-              LIVE
+              <span>LIVE</span>
             </Link>
 
             {/* Admin Profile */}
