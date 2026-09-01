@@ -5,11 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import brandLogo from "../assets/logo.png";
 
 const navLinks = [
+  { label: "About Us", path: "/about", icon: ShieldCheck },
   { label: "Scriptures", path: "/bible", icon: Book },
   { label: "Prayer Wall", path: "/prayer-wall", icon: Heart },
   { label: "Sermons", path: "/sermons", icon: Headphones },
   { label: "Events", path: "/events", icon: Calendar },
-  { label: "About", path: "/about", icon: ShieldCheck },
   { label: "Partner", path: "/subscribe", icon: Crown },
   { label: "Give", path: "/#give", icon: Gift },
 ];
