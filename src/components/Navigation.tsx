@@ -45,7 +45,7 @@ export default function Navigation() {
         <div className="container-main mx-auto h-full flex items-center justify-between px-4 sm:px-6">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <img src="./logo.png" alt="Kingdom Mission Network" className="h-8 w-auto" />
+            <img src="/logo-sm.png" alt="Kingdom Mission Network" className="h-8 w-8 object-contain" width="32" height="32" />
             <span className="font-display text-xl md:text-[22px] font-bold text-white tracking-tight">
               Kingdom Mission Network
             </span>
