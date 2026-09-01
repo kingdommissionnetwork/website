@@ -61,10 +61,10 @@ export default function Navigation() {
               />
             </div>
             <div className="flex flex-col">
-              <span className="font-display text-lg sm:text-xl md:text-[23px] font-black text-[#0c1b33] tracking-tight leading-tight group-hover:text-[#996515] transition-colors">
+              <span className="font-brand text-lg sm:text-xl md:text-[21px] font-bold text-[#0c1b33] tracking-[0.03em] leading-tight group-hover:text-[#996515] transition-colors">
                 Kingdom Missions Network
               </span>
-              <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold tracking-[0.22em] text-[#996515] uppercase leading-none mt-0.5">
+              <span className="font-outfit text-[9px] sm:text-[10px] md:text-[11px] font-bold tracking-[0.24em] text-[#996515] uppercase leading-none mt-0.5">
                 Global Christian Community
               </span>
             </div>
@@ -164,8 +164,8 @@ export default function Navigation() {
                 <div className="flex items-center gap-2.5">
                   <img src={brandLogo} alt="Kingdom Missions Network Logo" className="h-10 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]" width="40" height="40" />
                   <div className="flex flex-col">
-                    <span className="font-display text-sm font-bold text-white leading-none">Kingdom Missions</span>
-                    <span className="text-[9px] text-[#d4af37] font-semibold tracking-wider uppercase mt-0.5">Network</span>
+                    <span className="font-brand text-sm font-bold text-white leading-none">Kingdom Missions</span>
+                    <span className="font-outfit text-[9px] text-[#d4af37] font-bold tracking-wider uppercase mt-0.5">Network</span>
                   </div>
                 </div>
                 <button
