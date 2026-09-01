@@ -3,6 +3,7 @@ import { ShieldCheck, Heart, BookOpen, Globe, Users, Flame, ArrowRight, Mail, Co
 import SEO from "../components/SEO";
 import ScrollReveal from "../components/ScrollReveal";
 import brandLogo from "../assets/logo.png";
+import bishopImg from "../assets/bishop.webp";
 
 const faithStatements = [
   {
@@ -234,12 +235,12 @@ export default function AboutUs() {
             <div className="relative z-10 grid lg:grid-cols-3 gap-10 items-center">
               {/* Founder Profile Card */}
               <div className="lg:col-span-1 flex flex-col items-center text-center p-6 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-sm">
-                <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full p-1 bg-gradient-to-tr from-[#d4af37] via-[#f3e5ab] to-[#8c6508] mb-4 shadow-[0_0_20px_rgba(212,175,55,0.4)] flex items-center justify-center">
-                  <div className="w-full h-full rounded-full bg-[#071324] flex items-center justify-center overflow-hidden">
+                <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-full p-1.5 bg-gradient-to-tr from-[#d4af37] via-[#f3e5ab] to-[#8c6508] mb-4 shadow-[0_0_25px_rgba(212,175,55,0.45)] flex items-center justify-center">
+                  <div className="w-full h-full rounded-full overflow-hidden bg-[#071324] border-2 border-[#0c1b33]">
                     <img
-                      src={brandLogo}
+                      src={bishopImg}
                       alt="Bishop Dr. George Githinji"
-                      className="w-20 h-20 object-contain filter drop-shadow-[0_2px_8px_rgba(212,175,55,0.5)]"
+                      className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-300"
                     />
                   </div>
                 </div>
