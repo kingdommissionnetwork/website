@@ -38,7 +38,7 @@ export default function Navigation() {
     <>
       <nav
         style={{ backgroundColor: '#FAF7F2' }}
-        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 bg-[#FAF7F2] border-b-2 border-[#d4af37] shadow-[0_4px_25px_rgba(0,0,0,0.15)] h-[78px] sm:h-[84px] ${
+        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 bg-[#FAF7F2] border-b-2 border-[#d4af37] shadow-[0_4px_25px_rgba(0,0,0,0.15)] h-[92px] sm:h-[100px] md:h-[108px] ${
           scrolled ? "shadow-[0_8px_30px_rgba(0,0,0,0.22)]" : ""
         }`}
       >
@@ -55,16 +55,16 @@ export default function Navigation() {
               <img
                 src={brandLogo}
                 alt="Kingdom Missions Network"
-                className="h-11 sm:h-12 md:h-14 w-auto object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)] transition-transform duration-300 group-hover:scale-105"
-                width="56"
-                height="56"
+                className="h-16 sm:h-18 md:h-20 w-auto object-contain filter drop-shadow-[0_3px_8px_rgba(0,0,0,0.22)] transition-transform duration-300 group-hover:scale-105"
+                width="80"
+                height="80"
               />
             </div>
             <div className="flex flex-col">
-              <span className="font-brand text-xl sm:text-2xl md:text-[26px] font-normal text-[#0c1b33] tracking-wide leading-tight group-hover:text-[#996515] transition-colors">
+              <span className="font-brand text-base sm:text-xl md:text-[22px] font-normal text-[#0c1b33] tracking-[0.12em] leading-tight uppercase group-hover:text-[#996515] transition-colors">
                 Kingdom Missions Network
               </span>
-              <span className="font-outfit text-[9px] sm:text-[10px] md:text-[11px] font-bold tracking-[0.28em] text-[#996515] uppercase leading-none mt-0.5">
+              <span className="font-outfit text-[9px] sm:text-[10px] md:text-[11px] font-bold tracking-[0.32em] text-[#996515] uppercase leading-none mt-1">
                 Global Christian Community
               </span>
             </div>

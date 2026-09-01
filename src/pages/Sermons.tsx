@@ -49,7 +49,7 @@ export default function Sermons() {
   };
 
   return (
-    <div className="pt-[72px] min-h-screen bg-white">
+    <div className="pt-[108px] min-h-screen bg-white">
       <SEO title="Sermons" description="Browse our collection of sermons on faith, hope, love, and discipleship." />
       <div className="relative py-16 px-4 bg-gradient-to-br from-[#0c1b33] via-[#162a4a] to-[#1a3a5c]">
         <div className="container-main mx-auto text-center">

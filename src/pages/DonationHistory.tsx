@@ -36,7 +36,7 @@ export default function DonationHistory() {
   }, [email]);
 
   return (
-    <div className="pt-[72px] min-h-screen bg-[#e6eef7]">
+    <div className="pt-[108px] min-h-screen bg-[#e6eef7]">
       <SEO title="Giving History" description="View your donation history." />
       <div className="bg-[#0c1b33] py-12 px-4">
         <div className="container-main mx-auto">
