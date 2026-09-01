@@ -30,8 +30,7 @@ export default function HeroSection() {
 
         <ScrollReveal delay={300}>
           <p className="text-lg sm:text-xl text-white/80 font-body mb-10 max-w-2xl mx-auto leading-relaxed">
-            A global, open-source platform for prayer, scripture, and fellowship — built on a
-            $0/month infrastructure that serves the Kingdom.
+            A global platform for prayer, scripture, and fellowship — connecting Christian believers worldwide to advance the Kingdom.
           </p>
         </ScrollReveal>
 
