@@ -45,7 +45,7 @@ export default function Footer() {
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-3 mb-4">
               <img src={brandLogo} alt="Kingdom Missions Network" className="h-10 w-auto object-contain" width="40" height="40" />
-              <span className="font-display text-xl font-bold">Kingdom Missions Network</span>
+              <span className="font-brand text-xl font-bold">Kingdom Missions Network</span>
             </Link>
             <p className="text-white/60 text-sm leading-relaxed max-w-sm mb-6">
               A global platform connecting Christian believers worldwide through
