@@ -38,21 +38,42 @@ export default function Navigation() {
       <nav
         className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 ${
           scrolled
-            ? "bg-[rgba(12,27,51,0.95)] backdrop-blur-[12px] shadow-lg"
-            : "bg-[rgba(12,27,51,0.85)] backdrop-blur-[8px]"
-        } h-[72px]`}
+            ? "bg-[#050c18]/98 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.8)] border-b border-[#d4af37]/40"
+            : "bg-[#060e1c]/92 backdrop-blur-md shadow-[0_6px_30px_rgba(0,0,0,0.6)] border-b border-[#d4af37]/25"
+        } h-[76px] sm:h-[82px]`}
       >
+        {/* Top subtle highlight */}
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/10 pointer-events-none" />
+
+        {/* Bottom luminous gold gradient accent line */}
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#d4af37] to-transparent opacity-90 shadow-[0_0_12px_rgba(212,175,55,0.7)] pointer-events-none" />
+
         <div className="container-main mx-auto h-full flex items-center justify-between px-4 sm:px-6">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <img src="/logo-sm.png" alt="Kingdom Mission Network" className="h-8 w-8 object-contain" width="32" height="32" />
-            <span className="font-display text-xl md:text-[22px] font-bold text-white tracking-tight">
-              Kingdom Mission Network
-            </span>
+          {/* High-Visibility Brand Logo & Identity */}
+          <Link to="/" className="flex items-center gap-3 sm:gap-3.5 group py-1">
+            <div className="relative flex items-center justify-center">
+              {/* Subtle radiant halo behind logo */}
+              <div className="absolute -inset-1 bg-[#d4af37]/20 rounded-full blur-md opacity-75 group-hover:opacity-100 group-hover:bg-[#d4af37]/35 transition-all duration-300" />
+              <img
+                src="/logo.png"
+                alt="Kingdom Missions Network"
+                className="relative h-11 sm:h-12 md:h-14 w-auto object-contain filter drop-shadow-[0_3px_10px_rgba(0,0,0,0.8)] drop-shadow-[0_0_8px_rgba(212,175,55,0.4)] transition-transform duration-300 group-hover:scale-105"
+                width="56"
+                height="56"
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-display text-lg sm:text-xl md:text-[22px] font-extrabold text-white tracking-tight leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-[#f3e5ab] transition-colors">
+                Kingdom Missions Network
+              </span>
+              <span className="text-[9px] sm:text-[10px] md:text-[11px] font-semibold tracking-[0.22em] text-[#d4af37] uppercase leading-none mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                Global Christian Community
+              </span>
+            </div>
           </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden lg:flex items-center gap-8">
+          {/* Desktop Nav Links */}
+          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 bg-white/[0.04] p-1.5 rounded-full border border-white/10 shadow-inner">
             {navLinks.map((link) => (
               <Link
                 key={link.label}
@@ -70,47 +91,47 @@ export default function Navigation() {
                     }
                   }
                 }}
-                className={`relative text-sm font-medium uppercase tracking-[0.5px] transition-colors ${
-                  isActive(link.path) ? "text-[#d4af37]" : "text-white/80 hover:text-white"
+                className={`relative px-3.5 py-1.5 rounded-full text-xs xl:text-sm font-semibold uppercase tracking-[0.6px] transition-all duration-200 ${
+                  isActive(link.path)
+                    ? "text-[#060e1c] font-bold bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c59b27] shadow-[0_2px_10px_rgba(212,175,55,0.4)]"
+                    : "text-white/85 hover:text-white hover:bg-white/10"
                 }`}
               >
                 {link.label}
-                {isActive(link.path) && (
-                  <motion.div
-                    layoutId="nav-underline"
-                    className="absolute -bottom-1 left-0 right-0 h-[2px] bg-[#d4af37]"
-                  />
-                )}
               </Link>
             ))}
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Live Indicator Button */}
             <Link
               to="/events"
-              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-red-600/20 text-red-400 text-sm font-medium hover:bg-red-600/30 transition-colors"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-600/25 border border-red-500/40 text-red-300 text-xs sm:text-sm font-bold hover:bg-red-600/40 hover:border-red-400 transition-all shadow-[0_0_12px_rgba(239,68,68,0.3)]"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
               </span>
-              Live
+              LIVE
             </Link>
 
+            {/* Admin Profile */}
             <Link
               to="/admin"
-              className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              aria-label="Admin Dashboard"
+              className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-white/10 hover:bg-[#d4af37]/20 border border-white/15 hover:border-[#d4af37]/50 text-white hover:text-[#d4af37] transition-all"
             >
-              <User className="w-4 h-4 text-white" />
+              <User className="w-4 h-4" />
             </Link>
 
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="lg:hidden p-2 text-white hover:bg-white/10 border border-white/15 rounded-xl transition-colors"
+              aria-label="Toggle mobile menu"
             >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileOpen ? <X className="w-6 h-6 text-[#d4af37]" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
@@ -141,11 +162,18 @@ export default function Navigation() {
               transition={{ type: "spring", damping: 25, stiffness: 250 }}
               className="absolute right-0 top-0 bottom-0 w-[280px] bg-[#0c1b33] shadow-2xl"
             >
-              <div className="flex items-center justify-between px-6 pt-6 pb-2">
-                <span className="text-xs text-white/40 uppercase tracking-wider font-medium">Menu</span>
+              <div className="flex items-center justify-between px-5 pt-6 pb-4 border-b border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <img src="/logo.png" alt="KMN Logo" className="h-10 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]" width="40" height="40" />
+                  <div className="flex flex-col">
+                    <span className="font-display text-sm font-bold text-white leading-none">Kingdom Missions</span>
+                    <span className="text-[9px] text-[#d4af37] font-semibold tracking-wider uppercase mt-0.5">Network</span>
+                  </div>
+                </div>
                 <button
                   onClick={() => setMobileOpen(false)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors border border-white/10"
+                  aria-label="Close menu"
                 >
                   <X className="w-5 h-5 text-white/80" />
                 </button>
