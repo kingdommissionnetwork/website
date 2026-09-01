@@ -7,8 +7,8 @@ interface SEOProps {
   url?: string;
 }
 
-const SITE_NAME = "Kingdom Mission Network";
-const DEFAULT_DESC = "A global community of believers united in faith, prayer, and worship. Join us for sermons, events, and daily Bible study.";
+const SITE_NAME = "Kingdom Missions Network";
+const DEFAULT_DESC = "Official Kingdom Missions Network platform. Connecting Christian believers worldwide through a 24/7 interactive prayer wall, daily scripture in 22 translations, live sermons, events, and kingdom partnership.";
 
 export default function SEO({ title, description, image, url }: SEOProps) {
   const fullTitle = `${title} | ${SITE_NAME}`;
@@ -25,6 +25,9 @@ export default function SEO({ title, description, image, url }: SEOProps) {
       <meta property="og:description" content={desc} />
       <meta property="og:image" content={img} />
       <meta property="og:image:secure_url" content={img} />
+      <meta property="og:image:width" content="512" />
+      <meta property="og:image:height" content="512" />
+      <meta property="og:image:alt" content="Kingdom Missions Network Official Logo" />
       <meta property="og:url" content={href} />
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content={SITE_NAME} />
