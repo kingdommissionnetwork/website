@@ -6,10 +6,10 @@ const footerLinks = {
   about: {
     title: "About",
     links: [
-      { label: "Our Mission", href: "/#" },
-      { label: "Statement of Faith", href: "/#" },
-      { label: "Leadership", href: "/#" },
-      { label: "Contact Us", href: "/#" },
+      { label: "Our Mission", href: "/about" },
+      { label: "Statement of Faith", href: "/about#faith" },
+      { label: "Leadership", href: "/about#leadership" },
+      { label: "Contact Us", href: "/about#contact" },
     ],
   },
   quickLinks: {

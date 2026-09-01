@@ -16,6 +16,7 @@ const Events = lazy(() => import("./pages/Events"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const DonationHistory = lazy(() => import("./pages/DonationHistory"));
 const SubscriptionPortal = lazy(() => import("./pages/SubscriptionPortal"));
+const AboutUs = lazy(() => import("./pages/AboutUs"));
 
 function PageLoader() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<Home />} />
+                  <Route path="/about" element={<AboutUs />} />
                   <Route path="/prayer-wall" element={<PrayerWall />} />
                   <Route path="/bible" element={<BibleReader />} />
                   <Route path="/bible/:book/:chapter" element={<BibleReader />} />
