@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Heart, Twitter, Youtube, Mail } from "lucide-react";
+import brandLogo from "../assets/logo.png";
 
 const footerLinks = {
   about: {
@@ -43,8 +44,8 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-3 mb-4">
-              <img src="/logo-sm.png" alt="Kingdom Mission Network" className="h-8 w-8 object-contain" width="32" height="32" />
-              <span className="font-display text-xl font-bold">Kingdom Mission Network</span>
+              <img src={brandLogo} alt="Kingdom Missions Network" className="h-10 w-auto object-contain" width="40" height="40" />
+              <span className="font-display text-xl font-bold">Kingdom Missions Network</span>
             </Link>
             <p className="text-white/60 text-sm leading-relaxed max-w-sm mb-6">
               A global platform connecting Christian believers worldwide through
