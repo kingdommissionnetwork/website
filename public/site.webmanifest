@@ -1,10 +1,11 @@
 {
-  "name": "Kingdom Mission Network",
+  "name": "Kingdom Missions Network",
   "short_name": "KMN",
-  "description": "A global community of believers united in faith, prayer, and worship.",
+  "id": "https://kingdommissionsnetwork.org",
+  "description": "Official platform of Kingdom Missions Network. Connecting Christian believers worldwide through prayer, scripture, and fellowship.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0c1b33",
+  "background_color": "#FAF7F2",
   "theme_color": "#0c1b33",
   "icons": [
     {
