@@ -13,8 +13,8 @@ const DEFAULT_DESC = "A global community of believers united in faith, prayer, a
 export default function SEO({ title, description, image, url }: SEOProps) {
   const fullTitle = `${title} | ${SITE_NAME}`;
   const desc = description || DEFAULT_DESC;
-  const img = image || "/logo.png";
-  const href = url || "https://kingdommissionnetwork.org";
+  const img = image ? (image.startsWith("http") ? image : `https://kingdommissionsnetwork.org${image}`) : "https://kingdommissionsnetwork.org/logo.png";
+  const href = url ? (url.startsWith("http") ? url : `https://kingdommissionsnetwork.org${url}`) : "https://kingdommissionsnetwork.org";
 
   return (
     <Helmet>
@@ -24,6 +24,7 @@ export default function SEO({ title, description, image, url }: SEOProps) {
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={desc} />
       <meta property="og:image" content={img} />
+      <meta property="og:image:secure_url" content={img} />
       <meta property="og:url" content={href} />
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content={SITE_NAME} />

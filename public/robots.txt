@@ -1,4 +1,14 @@
 User-agent: *
 Allow: /
+Allow: /logo.png
+Allow: /favicon*.png
+Allow: /assets/
 
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+Sitemap: https://kingdommissionsnetwork.org/sitemap.xml
 Sitemap: https://kingdommissionnetwork.org/sitemap.xml
