@@ -93,46 +93,16 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Infrastructure Status */}
-        <div className="mt-12 py-6 border-t border-white/10">
-          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-white/40">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Cloudflare Pages
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Neon PostgreSQL
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Cloudflare Workers
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Upstash Redis
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Cloudflare R2
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Resend Email
-            </span>
-          </div>
-        </div>
-
         {/* Bottom Bar */}
-        <div className="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-white/40 flex items-center gap-1">
-            &copy; 2026 Kingdom Mission Network.
-            <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+        <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-white/50 flex items-center gap-1.5">
+            &copy; 2026 Kingdom Missions Network. All Rights Reserved.
+            <Heart className="w-3 h-3 text-[#d4af37] fill-[#d4af37]" />
           </p>
           <div className="flex items-center gap-4 text-xs text-white/40">
-            <Link to="#" className="hover:text-white/60 transition-colors">Privacy Policy</Link>
-            <Link to="#" className="hover:text-white/60 transition-colors">Terms of Service</Link>
-            <Link to="#" className="hover:text-white/60 transition-colors">Accessibility</Link>
+            <Link to="/about" className="hover:text-[#d4af37] transition-colors">About Us</Link>
+            <Link to="/about#faith" className="hover:text-[#d4af37] transition-colors">Statement of Faith</Link>
+            <Link to="/about#contact" className="hover:text-[#d4af37] transition-colors">Contact</Link>
           </div>
         </div>
       </div>

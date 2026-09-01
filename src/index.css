@@ -77,7 +77,10 @@
 
 @layer components {
   .font-brand {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'Cinzel', serif;
+  }
+  .font-cinzel {
+    font-family: 'Cinzel', serif;
   }
   .font-outfit {
     font-family: 'Outfit', sans-serif;
