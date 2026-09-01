@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Heart, Github, Twitter, Youtube, Mail } from "lucide-react";
+import { Heart, Twitter, Youtube, Mail } from "lucide-react";
 
 const footerLinks = {
   about: {
@@ -24,10 +24,10 @@ const footerLinks = {
   resources: {
     title: "Resources",
     links: [
-      { label: "Bible API", href: "/bible" },
-      { label: "Open Source", href: "https://github.com" },
-      { label: "Documentation", href: "/#" },
-      { label: "Developer API", href: "/#" },
+      { label: "Scripture Study", href: "/bible" },
+      { label: "Prayer Requests", href: "/prayer-wall" },
+      { label: "Sermons & Media", href: "/sermons" },
+      { label: "Global Missions", href: "/events" },
     ],
   },
 };
@@ -47,18 +47,10 @@ export default function Footer() {
               <span className="font-display text-xl font-bold">Kingdom Mission Network</span>
             </Link>
             <p className="text-white/60 text-sm leading-relaxed max-w-sm mb-6">
-              A global, open-source platform connecting Christian believers worldwide through
+              A global platform connecting Christian believers worldwide through
               prayer, scripture, and fellowship.
             </p>
             <div className="flex items-center gap-3">
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#d4af37]/20 transition-colors"
-              >
-                <Github className="w-4 h-4" />
-              </a>
               <a
                 href="/"
                 className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#d4af37]/20 transition-colors"
@@ -100,7 +92,7 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Open Source Badges */}
+        {/* Infrastructure Status */}
         <div className="mt-12 py-6 border-t border-white/10">
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-white/40">
             <span className="flex items-center gap-1">
