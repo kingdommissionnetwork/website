@@ -3,6 +3,7 @@ import { useEffect, useState, lazy, Suspense } from "react";
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
 import ScrollProgress from "./components/ScrollProgress";
+import ScrollToTop from "./components/ScrollToTop";
 import Toast from "./components/Toast";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider, AdminGuard } from "./lib/auth";
@@ -44,6 +45,7 @@ export default function App() {
     <AuthProvider>
       <ToastContext.Provider value={{ showToast }}>
         <div className="min-h-screen bg-cloud-blue">
+          <ScrollToTop />
           <ScrollProgress />
           <Navigation />
           <main>
