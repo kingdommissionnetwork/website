@@ -61,7 +61,7 @@ export default function Navigation() {
               />
             </div>
             <div className="flex flex-col">
-              <span className="font-cinzel text-[12.5px] sm:text-[14.5px] md:text-[16px] font-bold text-[#0c1b33] tracking-[0.055em] leading-tight uppercase group-hover:text-[#996515] transition-colors whitespace-nowrap">
+              <span className="font-outfit text-[12px] sm:text-[14px] md:text-[15.5px] font-extrabold text-[#0c1b33] tracking-[0.095em] leading-tight uppercase group-hover:text-[#996515] transition-colors whitespace-nowrap">
                 Kingdom Missions Network
               </span>
               <span className="font-outfit text-[9px] sm:text-[10px] md:text-[11px] font-bold tracking-[0.32em] text-[#996515] uppercase leading-none mt-1">

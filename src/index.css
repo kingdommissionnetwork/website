@@ -71,22 +71,22 @@
     font-family: 'Inter', sans-serif;
   }
   h1, h2, h3, h4 {
-    font-family: 'Cormorant Garamond', serif;
+    font-family: 'Outfit', sans-serif;
   }
 }
 
 @layer components {
   .font-brand {
-    font-family: 'Cinzel', serif;
+    font-family: 'Outfit', sans-serif;
   }
   .font-cinzel {
-    font-family: 'Cinzel', serif;
+    font-family: 'Outfit', sans-serif;
   }
   .font-outfit {
     font-family: 'Outfit', sans-serif;
   }
   .font-display {
-    font-family: 'DM Serif Display', 'Playfair Display', serif;
+    font-family: 'Outfit', sans-serif;
   }
   .font-body {
     font-family: 'Inter', sans-serif;
