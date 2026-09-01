@@ -1,0 +1,33 @@
+{
+  "name": "Kingdom Mission Network",
+  "short_name": "KMN",
+  "description": "A global community of believers united in faith, prayer, and worship.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c1b33",
+  "theme_color": "#0c1b33",
+  "icons": [
+    {
+      "src": "/favicon-48x48.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
