@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Radio, User, Book, Heart, Headphones, Calendar, Gift, DollarSign, Crown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import brandLogo from "../assets/logo.png";
 
 const navLinks = [
   { label: "Scriptures", path: "/bible", icon: Book },
@@ -36,44 +37,40 @@ export default function Navigation() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 ${
-          scrolled
-            ? "bg-[#050c18]/98 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.8)] border-b border-[#d4af37]/40"
-            : "bg-[#060e1c]/92 backdrop-blur-md shadow-[0_6px_30px_rgba(0,0,0,0.6)] border-b border-[#d4af37]/25"
-        } h-[76px] sm:h-[82px]`}
+        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 bg-gradient-to-r from-[#b38312] via-[#d4af37] to-[#c5961d] shadow-[0_8px_30px_rgba(0,0,0,0.5)] border-b-2 border-[#8c6508] h-[78px] sm:h-[84px] ${
+          scrolled ? "shadow-[0_12px_35px_rgba(0,0,0,0.65)]" : ""
+        }`}
       >
         {/* Top subtle highlight */}
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/10 pointer-events-none" />
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/30 pointer-events-none" />
 
-        {/* Bottom luminous gold gradient accent line */}
-        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#d4af37] to-transparent opacity-90 shadow-[0_0_12px_rgba(212,175,55,0.7)] pointer-events-none" />
+        {/* Bottom rich bronze-gold accent line */}
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#8c6508] via-[#fbf5b7] to-[#8c6508] opacity-90 pointer-events-none" />
 
         <div className="container-main mx-auto h-full flex items-center justify-between px-4 sm:px-6">
           {/* High-Visibility Brand Logo & Identity */}
-          <Link to="/" className="flex items-center gap-3 sm:gap-3.5 group py-1">
-            <div className="relative flex items-center justify-center">
-              {/* Subtle radiant halo behind logo */}
-              <div className="absolute -inset-1 bg-[#d4af37]/20 rounded-full blur-md opacity-75 group-hover:opacity-100 group-hover:bg-[#d4af37]/35 transition-all duration-300" />
+          <Link to="/" className="flex items-center gap-3 sm:gap-4 group py-1">
+            <div className="relative flex items-center justify-center p-1 rounded-xl bg-white/15 border border-white/25 shadow-sm group-hover:bg-white/25 transition-all">
               <img
-                src="/logo.png"
+                src={brandLogo}
                 alt="Kingdom Missions Network"
-                className="relative h-11 sm:h-12 md:h-14 w-auto object-contain filter drop-shadow-[0_3px_10px_rgba(0,0,0,0.8)] drop-shadow-[0_0_8px_rgba(212,175,55,0.4)] transition-transform duration-300 group-hover:scale-105"
+                className="h-11 sm:h-12 md:h-14 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)] transition-transform duration-300 group-hover:scale-105"
                 width="56"
                 height="56"
               />
             </div>
             <div className="flex flex-col">
-              <span className="font-display text-lg sm:text-xl md:text-[22px] font-extrabold text-white tracking-tight leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-[#f3e5ab] transition-colors">
+              <span className="font-display text-lg sm:text-xl md:text-[23px] font-black text-[#0c1b33] tracking-tight leading-tight drop-shadow-[0_1px_1px_rgba(255,255,255,0.3)]">
                 Kingdom Missions Network
               </span>
-              <span className="text-[9px] sm:text-[10px] md:text-[11px] font-semibold tracking-[0.22em] text-[#d4af37] uppercase leading-none mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+              <span className="text-[9px] sm:text-[10px] md:text-[11px] font-extrabold tracking-[0.22em] text-[#2c1d04] uppercase leading-none mt-0.5">
                 Global Christian Community
               </span>
             </div>
           </Link>
 
           {/* Desktop Nav Links */}
-          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 bg-white/[0.04] p-1.5 rounded-full border border-white/10 shadow-inner">
+          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 bg-[#0c1b33]/15 p-1.5 rounded-full border border-[#0c1b33]/20 shadow-inner">
             {navLinks.map((link) => (
               <Link
                 key={link.label}
@@ -91,10 +88,10 @@ export default function Navigation() {
                     }
                   }
                 }}
-                className={`relative px-3.5 py-1.5 rounded-full text-xs xl:text-sm font-semibold uppercase tracking-[0.6px] transition-all duration-200 ${
+                className={`relative px-3.5 py-1.5 rounded-full text-xs xl:text-sm font-bold uppercase tracking-[0.6px] transition-all duration-200 ${
                   isActive(link.path)
-                    ? "text-[#060e1c] font-bold bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c59b27] shadow-[0_2px_10px_rgba(212,175,55,0.4)]"
-                    : "text-white/85 hover:text-white hover:bg-white/10"
+                    ? "text-[#fbf5b7] font-extrabold bg-[#0c1b33] shadow-[0_3px_12px_rgba(12,27,51,0.5)]"
+                    : "text-[#0c1b33] hover:text-black hover:bg-[#0c1b33]/15"
                 }`}
               >
                 {link.label}
@@ -107,11 +104,11 @@ export default function Navigation() {
             {/* Live Indicator Button */}
             <Link
               to="/events"
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-600/25 border border-red-500/40 text-red-300 text-xs sm:text-sm font-bold hover:bg-red-600/40 hover:border-red-400 transition-all shadow-[0_0_12px_rgba(239,68,68,0.3)]"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#b91c1c] text-white text-xs sm:text-sm font-extrabold hover:bg-[#991b1b] transition-all shadow-[0_2px_10px_rgba(185,28,28,0.45)]"
             >
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-200 opacity-80" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
               </span>
               LIVE
             </Link>
@@ -120,7 +117,7 @@ export default function Navigation() {
             <Link
               to="/admin"
               aria-label="Admin Dashboard"
-              className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-white/10 hover:bg-[#d4af37]/20 border border-white/15 hover:border-[#d4af37]/50 text-white hover:text-[#d4af37] transition-all"
+              className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-[#0c1b33] text-[#fbf5b7] hover:bg-[#060e1b] transition-all shadow-sm"
             >
               <User className="w-4 h-4" />
             </Link>
@@ -128,10 +125,10 @@ export default function Navigation() {
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden p-2 text-white hover:bg-white/10 border border-white/15 rounded-xl transition-colors"
+              className="lg:hidden p-2 text-[#0c1b33] hover:bg-[#0c1b33]/15 border border-[#0c1b33]/25 rounded-xl transition-colors"
               aria-label="Toggle mobile menu"
             >
-              {mobileOpen ? <X className="w-6 h-6 text-[#d4af37]" /> : <Menu className="w-6 h-6" />}
+              {mobileOpen ? <X className="w-6 h-6 text-[#0c1b33]" /> : <Menu className="w-6 h-6 text-[#0c1b33]" />}
             </button>
           </div>
         </div>
