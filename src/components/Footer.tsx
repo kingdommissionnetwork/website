@@ -1,110 +1,226 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, Twitter, Youtube, Mail } from "lucide-react";
+import { Heart, Twitter, Youtube, Mail, Send, CheckCircle2, ShieldCheck, Globe, Crown } from "lucide-react";
 import brandLogo from "../assets/logo.png";
 
-const footerLinks = {
-  about: {
-    title: "About",
-    links: [
-      { label: "Our Mission", href: "/about" },
-      { label: "Statement of Faith", href: "/about#faith" },
-      { label: "Leadership", href: "/about#leadership" },
-      { label: "Contact Us", href: "/about#contact" },
-    ],
-  },
-  quickLinks: {
-    title: "Quick Links",
-    links: [
-      { label: "Scriptures", href: "/bible" },
-      { label: "Prayer Wall", href: "/prayer-wall" },
-      { label: "Sermon Library", href: "/sermons" },
-      { label: "Events Calendar", href: "/events" },
-      { label: "Giving History", href: "/donations" },
-    ],
-  },
-  resources: {
-    title: "Resources",
-    links: [
-      { label: "Scripture Study", href: "/bible" },
-      { label: "Prayer Requests", href: "/prayer-wall" },
-      { label: "Sermons & Media", href: "/sermons" },
-      { label: "Global Missions", href: "/events" },
-    ],
-  },
-};
-
 export default function Footer() {
-  return (
-    <footer className="bg-[#0c1b33] text-white">
-      {/* Top gradient line */}
-      <div className="h-[1px] bg-gradient-to-r from-transparent via-[#d4af37]/30 to-transparent" />
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
 
-      <div className="container-main mx-auto px-4 sm:px-6 pt-12 pb-8">
-        {/* Brand Row */}
-        <div className="mb-10">
-          <Link to="/" className="flex items-center gap-3 mb-4">
-            <img src={brandLogo} alt="Kingdom Missions Network" className="h-10 w-auto object-contain" width="40" height="40" />
-            <span className="font-brand text-base sm:text-xl font-bold">Kingdom Missions Network</span>
-          </Link>
-          <p className="text-white/60 text-sm leading-relaxed max-w-md mb-5">
-            A global platform connecting Christian believers worldwide through prayer, scripture, and fellowship.
-          </p>
-          <div className="flex items-center gap-3">
-            <a
-              href="/"
-              aria-label="Twitter"
-              className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#d4af37]/20 transition-colors"
-            >
-              <Twitter className="w-4 h-4" />
-            </a>
-            <a
-              href="/"
-              aria-label="YouTube"
-              className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#d4af37]/20 transition-colors"
-            >
-              <Youtube className="w-4 h-4" />
-            </a>
-            <a
-              href="mailto:kingdommissionsnetwork@gmail.com"
-              aria-label="Email"
-              className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#d4af37]/20 transition-colors"
-            >
-              <Mail className="w-4 h-4" />
-            </a>
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email.trim() && email.includes("@")) {
+      setSubscribed(true);
+      setEmail("");
+      setTimeout(() => setSubscribed(false), 5000);
+    }
+  };
+
+  return (
+    <footer className="bg-[#071324] text-white border-t border-[#d4af37]/30 relative overflow-hidden">
+      {/* Top radiant gold accent line */}
+      <div className="h-[2px] bg-gradient-to-r from-transparent via-[#d4af37] to-transparent shadow-[0_1px_8px_rgba(212,175,55,0.4)]" />
+
+      {/* Subtle background glow */}
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-[radial-gradient(circle,rgba(212,175,55,0.05)_0%,transparent_70%)] pointer-events-none blur-3xl" />
+
+      <div className="container-main mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12 relative z-10">
+        {/* Main 12-Column Responsive Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-12 pb-14 border-b border-white/10">
+          {/* Column 1: Brand, Identity & Mission (5 cols on lg) */}
+          <div className="lg:col-span-4 space-y-5">
+            <Link to="/" className="inline-flex items-center gap-3.5 group">
+              <img
+                src={brandLogo}
+                alt="Kingdom Missions Network Logo"
+                className="h-12 sm:h-14 w-auto object-contain filter drop-shadow-[0_2px_8px_rgba(212,175,55,0.3)] transition-transform duration-300 group-hover:scale-105"
+                width="56"
+                height="56"
+              />
+              <div className="flex flex-col">
+                <span className="font-outfit text-lg sm:text-xl font-extrabold text-white tracking-tight leading-tight">
+                  Kingdom Missions Network
+                </span>
+                <span className="font-outfit text-[10px] sm:text-[11px] font-bold tracking-[0.28em] text-[#d4af37] uppercase leading-none mt-1">
+                  Global Christian Community
+                </span>
+              </div>
+            </Link>
+
+            <p className="text-white/70 text-sm leading-relaxed max-w-sm">
+              A 24/7 global sanctuary uniting believers across nations through continuous intercession, scripture in 22 translations, live sermons, and kingdom outreach.
+            </p>
+
+            <div className="flex items-center gap-2 text-xs text-white/60 font-medium">
+              <Globe className="w-4 h-4 text-[#d4af37]" />
+              <span>Headquarters: Nairobi, Kenya • Global Online Outreach</span>
+            </div>
+
+            {/* Social Links */}
+            <div className="flex items-center gap-3 pt-1">
+              <a
+                href="https://www.youtube.com/@georgegithinji7542"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Official YouTube Channel"
+                className="w-10 h-10 rounded-xl bg-white/[0.08] hover:bg-[#d4af37] hover:text-[#071324] text-white/80 flex items-center justify-center transition-all shadow-sm border border-white/10"
+              >
+                <Youtube className="w-4 h-4" />
+              </a>
+              <a
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Twitter / X"
+                className="w-10 h-10 rounded-xl bg-white/[0.08] hover:bg-[#d4af37] hover:text-[#071324] text-white/80 flex items-center justify-center transition-all shadow-sm border border-white/10"
+              >
+                <Twitter className="w-4 h-4" />
+              </a>
+              <a
+                href="mailto:kingdommissionsnetwork@gmail.com"
+                aria-label="Email Pastoral Office"
+                className="w-10 h-10 rounded-xl bg-white/[0.08] hover:bg-[#d4af37] hover:text-[#071324] text-white/80 flex items-center justify-center transition-all shadow-sm border border-white/10"
+              >
+                <Mail className="w-4 h-4" />
+              </a>
+            </div>
+          </div>
+
+          {/* Column 2: Ministry & Vision (2 cols on lg) */}
+          <div className="lg:col-span-2 space-y-4">
+            <h4 className="font-outfit text-xs font-bold uppercase tracking-[0.2em] text-[#d4af37] flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]" />
+              Ministry
+            </h4>
+            <ul className="space-y-3">
+              <li>
+                <Link to="/about" className="text-sm text-white/70 hover:text-white transition-colors">
+                  Our Mission
+                </Link>
+              </li>
+              <li>
+                <Link to="/about#faith" className="text-sm text-white/70 hover:text-white transition-colors">
+                  Statement of Faith
+                </Link>
+              </li>
+              <li>
+                <Link to="/about#leadership" className="text-sm text-white/70 hover:text-white transition-colors">
+                  Leadership & Founder
+                </Link>
+              </li>
+              <li>
+                <Link to="/about#contact" className="text-sm text-white/70 hover:text-white transition-colors">
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/subscribe" className="text-sm text-[#fbf5b7] hover:text-[#d4af37] transition-colors flex items-center gap-1.5 font-semibold">
+                  <Crown className="w-3.5 h-3.5 text-[#d4af37]" />
+                  Become a Partner
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 3: Platform & Fellowship (2 cols on lg) */}
+          <div className="lg:col-span-2 space-y-4">
+            <h4 className="font-outfit text-xs font-bold uppercase tracking-[0.2em] text-[#d4af37] flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]" />
+              Sanctuary
+            </h4>
+            <ul className="space-y-3">
+              <li>
+                <Link to="/prayer-wall" className="text-sm text-white/70 hover:text-white transition-colors">
+                  24/7 Prayer Wall
+                </Link>
+              </li>
+              <li>
+                <Link to="/bible" className="text-sm text-white/70 hover:text-white transition-colors">
+                  Holy Scriptures (22)
+                </Link>
+              </li>
+              <li>
+                <Link to="/sermons" className="text-sm text-white/70 hover:text-white transition-colors">
+                  Sermon Library
+                </Link>
+              </li>
+              <li>
+                <Link to="/events" className="text-sm text-white/70 hover:text-white transition-colors">
+                  Live Events & Broadcasts
+                </Link>
+              </li>
+              <li>
+                <Link to="/donations" className="text-sm text-white/70 hover:text-white transition-colors">
+                  Giving History
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4: Daily Devotional & Newsletter (4 cols on lg) */}
+          <div className="lg:col-span-4 space-y-4">
+            <h4 className="font-outfit text-xs font-bold uppercase tracking-[0.2em] text-[#d4af37] flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]" />
+              Stay Connected
+            </h4>
+            <p className="text-sm text-white/70 leading-relaxed">
+              Receive daily scripture verses, prayer alerts, and inspirational teachings directly from our pastoral team.
+            </p>
+
+            {subscribed ? (
+              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs sm:text-sm flex items-center gap-2.5">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <span>God bless you! You are subscribed to our global prayer network.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSubscribe} className="space-y-2.5">
+                <div className="flex items-center rounded-2xl bg-white/[0.08] border border-white/20 p-1.5 focus-within:border-[#d4af37] transition-all">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email address"
+                    required
+                    className="w-full bg-transparent px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    aria-label="Subscribe"
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm hover:brightness-110 transition-all flex items-center gap-1.5 shrink-0 shadow-md"
+                  >
+                    <span>Join</span>
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-white/50">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#d4af37]" />
+                  <span>Free • No Spam • Unsubscribe at any time</span>
+                </div>
+              </form>
+            )}
           </div>
         </div>
 
-        {/* Link Columns — 2 col on mobile, 3 col on lg */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-8 pb-10 border-b border-white/10">
-          {Object.values(footerLinks).map((section) => (
-            <div key={section.title}>
-              <h4 className="font-outfit text-sm font-bold uppercase tracking-widest text-[#d4af37] mb-4">{section.title}</h4>
-              <ul className="space-y-3">
-                {section.links.map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      to={link.href}
-                      className="text-sm text-white/60 hover:text-[#d4af37] transition-colors leading-relaxed"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
         {/* Bottom Bar */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <p className="text-xs text-white/50 flex items-center gap-1.5 justify-center sm:justify-start">
             &copy; 2026 Kingdom Missions Network. All Rights Reserved.
             <Heart className="w-3 h-3 text-[#d4af37] fill-[#d4af37]" />
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-white/40">
-            <Link to="/privacy" className="hover:text-[#d4af37] transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-[#d4af37] transition-colors">Terms of Service</Link>
-            <Link to="/accessibility" className="hover:text-[#d4af37] transition-colors">Accessibility</Link>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-white/50">
+            <Link to="/privacy" className="hover:text-[#d4af37] transition-colors">
+              Privacy Policy
+            </Link>
+            <Link to="/terms" className="hover:text-[#d4af37] transition-colors">
+              Terms of Service
+            </Link>
+            <Link to="/accessibility" className="hover:text-[#d4af37] transition-colors">
+              Accessibility
+            </Link>
+            <Link to="/donations" className="hover:text-[#d4af37] transition-colors">
+              Giving Records
+            </Link>
           </div>
         </div>
       </div>
