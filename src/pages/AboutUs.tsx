@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ShieldCheck, Heart, BookOpen, Globe, Users, Flame, ArrowRight, Mail, Compass, Award, Anchor } from "lucide-react";
 import SEO from "../components/SEO";
 import ScrollReveal from "../components/ScrollReveal";
+import AmbientParticles from "../components/AmbientParticles";
 import brandLogo from "../assets/logo.png";
 import bishopImg from "../assets/bishop.webp";
 
@@ -101,12 +102,17 @@ export default function AboutUs() {
       />
 
       {/* Hero Header */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#0c1b33] to-[#071324] text-white py-20 lg:py-28 px-4 sm:px-6">
-        {/* Subtle decorative background glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_center,rgba(212,175,55,0.18),transparent_70%)] pointer-events-none" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] text-white py-20 lg:py-28 px-4 sm:px-6">
+        {/* Warm Orange & Gold Radiant Background Glows */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[radial-gradient(circle_at_top_center,rgba(212,175,55,0.20),transparent_70%)] pointer-events-none blur-2xl" />
+        <div className="absolute top-10 right-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-5 left-10 w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(234,88,12,0.14)_0%,transparent_70%)] pointer-events-none blur-3xl" />
+
+        {/* Ambient Particles */}
+        <AmbientParticles />
 
         <div className="container-main mx-auto relative z-10 text-center max-w-4xl">
-          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs sm:text-sm font-semibold mb-6 shadow-inner">
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs sm:text-sm font-semibold mb-6 shadow-inner backdrop-blur-md">
             <ShieldCheck className="w-4 h-4 text-[#d4af37]" />
             Official Platform & Ministry Foundation
           </div>

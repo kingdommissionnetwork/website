@@ -6,10 +6,11 @@ import bishopHeroImg from "../../assets/bishop-hero.png";
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#071324] via-[#0c1b33] to-[#142642] pt-[72px] md:pt-[100px] lg:pt-[72px] md:pt-[108px] pb-12 md:pb-16 px-4 sm:px-6 lg:px-8">
-      {/* Dynamic Background Glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] md:w-[600px] h-[400px] md:h-[600px] bg-[radial-gradient(circle,rgba(212,175,55,0.15)_0%,transparent_70%)] pointer-events-none blur-2xl" />
-      <div className="absolute top-1/2 right-0 md:right-10 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-[radial-gradient(circle,rgba(14,165,233,0.10)_0%,transparent_70%)] pointer-events-none blur-3xl" />
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#071324] via-[#0c1b33] to-[#1a1107] pt-[72px] md:pt-[100px] lg:pt-[108px] pb-12 md:pb-16 px-4 sm:px-6 lg:px-8">
+      {/* Dynamic Warm Orange & Gold Background Glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] md:w-[650px] h-[400px] md:h-[650px] bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,transparent_70%)] pointer-events-none blur-2xl" />
+      <div className="absolute top-12 right-0 md:right-10 w-[350px] md:w-[550px] h-[350px] md:h-[550px] bg-[radial-gradient(circle,rgba(249,115,22,0.16)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+      <div className="absolute bottom-10 left-10 w-[300px] md:w-[450px] h-[300px] md:h-[450px] bg-[radial-gradient(circle,rgba(234,88,12,0.12)_0%,transparent_70%)] pointer-events-none blur-3xl" />
 
       {/* Ambient Particles */}
       <AmbientParticles />

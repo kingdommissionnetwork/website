@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ScrollReveal from "../components/ScrollReveal";
+import AmbientParticles from "../components/AmbientParticles";
 import SEO from "../components/SEO";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -239,18 +240,23 @@ export default function SubscriptionPortal() {
       />
 
       {/* Hero Header */}
-      <section className="relative py-16 md:py-24 px-4 overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0 bg-radial-gradient from-[#d4af37]/10 via-transparent to-transparent pointer-events-none" />
+      <section className="relative py-16 md:py-24 px-4 overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] border-b border-white/10">
+        {/* Warm Orange & Golden Radiant Background Glows */}
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+
+        <AmbientParticles />
+
         <div className="container-main mx-auto text-center max-w-3xl relative z-10">
           <ScrollReveal>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30 text-sm font-semibold mb-6">
-              <Crown className="w-4 h-4" />
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#d4af37]/15 text-[#fbf5b7] border border-[#d4af37]/30 text-sm font-semibold mb-6 backdrop-blur-md">
+              <Crown className="w-4 h-4 text-[#d4af37]" />
               <span>Kingdom Partner Initiative</span>
             </div>
             <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white mb-6">
-              Empower the Mission with <span className="text-[#d4af37]">1,000 KES</span> / Month
+              Empower the Mission with <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">1,000 KES</span> / Month
             </h1>
-            <p className="text-white/70 text-lg md:text-xl leading-relaxed mb-8">
+            <p className="text-white/80 text-lg md:text-xl leading-relaxed mb-8">
               Join a dedicated covenant of partners broadcasting truth, supporting local communities, and building the Heavenly Kingdom network worldwide.
             </p>
 

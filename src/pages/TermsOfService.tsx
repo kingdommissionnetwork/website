@@ -1,5 +1,6 @@
 import { ShieldCheck, Mail } from "lucide-react";
 import SEO from "../components/SEO";
+import AmbientParticles from "../components/AmbientParticles";
 
 export default function TermsOfService() {
   return (
@@ -9,17 +10,23 @@ export default function TermsOfService() {
         description="Terms of Service and Community Guidelines for Kingdom Missions Network. Understand our biblical standards, prayer wall guidelines, and stewardship terms."
       />
 
-      {/* Header */}
-      <section className="bg-gradient-to-b from-[#0c1b33] to-[#162a4a] text-white py-16 px-4 sm:px-6">
-        <div className="container-main mx-auto max-w-4xl text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-[#fbf5b7] text-xs font-semibold uppercase tracking-wider border border-white/15">
+      {/* Header with Orange Gradient and Ambient Particles */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] text-white py-16 lg:py-20 px-4 sm:px-6">
+        {/* Dynamic Warm Orange & Gold Background Glows */}
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+
+        <AmbientParticles />
+
+        <div className="container-main mx-auto max-w-4xl text-center space-y-4 relative z-10">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-[#fbf5b7] text-xs font-semibold uppercase tracking-wider border border-[#d4af37]/40 backdrop-blur-md">
             <ShieldCheck className="w-3.5 h-3.5 text-[#d4af37]" />
             Community Covenant & Standards
           </div>
-          <h1 className="font-outfit text-3xl sm:text-5xl font-bold tracking-tight">
-            Terms of Service
+          <h1 className="font-brand text-3xl sm:text-5xl font-bold tracking-tight">
+            Terms of <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">Service</span>
           </h1>
-          <p className="font-outfit text-white/75 text-sm sm:text-base max-w-2xl mx-auto">
+          <p className="font-outfit text-white/80 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
             Last Updated: September 2026 • Governing your participation across Kingdom Missions Network platform and ministries.
           </p>
         </div>

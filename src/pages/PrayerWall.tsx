@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ScrollReveal from "../components/ScrollReveal";
+import AmbientParticles from "../components/AmbientParticles";
 import { api } from "../lib/api";
 import type { PrayerRequest } from "../data/demoData";
 import { useToast } from "../lib/toast";
@@ -123,13 +124,24 @@ export default function PrayerWall() {
   return (
     <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#e6eef7]">
       <SEO title="Prayer Wall" description="Share your prayer requests and pray for others. Join our global prayer community." />
-      <div className="bg-[#0c1b33] py-16 px-4">
-        <div className="container-main mx-auto text-center">
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-3">
-            Prayer Wall
+      
+      {/* Hero Header with Orange Gradient and Ambient Particles */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] py-16 lg:py-20 px-4">
+        {/* Dynamic Warm Orange & Gold Background Glows */}
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+
+        <AmbientParticles />
+
+        <div className="container-main mx-auto text-center relative z-10">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
+            <span>24/7 Global Intercession Sanctuary</span>
+          </div>
+          <h1 className="font-brand text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight">
+            <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">Prayer Wall</span>
           </h1>
-          <p className="text-white/60 text-lg max-w-xl mx-auto">
-            Share your prayer requests and join a global community of believers praying for one another.
+          <p className="font-outfit text-white/80 text-base md:text-xl max-w-2xl mx-auto leading-relaxed">
+            Share your burdens and stand in agreement with believers across nations in round-the-clock prayer.
           </p>
         </div>
       </div>

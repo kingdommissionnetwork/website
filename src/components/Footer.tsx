@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, Twitter, Youtube, Mail, Send, CheckCircle2, ShieldCheck, Globe, Crown } from "lucide-react";
 import brandLogo from "../assets/logo.png";
+import AmbientParticles from "./AmbientParticles";
 
 export default function Footer() {
   const [email, setEmail] = useState("");
@@ -17,12 +18,16 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-[#071324] text-white border-t border-[#d4af37]/30 relative overflow-hidden">
+    <footer className="bg-gradient-to-br from-[#071324] via-[#0c1b33] to-[#1a1107] text-white border-t border-[#d4af37]/30 relative overflow-hidden">
       {/* Top radiant gold accent line */}
       <div className="h-[2px] bg-gradient-to-r from-transparent via-[#d4af37] to-transparent shadow-[0_1px_8px_rgba(212,175,55,0.4)]" />
 
-      {/* Subtle background glow */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-[radial-gradient(circle,rgba(212,175,55,0.05)_0%,transparent_70%)] pointer-events-none blur-3xl" />
+      {/* Warm Orange & Golden Radiant Background Glows */}
+      <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.12)_0%,transparent_70%)] pointer-events-none blur-3xl" />
+      <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.14)_0%,transparent_70%)] pointer-events-none blur-3xl" />
+
+      {/* Ambient Particles in Footer */}
+      <AmbientParticles />
 
       <div className="container-main mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12 relative z-10">
         {/* Main 12-Column Responsive Grid */}

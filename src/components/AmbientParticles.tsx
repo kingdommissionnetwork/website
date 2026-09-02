@@ -61,10 +61,11 @@ export default function AmbientParticles() {
         }
 
         const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius * 3);
-        const isGold = Math.random() > 0.3;
-        const r = isGold ? 212 : 255;
-        const g = isGold ? 175 : 255;
-        const b = isGold ? 55 : 255;
+        const rand = Math.random();
+        // Warm gold, luminous amber-orange, or sacred white
+        const r = rand > 0.6 ? 249 : rand > 0.2 ? 212 : 255;
+        const g = rand > 0.6 ? 115 : rand > 0.2 ? 175 : 255;
+        const b = rand > 0.6 ? 22 : rand > 0.2 ? 55 : 240;
 
         gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${p.opacity})`);
         gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
