@@ -3,7 +3,7 @@ import SEO from "../components/SEO";
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-[#FAF7F2] text-[#0c1b33] pt-[108px] pb-24">
+    <div className="min-h-screen bg-[#FAF7F2] text-[#0c1b33] pt-[72px] md:pt-[108px] pb-24">
       <SEO
         title="Privacy Policy — Kingdom Missions Network"
         description="Official Privacy Policy of Kingdom Missions Network. Understand how we protect your personal data, prayer requests, and donor information."

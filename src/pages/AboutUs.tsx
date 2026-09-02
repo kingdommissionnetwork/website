@@ -93,7 +93,7 @@ const corePillars = [
 
 export default function AboutUs() {
   return (
-    <div className="pt-[108px] min-h-screen bg-[#FAF7F2] text-[#0c1b33]">
+    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#FAF7F2] text-[#0c1b33]">
       <SEO
         title="About Us & Statement of Faith"
         description="Learn about Kingdom Missions Network (kingdommissionsnetwork.org) — our global vision, core pillars, leadership commitment, and foundational Statement of Faith."

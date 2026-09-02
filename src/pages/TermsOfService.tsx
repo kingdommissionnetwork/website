@@ -3,7 +3,7 @@ import SEO from "../components/SEO";
 
 export default function TermsOfService() {
   return (
-    <div className="min-h-screen bg-[#FAF7F2] text-[#0c1b33] pt-[108px] pb-24">
+    <div className="min-h-screen bg-[#FAF7F2] text-[#0c1b33] pt-[72px] md:pt-[108px] pb-24">
       <SEO
         title="Terms of Service — Kingdom Missions Network"
         description="Terms of Service and Community Guidelines for Kingdom Missions Network. Understand our biblical standards, prayer wall guidelines, and stewardship terms."

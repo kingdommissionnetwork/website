@@ -191,14 +191,14 @@ export default function BibleReader() {
 
   if (loadingBooks) {
     return (
-      <div className="pt-[108px] min-h-screen bg-[#e6eef7] flex items-center justify-center">
+      <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#e6eef7] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="pt-[108px] h-screen bg-[#e6eef7] flex flex-col overflow-hidden">
+    <div className="pt-[72px] md:pt-[108px] h-screen bg-[#e6eef7] flex flex-col overflow-hidden">
       <SEO title={selectedBook ? `${selectedBook} ${selectedChapter} — Bible` : "Bible"} description="Read the Bible online with multiple translations (KJV, WEB, ASV). Search, bookmark, and take study notes." />
       <div className="bg-[#0c1b33] py-6 px-4 shrink-0 z-10">
         <div className="container-main mx-auto flex items-center justify-between flex-wrap gap-4">
