@@ -38,33 +38,28 @@ export default function Navigation() {
     <>
       <nav
         style={{ backgroundColor: '#FAF7F2' }}
-        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 bg-[#FAF7F2] border-b-2 border-[#d4af37] shadow-[0_4px_25px_rgba(0,0,0,0.12)] h-[92px] sm:h-[100px] md:h-[108px] ${
-          scrolled ? "shadow-[0_8px_30px_rgba(0,0,0,0.18)]" : ""
+        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 bg-[#FAF7F2] border-b border-[#d4af37] shadow-[0_2px_16px_rgba(0,0,0,0.1)] h-[64px] md:h-[92px] lg:h-[108px] ${
+          scrolled ? "shadow-[0_4px_24px_rgba(0,0,0,0.15)]" : ""
         }`}
       >
-        {/* Top subtle highlight */}
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-white pointer-events-none" />
-
         {/* Bottom luminous gold gradient accent line */}
-        <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#d4af37]/40 via-[#d4af37] to-[#d4af37]/40 shadow-[0_1px_6px_rgba(212,175,55,0.7)] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#d4af37]/40 via-[#d4af37] to-[#d4af37]/40 pointer-events-none" />
 
-        <div className="container-main mx-auto h-full flex items-center justify-between px-4 sm:px-6">
-          {/* High-Visibility Brand Logo & Identity */}
-          <Link to="/" className="flex items-center gap-3 sm:gap-4 group py-1 shrink-0">
-            <div className="relative flex items-center justify-center">
-              <img
-                src={brandLogo}
-                alt="Kingdom Missions Network"
-                className="h-16 sm:h-18 md:h-20 w-auto object-contain filter drop-shadow-[0_3px_8px_rgba(0,0,0,0.22)] transition-transform duration-300 group-hover:scale-105"
-                width="80"
-                height="80"
-              />
-            </div>
+        <div className="container-main mx-auto h-full flex items-center justify-between px-3 sm:px-4 md:px-6">
+          {/* Brand Logo & Identity */}
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 md:gap-4 group py-1 shrink-0">
+            <img
+              src={brandLogo}
+              alt="Kingdom Missions Network"
+              className="h-10 sm:h-12 md:h-16 lg:h-20 w-auto object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.2)] transition-transform duration-300 group-hover:scale-105"
+              width="80"
+              height="80"
+            />
             <div className="flex flex-col">
-              <span className="font-outfit text-[12px] sm:text-[14px] md:text-[15.5px] font-extrabold text-[#0c1b33] tracking-[0.095em] leading-tight uppercase group-hover:text-[#996515] transition-colors whitespace-nowrap">
+              <span className="font-outfit text-[11px] sm:text-[12.5px] md:text-[14px] lg:text-[15.5px] font-extrabold text-[#0c1b33] tracking-[0.08em] md:tracking-[0.095em] leading-tight uppercase group-hover:text-[#996515] transition-colors whitespace-nowrap">
                 Kingdom Missions Network
               </span>
-              <span className="font-outfit text-[9px] sm:text-[10px] md:text-[11px] font-bold tracking-[0.32em] text-[#996515] uppercase leading-none mt-1">
+              <span className="font-outfit text-[8px] sm:text-[9px] md:text-[10px] lg:text-[11px] font-bold tracking-[0.25em] md:tracking-[0.32em] text-[#996515] uppercase leading-none mt-0.5">
                 Global Christian Community
               </span>
             </div>

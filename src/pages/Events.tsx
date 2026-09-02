@@ -77,7 +77,7 @@ export default function Events() {
   };
 
   return (
-    <div className="pt-[108px] min-h-screen bg-white">
+    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-white">
       <SEO title="Events" description="Join our global events — worship nights, conferences, youth revivals, and prayer summits." />
       <div className="bg-[#0c1b33] py-12 px-4">
         <div className="container-main mx-auto text-center">

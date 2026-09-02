@@ -232,7 +232,7 @@ export default function SubscriptionPortal() {
   };
 
   return (
-    <div className="pt-[108px] min-h-screen bg-[#0c1b33] text-white">
+    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#0c1b33] text-white">
       <SEO
         title="Kingdom Partner Subscription — 1,000 KES"
         description="Become a monthly Kingdom Partner for 1,000 KES (computed live in USD). Support global gospel outreach, youth revivals, and biblical education."

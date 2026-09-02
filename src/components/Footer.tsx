@@ -39,50 +39,52 @@ export default function Footer() {
       {/* Top gradient line */}
       <div className="h-[1px] bg-gradient-to-r from-transparent via-[#d4af37]/30 to-transparent" />
 
-      <div className="container-main mx-auto px-4 sm:px-6 pt-16 pb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8">
-          {/* Brand Column */}
-          <div className="lg:col-span-2">
-            <Link to="/" className="flex items-center gap-3 mb-4">
-              <img src={brandLogo} alt="Kingdom Missions Network" className="h-10 w-auto object-contain" width="40" height="40" />
-              <span className="font-brand text-xl font-bold">Kingdom Missions Network</span>
-            </Link>
-            <p className="text-white/60 text-sm leading-relaxed max-w-sm mb-6">
-              A global platform connecting Christian believers worldwide through
-              prayer, scripture, and fellowship.
-            </p>
-            <div className="flex items-center gap-3">
-              <a
-                href="/"
-                className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#d4af37]/20 transition-colors"
-              >
-                <Twitter className="w-4 h-4" />
-              </a>
-              <a
-                href="/"
-                className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#d4af37]/20 transition-colors"
-              >
-                <Youtube className="w-4 h-4" />
-              </a>
-              <a
-                href="/"
-                className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#d4af37]/20 transition-colors"
-              >
-                <Mail className="w-4 h-4" />
-              </a>
-            </div>
+      <div className="container-main mx-auto px-4 sm:px-6 pt-12 pb-8">
+        {/* Brand Row */}
+        <div className="mb-10">
+          <Link to="/" className="flex items-center gap-3 mb-4">
+            <img src={brandLogo} alt="Kingdom Missions Network" className="h-10 w-auto object-contain" width="40" height="40" />
+            <span className="font-brand text-base sm:text-xl font-bold">Kingdom Missions Network</span>
+          </Link>
+          <p className="text-white/60 text-sm leading-relaxed max-w-md mb-5">
+            A global platform connecting Christian believers worldwide through prayer, scripture, and fellowship.
+          </p>
+          <div className="flex items-center gap-3">
+            <a
+              href="/"
+              aria-label="Twitter"
+              className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#d4af37]/20 transition-colors"
+            >
+              <Twitter className="w-4 h-4" />
+            </a>
+            <a
+              href="/"
+              aria-label="YouTube"
+              className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#d4af37]/20 transition-colors"
+            >
+              <Youtube className="w-4 h-4" />
+            </a>
+            <a
+              href="mailto:kingdommissionsnetwork@gmail.com"
+              aria-label="Email"
+              className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#d4af37]/20 transition-colors"
+            >
+              <Mail className="w-4 h-4" />
+            </a>
           </div>
+        </div>
 
-          {/* Link Columns */}
+        {/* Link Columns — 2 col on mobile, 3 col on lg */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-8 pb-10 border-b border-white/10">
           {Object.values(footerLinks).map((section) => (
             <div key={section.title}>
-              <h4 className="font-display text-lg font-semibold mb-4">{section.title}</h4>
-              <ul className="space-y-2.5">
+              <h4 className="font-outfit text-sm font-bold uppercase tracking-widest text-[#d4af37] mb-4">{section.title}</h4>
+              <ul className="space-y-3">
                 {section.links.map((link) => (
                   <li key={link.label}>
                     <Link
                       to={link.href}
-                      className="text-sm text-white/60 hover:text-[#d4af37] transition-colors"
+                      className="text-sm text-white/60 hover:text-[#d4af37] transition-colors leading-relaxed"
                     >
                       {link.label}
                     </Link>
@@ -94,12 +96,12 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-white/50 flex items-center gap-1.5">
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <p className="text-xs text-white/50 flex items-center gap-1.5 justify-center sm:justify-start">
             &copy; 2026 Kingdom Missions Network. All Rights Reserved.
             <Heart className="w-3 h-3 text-[#d4af37] fill-[#d4af37]" />
           </p>
-          <div className="flex items-center gap-4 text-xs text-white/40">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-white/40">
             <Link to="/privacy" className="hover:text-[#d4af37] transition-colors">Privacy Policy</Link>
             <Link to="/terms" className="hover:text-[#d4af37] transition-colors">Terms of Service</Link>
             <Link to="/accessibility" className="hover:text-[#d4af37] transition-colors">Accessibility</Link>

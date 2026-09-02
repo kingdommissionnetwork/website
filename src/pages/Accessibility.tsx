@@ -3,7 +3,7 @@ import SEO from "../components/SEO";
 
 export default function Accessibility() {
   return (
-    <div className="min-h-screen bg-[#FAF7F2] text-[#0c1b33] pt-[108px] pb-24">
+    <div className="min-h-screen bg-[#FAF7F2] text-[#0c1b33] pt-[72px] md:pt-[108px] pb-24">
       <SEO
         title="Accessibility Statement — Kingdom Missions Network"
         description="Accessibility statement of Kingdom Missions Network. Committed to ensuring scripture, prayer, and sermons are accessible to everyone regardless of ability."

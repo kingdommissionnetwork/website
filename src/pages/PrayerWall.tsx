@@ -121,7 +121,7 @@ export default function PrayerWall() {
   const paginatedPrayers = filteredPrayers.slice(0, visibleCount);
 
   return (
-    <div className="pt-[108px] min-h-screen bg-[#e6eef7]">
+    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#e6eef7]">
       <SEO title="Prayer Wall" description="Share your prayer requests and pray for others. Join our global prayer community." />
       <div className="bg-[#0c1b33] py-16 px-4">
         <div className="container-main mx-auto text-center">

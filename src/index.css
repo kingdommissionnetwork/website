@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Cinzel:wght@500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -34,6 +34,9 @@
     --deep-navy: #162a4a;
     --alabaster: #f8f6f3;
     --bronze: #8b5e3c;
+    /* Mobile safe areas */
+    --nav-height-mobile: 64px;
+    --nav-height-desktop: 108px;
   }
 
   .dark {
@@ -62,16 +65,27 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
   }
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   body {
     @apply bg-[#e6eef7] text-[#0c1b33] antialiased;
     font-family: 'Inter', sans-serif;
+    overscroll-behavior-y: none;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   h1, h2, h3, h4 {
     font-family: 'Outfit', sans-serif;
+  }
+  /* Minimum touch target size */
+  button, a, [role="button"] {
+    min-height: 44px;
   }
 }
 

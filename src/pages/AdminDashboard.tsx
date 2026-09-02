@@ -214,7 +214,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="pt-[108px] min-h-screen bg-[#0c1b33]">
+    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#0c1b33]">
       <SEO title="Admin Dashboard" description="Manage sermons, events, prayer requests, users, and donations." />
       <div className="flex">
         {/* Sidebar */}
