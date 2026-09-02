@@ -352,3 +352,53 @@ adminRoutes.get("/health", async (c) => {
     lastChecked: new Date().toISOString(),
   });
 });
+
+// 10. ADMINISTRATOR INVITATION & PROVISIONING (INVITATION-ONLY)
+adminRoutes.post(
+  "/invite",
+  zValidator(
+    "json",
+    z.object({
+      name: z.string().min(2),
+      email: z.string().email(),
+      role: z.enum([
+        "super_admin",
+        "system_admin",
+        "finance_admin",
+        "content_admin",
+        "support_admin",
+        "marketing_admin",
+        "analyst",
+      ]),
+    })
+  ),
+  async (c) => {
+    const supabase = getSupabase();
+    const { name, email, role } = c.req.valid("json");
+    const inviteToken = `inv_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
+
+    // Create or update user as invited administrator
+    const { data: existingUser } = await supabase.from("users").select("id").eq("email", email).single();
+
+    if (existingUser) {
+      await supabase.from("users").update({ role }).eq("id", existingUser.id);
+    } else {
+      await supabase.from("users").insert({
+        id: `usr_${Date.now()}`,
+        name,
+        email,
+        role,
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    await logAuditEvent("Super Admin", "ADMIN_INVITED", "admin_user", email, { role, token: inviteToken });
+
+    return c.json({
+      success: true,
+      message: `Administrator invitation generated for ${name} (${role})`,
+      inviteLink: `https://admin.kingdommissionsnetwork.org/admin/accept-invite?token=${inviteToken}`,
+    });
+  }
+);
+

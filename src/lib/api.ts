@@ -343,6 +343,13 @@ export const api = {
     health: async (): Promise<{ status: string; services: { name: string; status: string; latency: string }[]; lastChecked: string }> => {
       return await request("/admin/health", { headers: authHeaders() });
     },
+    invite: async (data: { name: string; email: string; role: string }): Promise<{ success: boolean; message: string; inviteLink: string }> => {
+      return await request("/admin/invite", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+      });
+    },
   },
 
 };
