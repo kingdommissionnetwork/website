@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
@@ -33,6 +33,9 @@ function PageLoader() {
 
 export default function App() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "info" | "error" } | null>(null);
+  const location = useLocation();
+  const isAdminDomain = typeof window !== "undefined" && window.location.hostname.startsWith("admin.");
+  const isAdminRoute = location.pathname.startsWith("/admin") || isAdminDomain;
 
   useEffect(() => {
     if (toast) {
@@ -50,13 +53,13 @@ export default function App() {
       <ToastContext.Provider value={{ showToast }}>
         <div className="min-h-screen bg-cloud-blue">
           <ScrollToTop />
-          <ScrollProgress />
-          <Navigation />
+          {!isAdminRoute && <ScrollProgress />}
+          {!isAdminRoute && <Navigation />}
           <main>
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  <Route path="/" element={<Home />} />
+                  <Route path="/" element={isAdminDomain ? <AdminGuard><AdminDashboard /></AdminGuard> : <Home />} />
                   <Route path="/about" element={<AboutUs />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
@@ -76,12 +79,20 @@ export default function App() {
                       </AdminGuard>
                     }
                   />
+                  <Route
+                    path="/admin/*"
+                    element={
+                      <AdminGuard>
+                        <AdminDashboard />
+                      </AdminGuard>
+                    }
+                  />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
             </ErrorBoundary>
           </main>
-          <Footer />
+          {!isAdminRoute && <Footer />}
           {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </div>
       </ToastContext.Provider>

@@ -20,6 +20,8 @@ import {
   Download,
   Filter,
   RefreshCw,
+  UserPlus,
+  Copy,
 } from "lucide-react";
 import SEO from "../components/SEO";
 import { api } from "../lib/api";
@@ -185,6 +187,14 @@ export default function AdminDashboard() {
   const [broadcastBody, setBroadcastBody] = useState("");
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
 
+  // Administrator Invitation state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("support_admin");
+  const [generatedInviteLink, setGeneratedInviteLink] = useState("");
+  const [submittingInvite, setSubmittingInvite] = useState(false);
+
   const { showToast } = useToast();
 
   const loadAllData = async () => {
@@ -268,6 +278,23 @@ export default function AdminDashboard() {
       setBroadcastBody("");
       showToast(`Pastoral Campaign sent to ${broadcastAudience.replace("_", " ")}!`, "success");
     }, 1200);
+  };
+
+  // Administrator Invitation Handler
+  const handleInviteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteName || !inviteEmail) return;
+    setSubmittingInvite(true);
+    try {
+      const res = await api.admin.invite({ name: inviteName, email: inviteEmail, role: inviteRole });
+      setGeneratedInviteLink(res.inviteLink);
+      showToast(res.message, "success");
+      loadAllData();
+    } catch {
+      showToast("Failed to generate invitation", "error");
+    } finally {
+      setSubmittingInvite(false);
+    }
   };
 
   const filteredMembers = members.filter((m) => {
@@ -959,13 +986,26 @@ export default function AdminDashboard() {
           {/* TAB 9: SECURITY & AUDIT CENTER */}
           {activeTab === "security" && (
             <div className="space-y-6">
-              <div>
-                <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
-                  Security, Health & Audit Command Center
-                </h1>
-                <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
-                  Immutable audit trail of all administrative actions and live service health monitoring.
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                    Security, Health & Audit Command Center
+                  </h1>
+                  <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                    Immutable audit trail of all administrative actions and live service health monitoring.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGeneratedInviteLink("");
+                    setShowInviteModal(true);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:brightness-110 transition-all shrink-0"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Invite Administrator</span>
+                </button>
               </div>
 
               {/* Service Health Grid */}
@@ -1223,6 +1263,128 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADMINISTRATOR INVITATION MODAL */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-xl p-8 rounded-3xl bg-[#0d1d36] border-2 border-[#d4af37] text-white shadow-2xl space-y-6">
+            <button
+              type="button"
+              onClick={() => setShowInviteModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div>
+              <span className="text-[10px] uppercase font-bold text-[#d4af37] tracking-widest block">
+                Administrative Governance & Provisioning
+              </span>
+              <h3 className="font-brand text-2xl font-bold text-white mt-1">Invite New Administrator</h3>
+              <p className="text-xs text-white/60">
+                Grant role-based administrative authority. Administrator will receive a secure onboarding token.
+              </p>
+            </div>
+
+            {generatedInviteLink ? (
+              <div className="space-y-4 p-5 rounded-2xl bg-white/5 border border-[#d4af37]/30">
+                <span className="text-xs font-bold text-emerald-400 block">✓ Invitation Successfully Created!</span>
+                <p className="text-xs text-white/70">Share this secure one-time onboarding link with the administrator:</p>
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-black/40 border border-white/10">
+                  <input
+                    type="text"
+                    readOnly
+                    value={generatedInviteLink}
+                    className="w-full bg-transparent text-xs text-[#fbf5b7] font-mono outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedInviteLink);
+                      showToast("Invitation link copied to clipboard!", "success");
+                    }}
+                    className="px-3 py-1 rounded-lg bg-[#d4af37] text-[#0c1b33] font-bold text-xs flex items-center gap-1 shrink-0"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleInviteSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="inviteAdminNameInput" className="block text-xs uppercase font-bold text-white/60 mb-1.5">Staff Full Name</label>
+                  <input
+                    id="inviteAdminNameInput"
+                    type="text"
+                    placeholder="e.g. Sarah Jenkins"
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs font-bold focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="inviteAdminEmailInput" className="block text-xs uppercase font-bold text-white/60 mb-1.5">Official Email Address</label>
+                  <input
+                    id="inviteAdminEmailInput"
+                    type="email"
+                    placeholder="staff@kingdommissionsnetwork.org"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs font-bold focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="inviteAdminRoleSelect" className="block text-xs uppercase font-bold text-white/60 mb-1.5">Administrative Role & Scope</label>
+                  <select
+                    id="inviteAdminRoleSelect"
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs font-bold focus:outline-none"
+                  >
+                    <option value="support_admin" className="bg-[#0c1b33]">Support Admin (Member Support & Prayers)</option>
+                    <option value="content_admin" className="bg-[#0c1b33]">Content Admin (Sermons, Events & CMS)</option>
+                    <option value="finance_admin" className="bg-[#0c1b33]">Finance Admin (Billing, Payments & Invoices)</option>
+                    <option value="marketing_admin" className="bg-[#0c1b33]">Marketing Admin (Campaigns & Broadcasts)</option>
+                    <option value="analyst" className="bg-[#0c1b33]">Analyst (Read-Only Analytics & Reports)</option>
+                    <option value="system_admin" className="bg-[#0c1b33]">System Admin (Technical & Integration Settings)</option>
+                    <option value="super_admin" className="bg-[#0c1b33]">Super Admin (Full Platform Authority)</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={submittingInvite}
+                    className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition-all"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>{submittingInvite ? "Generating..." : "Generate Invitation Credentials"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowInviteModal(false)}
+                    className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
