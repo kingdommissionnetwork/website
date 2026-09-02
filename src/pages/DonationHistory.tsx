@@ -1,56 +1,80 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { DollarSign, ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import SEO from "../components/SEO";
+import AmbientParticles from "../components/AmbientParticles";
 import { api } from "../lib/api";
+import { useAuth } from "../lib/auth";
+import { useToast } from "../lib/toast";
+
+interface Donation {
+  id: string;
+  amount: number;
+  currency: string;
+  donor_name: string;
+  donor_email: string;
+  recurring: boolean;
+  status: string;
+  created_at: string;
+}
 
 export default function DonationHistory() {
-  const [donations, setDonations] = useState<{ amount: number; donor_name: string; donor_email: string; recurring: boolean; created_at: string }[]>([]);
-  const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
+  const [donations, setDonations] = useState<Donation[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const { user } = useAuth();
+  const { showToast } = useToast();
 
-  const fetchHistory = useCallback(async (e?: React.FormEvent) => {
-    e?.preventDefault();
+  useEffect(() => {
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user]);
+
+  const fetchHistory = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!email) return;
     setLoading(true);
+    setHasSearched(true);
     try {
       const data = await api.donations.history(email);
-      setDonations(data);
-      localStorage.setItem("hkn-donation-email", email);
-    } catch { setDonations([]); }
-    setLoading(false);
-  }, [email]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("hkn-donation-email");
-    if (saved) {
-      setEmail(saved);
-    } else {
+      setDonations(data as Donation[]);
+    } catch {
+      showToast("Could not load donation history.", "error");
+    } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    if (email) fetchHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email]);
+  };
 
   return (
     <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#e6eef7]">
-      <SEO title="Giving History" description="View your donation history." />
-      <div className="bg-[#0c1b33] py-12 px-4">
-        <div className="container-main mx-auto">
-          <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm mb-4 transition-colors">
+      <SEO title="Giving History" description="View your past donations to Kingdom Missions Network." />
+      
+      {/* Hero Header with Orange Gradient and Ambient Particles */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] py-16 px-4">
+        {/* Dynamic Warm Orange & Gold Background Glows */}
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+
+        <AmbientParticles />
+
+        <div className="container-main mx-auto text-center relative z-10">
+          <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-xs sm:text-sm mb-4 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </Link>
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-white">Giving History</h1>
-          <p className="text-white/60 mt-2">View your past donations to Kingdom Mission Network.</p>
+          <h1 className="font-brand text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight">
+            Giving <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">Records & History</span>
+          </h1>
+          <p className="font-outfit text-white/80 text-sm sm:text-base mt-2 max-w-lg mx-auto">
+            View your past seed gifts and kingdom partnership contributions.
+          </p>
         </div>
       </div>
 
       <div className="container-main mx-auto px-4 sm:px-6 py-10">
-        {!email ? (
+        {!hasSearched ? (
           <div className="bg-white rounded-2xl shadow-sm border border-[#0c1b33]/5 p-8 max-w-md mx-auto">
             <div className="w-14 h-14 rounded-full bg-[#d4af37]/10 flex items-center justify-center mx-auto mb-4">
               <DollarSign className="w-7 h-7 text-[#d4af37]" />

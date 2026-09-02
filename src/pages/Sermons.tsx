@@ -3,6 +3,7 @@ import SEO from "../components/SEO";
 import { Search, Clock, Bookmark, Play, Headphones, Filter } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ScrollReveal from "../components/ScrollReveal";
+import AmbientParticles from "../components/AmbientParticles";
 import { api } from "../lib/api";
 import type { Sermon } from "../data/demoData";
 
@@ -51,23 +52,33 @@ export default function Sermons() {
   return (
     <div className="pt-[72px] md:pt-[108px] min-h-screen bg-white">
       <SEO title="Sermons" description="Browse our collection of sermons on faith, hope, love, and discipleship." />
-      <div className="relative py-16 px-4 bg-gradient-to-br from-[#0c1b33] via-[#162a4a] to-[#1a3a5c]">
-        <div className="container-main mx-auto text-center">
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-3">
-            Sermon Library
+      
+      <div className="relative overflow-hidden py-16 lg:py-20 px-4 bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107]">
+        {/* Warm Orange & Golden Radiant Background Glows */}
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+
+        <AmbientParticles />
+
+        <div className="container-main mx-auto text-center relative z-10">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
+            <span>Anointed Teachings & Media Archive</span>
+          </div>
+          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight">
+            Sermon <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">Library</span>
           </h1>
-          <p className="text-white/60 text-lg max-w-xl mx-auto mb-8">
-            Searchable teachings from ministries worldwide.
+          <p className="text-white/80 text-base md:text-xl max-w-xl mx-auto mb-8 leading-relaxed">
+            Searchable teachings and sound doctrine from ministries worldwide.
           </p>
 
           <div className="relative max-w-lg mx-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6b7c93]" />
             <input
               type="text"
-              placeholder="Search sermons by title, speaker, or ministry..."
+              placeholder="Search sermons by title, speaker, or scripture..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white text-[#0c1b33] placeholder-[#6b7c93] focus:outline-none focus:ring-2 focus:ring-[#d4af37] shadow-lg"
+              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white text-[#0c1b33] placeholder-[#6b7c93] focus:outline-none focus:ring-2 focus:ring-[#d4af37] shadow-xl"
             />
           </div>
         </div>

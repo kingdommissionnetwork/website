@@ -24,6 +24,7 @@ import {
 } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import ScrollReveal from "../components/ScrollReveal";
+import AmbientParticles from "../components/AmbientParticles";
 import { api } from "../lib/api";
 import type { Event } from "../data/demoData";
 import { useToast } from "../lib/toast";
@@ -79,13 +80,22 @@ export default function Events() {
   return (
     <div className="pt-[72px] md:pt-[108px] min-h-screen bg-white">
       <SEO title="Events" description="Join our global events — worship nights, conferences, youth revivals, and prayer summits." />
-      <div className="bg-[#0c1b33] py-12 px-4">
-        <div className="container-main mx-auto text-center">
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-3">
-            Kingdom Events
+      
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] py-16 lg:py-20 px-4">
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+
+        <AmbientParticles />
+
+        <div className="container-main mx-auto text-center relative z-10">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
+            <span>Global Summits, Prayer Nights & Fellowships</span>
+          </div>
+          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight">
+            Kingdom <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">Events</span>
           </h1>
-          <p className="text-white/60 text-lg max-w-xl mx-auto">
-            Global gatherings, conferences, and worship nights.
+          <p className="text-white/80 text-base md:text-xl max-w-xl mx-auto leading-relaxed">
+            Join believers worldwide for live prayer summits, revival conferences, and worship gatherings.
           </p>
         </div>
       </div>
