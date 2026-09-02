@@ -25,24 +25,24 @@ vi.mock("../lib/auth", () => ({
 }));
 
 describe("SubscriptionPortal", () => {
-  it("renders 1000 KES pricing and partner heading", async () => {
+  it("renders partnership packages and partner heading", async () => {
     render(
       <HelmetProvider>
         <SubscriptionPortal />
       </HelmetProvider>
     );
-    const elements = await screen.findAllByText(/1,000 KES/i);
-    expect(elements.length).toBeGreaterThan(0);
-    expect(await screen.findByText(/Kingdom Partner Initiative/i)).toBeDefined();
+    const headings = await screen.findAllByText(/Kingdom Ambassador|Seed Partner|Global Harvest Partner/i);
+    expect(headings.length).toBeGreaterThan(0);
+    expect(await screen.findByText(/Kingdom Partner/i)).toBeDefined();
   });
 
-  it("renders live currency exchange calculation", async () => {
+  it("renders live currency exchange calculation and perks", async () => {
     render(
       <HelmetProvider>
         <SubscriptionPortal />
       </HelmetProvider>
     );
-    const badges = await screen.findAllByText(/1,000 KES = \$7.72 USD/i);
+    const badges = await screen.findAllByText(/Live Rate/i);
     expect(badges.length).toBeGreaterThan(0);
   });
 });

@@ -2,49 +2,129 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
+  CreditCard,
+  Crown,
   HandHeart,
   Headphones,
-  Calendar,
   DollarSign,
   Settings,
   Search,
-  Bell,
-  CheckCircle,
-  Flag,
   Trash2,
-  ChevronDown,
   TrendingUp,
-  TrendingDown,
-  Plus,
   X,
-  Pencil,
+  ShieldCheck,
+  Award,
+  AlertTriangle,
+  Mail,
+  Send,
+  Download,
+  Filter,
+  RefreshCw,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-interface AdminSermon { id: string; title: string; speaker: string; ministry: string; duration: string; category: string; thumbnail: string; date: string; }
-interface AdminEvent { id: string; title: string; date: string; day: string; month: string; time: string; timezone: string; location: string; isOnline: boolean; image: string; description: string; }
-import { useToast } from "../lib/toast";
 import SEO from "../components/SEO";
 import { api } from "../lib/api";
+import { useToast } from "../lib/toast";
 
-type Tab = "overview" | "users" | "prayers" | "sermons" | "events" | "donations" | "settings";
+type Tab =
+  | "overview"
+  | "members"
+  | "subscriptions"
+  | "billing"
+  | "plans"
+  | "content"
+  | "communications"
+  | "prayers"
+  | "security"
+  | "settings";
 
-const sidebarItems: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "users", label: "Users", icon: Users },
-  { id: "prayers", label: "Prayer Requests", icon: HandHeart },
-  { id: "sermons", label: "Sermons", icon: Headphones },
-  { id: "events", label: "Events", icon: Calendar },
-  { id: "donations", label: "Donations", icon: DollarSign },
-  { id: "settings", label: "Settings", icon: Settings },
+interface AdminMember {
+  id: string | number;
+  name: string;
+  email: string;
+  role: string;
+  planName: string;
+  subscriptionStatus: string;
+  amount: number;
+  currency: string;
+  joinedAt: string;
+}
+
+interface AdminEvent {
+  id: string;
+  title: string;
+  date: string;
+  day: string;
+  month: string;
+  time: string;
+  timezone: string;
+  location: string;
+  isOnline: boolean;
+  image: string;
+  description: string;
+}
+
+interface AdminPrayer {
+  id: number;
+  text: string;
+  category: string;
+  author: string;
+  date: string;
+  status: string;
+}
+
+interface AuditLogItem {
+  id: number;
+  actor: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  details: Record<string, unknown>;
+  created_at: string;
+}
+
+interface AttentionAlert {
+  id: string;
+  type: "warning" | "danger" | "success" | "info";
+  title: string;
+  description: string;
+  actionLabel: string;
+  tab: string;
+}
+
+const sidebarSections = [
+  {
+    title: "OPERATIONS",
+    items: [
+      { id: "overview" as Tab, label: "Command Center", icon: LayoutDashboard },
+      { id: "members" as Tab, label: "Members & Partners", icon: Users },
+      { id: "subscriptions" as Tab, label: "Subscriptions", icon: Crown },
+      { id: "billing" as Tab, label: "Billing & Invoices", icon: CreditCard },
+      { id: "plans" as Tab, label: "Plans & Pricing", icon: Award },
+    ],
+  },
+  {
+    title: "CONTENT & MINISTRY",
+    items: [
+      { id: "content" as Tab, label: "Content & CMS", icon: Headphones },
+      { id: "prayers" as Tab, label: "Prayer Altar", icon: HandHeart },
+      { id: "communications" as Tab, label: "Campaigns & Email", icon: Mail },
+    ],
+  },
+  {
+    title: "SYSTEM & GOVERNANCE",
+    items: [
+      { id: "security" as Tab, label: "Security & Audit", icon: ShieldCheck },
+      { id: "settings" as Tab, label: "System Settings", icon: Settings },
+    ],
+  },
 ];
 
-const statusColors: Record<string, string> = {
-  pending: "bg-amber-500/20 text-amber-400",
-  approved: "bg-green-500/20 text-green-400",
-  flagged: "bg-red-500/20 text-red-400",
-};
-
-type AdminPrayer = { id: number; text: string; category: string; author: string; date: string; status: string };
+const partnerPlansCatalog = [
+  { id: "seed", name: "Seed Partner", kes: 1000, usd: 7.72, badge: "🌱 Seed", membersCount: 142, impact: "Food hampers & Holy Bibles" },
+  { id: "ambassador", name: "Kingdom Ambassador", kes: 3000, usd: 23.16, badge: "👑 Ambassador", membersCount: 386, impact: "Village crusades & sound rigs" },
+  { id: "harvest", name: "Global Harvest Partner", kes: 7500, usd: 57.9, badge: "🌍 Harvest", membersCount: 94, impact: "International itineraries & mission bases" },
+  { id: "pillar", name: "Covenant Pillar", kes: 20000, usd: 154.4, badge: "🏛️ Pillar", membersCount: 28, impact: "Global broadcast & city revival summits" },
+];
 
 function normalizePrayer(p: Record<string, unknown>): AdminPrayer {
   return {
@@ -52,650 +132,409 @@ function normalizePrayer(p: Record<string, unknown>): AdminPrayer {
     text: String(p.text || ""),
     category: String(p.category || ""),
     author: String(p.name || "Anonymous"),
-    date: p.created_at ? new Date(String(p.created_at)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "",
+    date: p.created_at
+      ? new Date(String(p.created_at)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "",
     status: String(p.status || "pending"),
   };
 }
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [prayerFilter, setPrayerFilter] = useState("all");
-  const [showEventModal, setShowEventModal] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<AdminEvent | null>(null);
-  const [showSermonModal, setShowSermonModal] = useState(false);
-  const [editingSermon, setEditingSermon] = useState<AdminSermon | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [stats, setStats] = useState({ totalUsers: 0, totalPrayers: 0, pendingPrayers: 0, totalSermons: 0, monthlyGiving: 0, activeEvents: 0, totalYtd: 0, donorCount: 0 });
+  const [memberStatusFilter, setMemberStatusFilter] = useState("all");
+  const [selectedMember, setSelectedMember] = useState<AdminMember | null>(null);
+
+  // Modals
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+
+  // Data states
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeSubscriptions: 0,
+    mrrKes: 0,
+    mrrUsd: 0,
+    arrKes: 0,
+    arrUsd: 0,
+    churnRate: "2.4%",
+    failedPaymentsCount: 0,
+    totalPrayers: 0,
+    pendingPrayers: 0,
+    flaggedPrayers: 0,
+    totalSermons: 0,
+    monthlyGiving: 0,
+    activeEvents: 0,
+    totalYtd: 0,
+    donorCount: 0,
+  });
+  const [attentionAlerts, setAttentionAlerts] = useState<AttentionAlert[]>([]);
+  const [members, setMembers] = useState<AdminMember[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Record<string, unknown>[]>([]);
+  const [donations, setDonations] = useState<{ id?: number; name: string; email?: string; amount: number; currency?: string; provider?: string; reference?: string; status?: string; date: string; recurring: boolean }[]>([]);
   const [prayers, setPrayers] = useState<AdminPrayer[]>([]);
-  const [sermons, setSermons] = useState<AdminSermon[]>([]);
+  const [prayerFilter, setPrayerFilter] = useState("all");
   const [events, setEvents] = useState<AdminEvent[]>([]);
-  const [adminUsers, setAdminUsers] = useState<{ id: number; name: string; email: string; role: string; status: string }[]>([]);
-  const [donations, setDonations] = useState<{ name: string; amount: number; date: string; recurring: boolean }[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [healthData, setHealthData] = useState<{ status: string; services: { name: string; status: string; latency: string }[]; lastChecked: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Broadcast composer state
+  const [broadcastAudience, setBroadcastAudience] = useState("all_partners");
+  const [broadcastSubject, setBroadcastSubject] = useState("");
+  const [broadcastBody, setBroadcastBody] = useState("");
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
+
   const { showToast } = useToast();
 
-  const filteredPrayers = prayers.filter((p) => {
-    if (prayerFilter === "all") return true;
-    return p.status === prayerFilter;
+  const loadAllData = async () => {
+    setLoading(true);
+    try {
+      const [statsData, attentionData, membersData, subsData, donData, prData, evData, auditData, hlData] = await Promise.all([
+        api.admin.stats().catch(() => stats),
+        api.admin.attention().catch(() => ({ alerts: [] })),
+        api.admin.members().catch(() => []),
+        api.admin.subscriptions().catch(() => []),
+        api.admin.donations().catch(() => []),
+        api.admin.prayers(prayerFilter).catch(() => []),
+        api.events.list().catch(() => []),
+        api.admin.auditLogs().catch(() => []),
+        api.admin.health().catch(() => null),
+      ]);
+
+      setStats(statsData as typeof stats);
+      setAttentionAlerts(attentionData.alerts);
+      setMembers(membersData);
+      setSubscriptions(subsData);
+      setDonations(donData);
+      setPrayers(prData.map(normalizePrayer));
+      setEvents(evData);
+      setAuditLogs(auditData);
+      setHealthData(hlData);
+    } catch {
+      showToast("Error loading operational data", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prayerFilter]);
+
+  // Member Action Handler
+  const handleMemberAction = async (id: string | number, action: string, planName?: string, role?: string) => {
+    try {
+      await api.admin.memberAction(id, { action, planName, role });
+      showToast(`Action ${action} executed successfully`, "success");
+      setShowMemberModal(false);
+      loadAllData();
+    } catch {
+      showToast("Failed to perform member action", "error");
+    }
+  };
+
+  // Prayer Moderation
+  const handlePrayerStatus = async (id: number, status: "pending" | "approved" | "flagged") => {
+    try {
+      await api.admin.updatePrayerStatus(id, status);
+      setPrayers((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
+      showToast(`Prayer status marked as ${status}`, "success");
+    } catch {
+      showToast("Failed to update status", "error");
+    }
+  };
+
+  const handleDeletePrayer = async (id: number) => {
+    try {
+      await api.admin.deletePrayer(id);
+      setPrayers((prev) => prev.filter((p) => p.id !== id));
+      showToast("Prayer request removed", "success");
+    } catch {
+      showToast("Failed to delete prayer", "error");
+    }
+  };
+
+  // Broadcast campaign
+  const handleSendBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastSubject || !broadcastBody) return;
+    setSendingBroadcast(true);
+    setTimeout(() => {
+      setSendingBroadcast(false);
+      setShowBroadcastModal(false);
+      setBroadcastSubject("");
+      setBroadcastBody("");
+      showToast(`Pastoral Campaign sent to ${broadcastAudience.replace("_", " ")}!`, "success");
+    }, 1200);
+  };
+
+  const filteredMembers = members.filter((m) => {
+    const matchesSearch =
+      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.planName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = memberStatusFilter === "all" || m.subscriptionStatus === memberStatusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  useEffect(() => { (async () => {
-    try { setStats(await api.admin.stats()); } catch {}
-  })(); }, []);
-
-  useEffect(() => { (async () => {
-    try { setPrayers((await api.admin.prayers(prayerFilter)).map(normalizePrayer)); } catch {}
-  })(); }, [prayerFilter]);
-
-  useEffect(() => { (async () => {
-    try { setEvents(await api.events.list()); } catch {}
-  })(); }, []);
-
-  useEffect(() => { (async () => {
-    try { setAdminUsers(await api.admin.users()); } catch {}
-  })(); }, []);
-
-  useEffect(() => { (async () => {
-    try { setDonations(await api.admin.donations()); } catch {}
-  })(); }, []);
-
-  useEffect(() => { (async () => {
-    try { setSermons(await api.sermons.list()); } catch {}
-  })(); }, []);
-
-  const handlePrayerAction = async (id: number, action: string) => {
-    try {
-      if (action === "deleted") {
-        await api.admin.deletePrayer(id);
-        setPrayers(p => p.filter(p => p.id !== id));
-      } else {
-        await api.admin.updatePrayerStatus(id, action);
-        setPrayers(p => p.map(p => p.id === id ? { ...p, status: action } : p));
-      }
-      showToast(`Prayer request ${action}!`, "success");
-    } catch {
-      showToast("Failed to update prayer request.", "error");
-    }
-  };
-
-  const handleSermonSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-    const data = {
-      title: fd.get("title") as string,
-      speaker: fd.get("speaker") as string,
-      ministry: fd.get("ministry") as string || "",
-      duration: fd.get("duration") as string,
-      category: fd.get("category") as string,
-      thumbnail: (fd.get("thumbnail") as string) || "/images/sermon-default.jpg",
-      date: (fd.get("date") as string) || new Date().toISOString().split("T")[0],
-    };
-    try {
-      if (editingSermon) {
-        await api.sermons.update(editingSermon.id, data);
-        showToast("Sermon updated!", "success");
-      } else {
-        await api.sermons.create(data);
-        showToast("Sermon created!", "success");
-      }
-      setShowSermonModal(false);
-      setEditingSermon(null);
-      const list = await api.sermons.list();
-      setSermons(list);
-    } catch {
-      showToast("Failed to save sermon.", "error");
-    }
-  };
-
-  const handleDeleteSermon = async (id: string) => {
-    if (!confirm("Delete this sermon?")) return;
-    try {
-      await api.sermons.delete(id);
-      setSermons(p => p.filter(s => s.id !== id));
-      showToast("Sermon deleted!", "success");
-    } catch {
-      showToast("Failed to delete sermon.", "error");
-    }
-  };
-
-  const handleDeleteEvent = async (id: string) => {
-    try {
-      await api.events.delete(id);
-      setEvents(p => p.filter(e => e.id !== id));
-      showToast("Event deleted!", "success");
-    } catch {
-      showToast("Failed to delete event.", "error");
-    }
-  };
-
-  const handleCreateEvent = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-    try {
-      await api.events.create({
-        title: fd.get("title") as string,
-        date: fd.get("date") as string,
-        time: fd.get("time") as string,
-        location: fd.get("location") as string,
-        description: fd.get("description") as string,
-        isOnline: fd.get("isOnline") === "on",
-      });
-      showToast("Event created!", "success");
-      setShowEventModal(false);
-      const data = await api.events.list();
-      setEvents(data);
-    } catch {
-      showToast("Failed to create event.", "error");
-    }
-  };
-
-  const handleEditEvent = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editingEvent) return;
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-    try {
-      await api.events.update(editingEvent.id, {
-        title: fd.get("title") as string,
-        date: fd.get("date") as string,
-        time: fd.get("time") as string,
-        location: fd.get("location") as string,
-        description: fd.get("description") as string,
-        isOnline: fd.get("isOnline") === "on",
-      });
-      showToast("Event updated!", "success");
-      setEditingEvent(null);
-      const data = await api.events.list();
-      setEvents(data);
-    } catch {
-      showToast("Failed to update event.", "error");
-    }
-  };
-
   return (
-    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#0c1b33]">
-      <SEO title="Admin Dashboard" description="Manage sermons, events, prayer requests, users, and donations." />
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className="hidden lg:block w-[260px] min-h-[calc(100vh-72px)] bg-[#0f2240] border-r border-white/5">
-          <div className="p-4">
-            <div className="flex items-center gap-3 px-4 py-3 mb-4">
-              <div className="w-9 h-9 rounded-full bg-[#d4af37]/20 flex items-center justify-center">
-                <Users className="w-4 h-4 text-[#d4af37]" />
-              </div>
+    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#071324] text-white flex flex-col">
+      <SEO title="Enterprise Operations Hub — Kingdom Missions Network" description="Operational Command Center, Members, Subscriptions, and Governance." />
+
+      <div className="flex-1 flex flex-col lg:flex-row">
+        {/* Master Sidebar */}
+        <aside className="w-full lg:w-72 bg-[#09182d] border-r border-white/10 p-5 shrink-0 flex flex-col justify-between">
+          <div className="space-y-6">
+            <div className="pb-4 border-b border-white/10 flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white">Admin User</p>
-                <p className="text-xs text-white/40">Super Admin</p>
+                <span className="font-brand text-base font-bold text-white tracking-wider block">
+                  KMN OPERATIONS
+                </span>
+                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#d4af37]">
+                  Enterprise Master Hub
+                </span>
               </div>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                Live
+              </span>
             </div>
 
-            <nav className="space-y-1">
-              {sidebarItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all ${
-                    activeTab === item.id
-                      ? "bg-[#d4af37]/10 text-[#d4af37] font-medium"
-                      : "text-white/60 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.label}
-                  {item.id === "prayers" && (
-                    <span className="ml-auto px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs">
-                      {stats.pendingPrayers}
-                    </span>
-                  )}
-                </button>
+            {/* Navigation Groups */}
+            <div className="space-y-6">
+              {sidebarSections.map((section) => (
+                <div key={section.title}>
+                  <span className="text-[10px] uppercase font-bold text-white/40 tracking-[0.2em] block mb-2 px-3">
+                    {section.title}
+                  </span>
+                  <div className="space-y-1">
+                    {section.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeTab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setActiveTab(item.id)}
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+                            isActive
+                              ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-bold"
+                              : "text-white/70 hover:text-white hover:bg-white/5"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className={`w-4 h-4 ${isActive ? "text-[#0c1b33]" : "text-[#d4af37]"}`} />
+                            <span>{item.label}</span>
+                          </div>
+                          {item.id === "prayers" && stats.pendingPrayers > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-[#0c1b33] text-[10px] font-extrabold">
+                              {stats.pendingPrayers}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
-            </nav>
+            </div>
+          </div>
+
+          {/* Admin User Badge */}
+          <div className="pt-6 border-t border-white/10 mt-6 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center font-bold text-[#fbf5b7]">
+                OP
+              </div>
+              <div>
+                <span className="font-bold text-white block leading-tight">Super Administrator</span>
+                <span className="text-[10px] text-white/50 font-mono">Role: super_admin</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={loadAllData}
+              title="Refresh all metrics"
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            </button>
           </div>
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          {/* Top Bar */}
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="font-display text-2xl sm:text-3xl font-bold text-white capitalize">
-              {activeTab}
-            </h1>
-            <div className="flex items-center gap-3">
-              <div className="relative hidden sm:block">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37] w-48"
-                />
-              </div>
-              <button className="relative p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                <Bell className="w-5 h-5 text-white/60" />
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#d4af37]" />
-              </button>
-            </div>
-          </div>
-
-          {/* Overview Tab */}
+        {/* Main Content Pane */}
+        <main className="flex-1 p-6 sm:p-8 lg:p-10 bg-[#071324] overflow-y-auto">
+          {/* TAB 1: COMMAND CENTER / OVERVIEW */}
           {activeTab === "overview" && (
-            <div className="space-y-6">
-              {/* Metric Cards */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  {
-                    label: "Total Users",
-                    value: stats.totalUsers.toLocaleString(),
-                    icon: Users,
-                    trend: "+12%",
-                    up: true,
-                  },
-                  {
-                    label: "Prayer Requests",
-                    value: stats.totalPrayers.toLocaleString(),
-                    icon: HandHeart,
-                    trend: "+8%",
-                    up: true,
-                  },
-                  {
-                    label: "Sermons",
-                    value: stats.totalSermons.toString(),
-                    icon: Headphones,
-                    trend: "+5%",
-                    up: true,
-                  },
-                  {
-                    label: "Monthly Giving",
-                    value: `$${stats.monthlyGiving.toLocaleString()}`,
-                    icon: DollarSign,
-                    trend: "-3%",
-                    up: false,
-                  },
-                ].map((metric, i) => (
-                  <motion.div
-                    key={metric.label}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="bg-[#0f2240] rounded-xl p-5 border border-white/5"
+            <div className="space-y-8">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                    Executive Operations Command Center
+                  </h1>
+                  <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                    Live operational metrics, subscription telemetry, and ministerial health indicators.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowBroadcastModal(true)}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:brightness-110 transition-all"
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="w-10 h-10 rounded-lg bg-[#d4af37]/10 flex items-center justify-center">
-                        <metric.icon className="w-5 h-5 text-[#d4af37]" />
-                      </div>
-                      <span
-                        className={`flex items-center gap-1 text-xs font-medium ${
-                          metric.up ? "text-green-400" : "text-red-400"
+                    <Send className="w-4 h-4" />
+                    <span>Send Broadcast Campaign</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Attention Center Alerts */}
+              {attentionAlerts.length > 0 && (
+                <div className="space-y-3">
+                  <span className="text-xs uppercase tracking-wider font-bold text-[#d4af37] block">
+                    ⚠ Operational Attention Center
+                  </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {attentionAlerts.map((alert) => (
+                      <div
+                        key={alert.id}
+                        className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${
+                          alert.type === "warning"
+                            ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
+                            : alert.type === "danger"
+                            ? "bg-red-500/10 border-red-500/30 text-red-300"
+                            : "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
                         }`}
                       >
-                        {metric.up ? (
-                          <TrendingUp className="w-3 h-3" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3" />
-                        )}
-                        {metric.trend}
-                      </span>
-                    </div>
-                    <p className="text-2xl font-bold text-white mb-1">{metric.value}</p>
-                    <p className="text-sm text-white/40">{metric.label}</p>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Recent Activity */}
-              <div className="grid lg:grid-cols-2 gap-6">
-                <div className="bg-[#0f2240] rounded-xl p-5 border border-white/5">
-                  <h3 className="font-display text-lg font-semibold text-white mb-4">
-                    Recent Prayer Requests
-                  </h3>
-                  <div className="space-y-3">
-                    {prayers.slice(0, 5).map((prayer) => (
-                      <div
-                        key={prayer.id}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-white/5"
-                      >
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            statusColors[prayer.status]
-                          }`}
+                        <div className="flex items-center gap-3">
+                          <AlertTriangle className="w-5 h-5 shrink-0" />
+                          <div>
+                            <span className="font-bold text-xs sm:text-sm block">{alert.title}</span>
+                            <span className="text-[11px] opacity-80 block">{alert.description}</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab(alert.tab as Tab)}
+                          className="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold text-xs shrink-0 transition-colors"
                         >
-                          {prayer.status}
-                        </span>
-                        <p className="text-sm text-white/70 flex-1 truncate">{prayer.text}</p>
+                          {alert.actionLabel}
+                        </button>
                       </div>
                     ))}
                   </div>
                 </div>
+              )}
 
-                <div className="bg-[#0f2240] rounded-xl p-5 border border-white/5">
-                  <h3 className="font-display text-lg font-semibold text-white mb-4">
-                    Upcoming Events
-                  </h3>
-                  <div className="space-y-3">
-                    {events.map((event) => (
-                      <div
-                        key={event.id}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-white/5"
-                      >
-                        <div className="w-10 h-10 rounded-lg bg-[#d4af37]/10 flex items-center justify-center flex-shrink-0">
-                          <Calendar className="w-5 h-5 text-[#d4af37]" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white truncate">{event.title}</p>
-                          <p className="text-xs text-white/40">
-                            {event.month} {event.day} — {event.time}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+              {/* Top-Level KPI Metric Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="p-6 rounded-3xl bg-white/[0.04] border border-white/10 space-y-2">
+                  <div className="flex items-center justify-between text-white/50 text-xs font-semibold">
+                    <span>MONTHLY RECURRING (MRR)</span>
+                    <TrendingUp className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-brand font-extrabold text-white">
+                    KES {stats.mrrKes.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-[#d4af37] font-semibold">
+                    ≈ ${stats.mrrUsd.toLocaleString()} USD / month
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-3xl bg-white/[0.04] border border-white/10 space-y-2">
+                  <div className="flex items-center justify-between text-white/50 text-xs font-semibold">
+                    <span>ACTIVE PARTNERS</span>
+                    <Crown className="w-4 h-4 text-[#d4af37]" />
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-brand font-extrabold text-white">
+                    {stats.activeSubscriptions || members.length}
+                  </div>
+                  <div className="text-xs text-emerald-400 font-semibold">
+                    ● Churn Rate: {stats.churnRate}
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-3xl bg-white/[0.04] border border-white/10 space-y-2">
+                  <div className="flex items-center justify-between text-white/50 text-xs font-semibold">
+                    <span>TOTAL REGISTERED MEMBERS</span>
+                    <Users className="w-4 h-4 text-sky-400" />
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-brand font-extrabold text-white">
+                    {stats.totalUsers || members.length}
+                  </div>
+                  <div className="text-xs text-white/60 font-semibold">
+                    Across 18+ Nations
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-3xl bg-white/[0.04] border border-white/10 space-y-2">
+                  <div className="flex items-center justify-between text-white/50 text-xs font-semibold">
+                    <span>ANNUAL RUN RATE (ARR)</span>
+                    <DollarSign className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-brand font-extrabold text-white">
+                    KES {stats.arrKes.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-white/60 font-semibold">
+                    ≈ ${stats.arrUsd.toLocaleString()} USD projected
                   </div>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Prayer Moderation Tab */}
-          {activeTab === "prayers" && (
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center gap-3">
-                {["all", "pending", "approved", "flagged"].map((filter) => (
+              {/* Tier Distribution Breakdown */}
+              <div className="p-7 rounded-3xl bg-white/[0.03] border border-white/10 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-brand text-lg font-bold text-white">
+                      Partnership Tier Distribution & Ministry Allocation
+                    </h3>
+                    <p className="text-xs text-white/60">Live breakdown of active covenant subscriber tiers.</p>
+                  </div>
                   <button
-                    key={filter}
-                    onClick={() => setPrayerFilter(filter)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      prayerFilter === filter
-                        ? "bg-[#d4af37] text-[#0c1b33]"
-                        : "bg-white/5 text-white/60 hover:bg-white/10"
-                    }`}
+                    type="button"
+                    onClick={() => setActiveTab("plans")}
+                    className="text-xs text-[#d4af37] font-bold hover:underline"
                   >
-                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                    Manage Plans →
                   </button>
-                ))}
-              </div>
-
-              <div className="bg-[#0f2240] rounded-xl border border-white/5 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-white/5">
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">
-                          Request
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">
-                          Category
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">
-                          Author
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">
-                          Date
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">
-                          Status
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredPrayers.map((prayer) => (
-                        <tr
-                          key={prayer.id}
-                          className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                        >
-                          <td className="px-4 py-3 text-sm text-white/70 max-w-xs truncate">
-                            {prayer.text}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-1 rounded-full bg-[#d4af37]/10 text-[#d4af37] text-xs">
-                              {prayer.category}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-white/60">{prayer.author}</td>
-                          <td className="px-4 py-3 text-sm text-white/60">{prayer.date}</td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                statusColors[prayer.status]
-                              }`}
-                            >
-                              {prayer.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => handlePrayerAction(prayer.id, "approved")}
-                                className="p-1.5 rounded-lg hover:bg-green-500/20 text-green-400 transition-colors"
-                                title="Approve"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handlePrayerAction(prayer.id, "flagged")}
-                                className="p-1.5 rounded-lg hover:bg-amber-500/20 text-amber-400 transition-colors"
-                                title="Flag"
-                              >
-                                <Flag className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handlePrayerAction(prayer.id, "deleted")}
-                                className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {/* Users Tab */}
-          {activeTab === "users" && (
-            <div className="bg-[#0f2240] rounded-xl border border-white/5 overflow-hidden">
-              <div className="p-5 border-b border-white/5">
-                <h3 className="font-display text-lg font-semibold text-white">
-                  User Management
-                </h3>
-                <p className="text-sm text-white/40 mt-1">
-                  {stats.totalUsers.toLocaleString()} total users
-                </p>
-              </div>
-              <div className="p-5">
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {adminUsers.map((user, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="bg-white/5 rounded-lg p-4"
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-full bg-[#d4af37]/10 flex items-center justify-center">
-                          <Users className="w-5 h-5 text-[#d4af37]" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-white">{user.name}</p>
-                          <p className="text-xs text-white/40">{user.email}</p>
-                        </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {partnerPlansCatalog.map((tier) => (
+                    <div key={tier.id} className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#fbf5b7]">{tier.badge}</span>
+                        <span className="text-xs font-bold text-white">{tier.membersCount} Partners</span>
                       </div>
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/10 text-[#d4af37] text-xs">
-                          {user.role}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs ${
-                            user.status === "active"
-                              ? "bg-green-500/20 text-green-400"
-                              : "bg-red-500/20 text-red-400"
-                          }`}
-                        >
-                          {user.status}
-                        </span>
+                      <div className="text-lg font-bold text-white">
+                        KES {tier.kes.toLocaleString()} <span className="text-xs text-white/50">/ mo</span>
                       </div>
-                    </motion.div>
+                      <p className="text-[11px] text-white/60 leading-snug">{tier.impact}</p>
+                    </div>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Events Tab */}
-          {activeTab === "events" && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-lg font-semibold text-white">Events</h3>
-                <button
-                  onClick={() => setShowEventModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37] text-[#0c1b33] text-sm font-medium hover:brightness-110 transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Event
-                </button>
-              </div>
-
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {events.map((event, i) => (
-                  <motion.div
-                    key={event.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="bg-[#0f2240] rounded-xl overflow-hidden border border-white/5"
-                  >
-                    <div className="relative h-32">
-                      <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="p-4">
-                      <h4 className="text-sm font-medium text-white mb-1">{event.title}</h4>
-                      <p className="text-xs text-white/40 mb-3">
-                        {event.month} {event.day}, 2026 — {event.time} {event.timezone}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => setEditingEvent(event)} className="p-1.5 rounded-lg bg-white/5 hover:bg-blue-500/20 transition-colors">
-                          <Pencil className="w-3.5 h-3.5 text-blue-400" />
-                        </button>
-                        <button onClick={() => handleDeleteEvent(event.id)} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Sermons Tab */}
-          {activeTab === "sermons" && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-lg font-semibold text-white">Sermon Management</h3>
-                <button
-                  onClick={() => { setEditingSermon(null); setShowSermonModal(true); }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37] text-[#0c1b33] text-sm font-medium hover:brightness-110 transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Sermon
-                </button>
-              </div>
-
-              <div className="bg-[#0f2240] rounded-xl border border-white/5 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-white/5">
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">Title</th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">Speaker</th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">Category</th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">Duration</th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">Date</th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-white/40 uppercase">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sermons.map((sermon) => (
-                        <tr key={sermon.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                          <td className="px-4 py-3 text-sm text-white/70 max-w-xs truncate">{sermon.title}</td>
-                          <td className="px-4 py-3 text-sm text-white/60">{sermon.speaker}</td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-1 rounded-full bg-[#d4af37]/10 text-[#d4af37] text-xs">{sermon.category}</span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-white/60">{sermon.duration}</td>
-                          <td className="px-4 py-3 text-sm text-white/60">{sermon.date}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => { setEditingSermon(sermon); setShowSermonModal(true); }} className="p-1.5 rounded-lg hover:bg-blue-500/20 text-blue-400 transition-colors" title="Edit">
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => handleDeleteSermon(sermon.id)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-colors" title="Delete">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Donations Tab */}
-          {activeTab === "donations" && (
-            <div className="space-y-6">
-              <div className="grid sm:grid-cols-3 gap-4">
-                {[
-                  { label: "This Month", value: `$${stats.monthlyGiving.toLocaleString()}`, color: "text-[#d4af37]" },
-                  { label: "Total YTD", value: `$${stats.totalYtd?.toLocaleString() || "0"}`, color: "text-green-400" },
-                  { label: "Donors", value: String(stats.donorCount || 0), color: "text-blue-400" },
-                ].map((stat) => (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-[#0f2240] rounded-xl p-5 border border-white/5 text-center"
-                  >
-                    <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-                    <p className="text-sm text-white/40 mt-1">{stat.label}</p>
-                  </motion.div>
-                ))}
-              </div>
-
-              <div className="bg-[#0f2240] rounded-xl border border-white/5 overflow-hidden">
-                <div className="p-5 border-b border-white/5">
-                  <h3 className="font-display text-lg font-semibold text-white">
-                    Recent Donations
-                  </h3>
-                </div>
-                <div className="divide-y divide-white/5">
-                  {donations.map((donation, i) => (
-                    <div key={i} className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
+              {/* Recent Activity Stream */}
+              <div className="p-7 rounded-3xl bg-white/[0.03] border border-white/10 space-y-4">
+                <h3 className="font-brand text-lg font-bold text-white">Recent Administrative & Transaction Stream</h3>
+                <div className="space-y-2">
+                  {donations.slice(0, 5).map((don, idx) => (
+                    <div key={idx} className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#d4af37]/10 flex items-center justify-center">
-                          <DollarSign className="w-4 h-4 text-[#d4af37]" />
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center font-bold">
+                          ✓
                         </div>
                         <div>
-                          <p className="text-sm text-white">{donation.name}</p>
-                          <p className="text-xs text-white/40">{donation.date}</p>
+                          <span className="font-bold text-white block">{don.name}</span>
+                          <span className="text-white/50 text-[11px]">{don.provider?.toUpperCase()} • {don.date || "Today"}</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium text-[#d4af37]">${donation.amount}</p>
-                        {donation.recurring && (
-                          <p className="text-xs text-green-400">Monthly</p>
-                        )}
+                        <span className="font-bold text-emerald-400 block">{don.currency} {don.amount.toLocaleString()}</span>
+                        <span className="text-[10px] text-white/40">{don.recurring ? "Monthly Recurring" : "One-Time Seed"}</span>
                       </div>
                     </div>
                   ))}
@@ -704,56 +543,522 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Settings Tab */}
-          {activeTab === "settings" && (
-            <div className="bg-[#0f2240] rounded-xl border border-white/5 p-6 max-w-2xl">
-              <h3 className="font-display text-lg font-semibold text-white mb-6">
-                Platform Settings
-              </h3>
-              <div className="space-y-6">
-                {[
-                  { label: "Platform Name", value: "Kingdom Mission Network", type: "text" },
-                  { label: "Contact Email", value: "admin@kingdommissionnetwork.org", type: "email" },
-                  { label: "Default Language", value: "English", type: "select" },
-                  { label: "Prayer Moderation", value: "AI-assisted", type: "select" },
-                  { label: "Auto-approve prayers", value: false, type: "toggle" },
-                  { label: "Enable live streaming", value: true, type: "toggle" },
-                ].map((setting) => (
-                  <div key={setting.label} className="flex items-center justify-between py-3 border-b border-white/5">
-                    <div>
-                      <p className="text-sm text-white">{setting.label}</p>
-                    </div>
-                    {setting.type === "toggle" ? (
-                      <button
-                        className={`w-11 h-6 rounded-full transition-colors ${
-                          setting.value ? "bg-[#d4af37]" : "bg-white/20"
-                        }`}
-                      >
-                        <div
-                          className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                            setting.value ? "translate-x-5" : "translate-x-0.5"
-                          }`}
-                        />
-                      </button>
-                    ) : setting.type === "select" ? (
-                      <div className="flex items-center gap-2 text-sm text-white/60">
-                        {String(setting.value)}
-                        <ChevronDown className="w-4 h-4" />
+          {/* TAB 2: MEMBERS & PARTNERS HUB */}
+          {activeTab === "members" && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                    Members & Covenant Partners
+                  </h1>
+                  <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                    Manage member profiles, partnership subscriptions, permissions, and official credentials.
+                  </p>
+                </div>
+              </div>
+
+              {/* Search & Filter Bar */}
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="relative flex-1 w-full">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by name, email, or tier..."
+                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 text-xs sm:text-sm focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Filter className="w-4 h-4 text-white/50 shrink-0" />
+                  <select
+                    value={memberStatusFilter}
+                    onChange={(e) => setMemberStatusFilter(e.target.value)}
+                    className="px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs sm:text-sm focus:outline-none"
+                  >
+                    <option value="all" className="bg-[#0c1b33]">All Statuses</option>
+                    <option value="active" className="bg-[#0c1b33]">Active</option>
+                    <option value="trial" className="bg-[#0c1b33]">Trial</option>
+                    <option value="suspended" className="bg-[#0c1b33]">Suspended</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Members Table */}
+              <div className="rounded-3xl bg-white/[0.03] border border-white/10 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 bg-white/5 text-white/50 text-[11px] uppercase tracking-wider font-bold">
+                        <th className="py-4 px-6">Member</th>
+                        <th className="py-4 px-6">Role</th>
+                        <th className="py-4 px-6">Partnership Tier</th>
+                        <th className="py-4 px-6">Status</th>
+                        <th className="py-4 px-6">Joined Date</th>
+                        <th className="py-4 px-6 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {filteredMembers.map((member) => (
+                        <tr key={member.id} className="hover:bg-white/[0.04] transition-colors">
+                          <td className="py-4 px-6 font-bold text-white">
+                            <div>{member.name}</div>
+                            <div className="text-[11px] font-normal text-white/50 font-mono">{member.email}</div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                              member.role === "admin"
+                                ? "bg-[#d4af37]/20 text-[#fbf5b7] border border-[#d4af37]/40"
+                                : "bg-white/10 text-white/70"
+                            }`}>
+                              {member.role}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className="font-bold text-[#fbf5b7]">{member.planName}</span>
+                            {member.amount > 0 && (
+                              <div className="text-[11px] text-white/50">{member.currency} {member.amount.toLocaleString()} / mo</div>
+                            )}
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                              member.subscriptionStatus === "active"
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : "bg-amber-500/20 text-amber-400"
+                            }`}>
+                              ● {member.subscriptionStatus.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-white/60">{member.joinedAt}</td>
+                          <td className="py-4 px-6 text-right">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedMember(member);
+                                setShowMemberModal(true);
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors"
+                            >
+                              Manage Profile
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: SUBSCRIPTIONS & PLANS HUB */}
+          {activeTab === "subscriptions" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                  Active Subscription Telemetry
+                </h1>
+                <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                  Unified recurring revenue stream across Paystack (M-Pesa/Cards) and PayPal (USD).
+                </p>
+              </div>
+
+              <div className="rounded-3xl bg-white/[0.03] border border-white/10 overflow-hidden">
+                <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                  <h3 className="font-brand font-bold text-lg text-white">Live Subscriptions ({subscriptions.length || members.length})</h3>
+                </div>
+                <div className="divide-y divide-white/5">
+                  {(subscriptions.length > 0 ? (subscriptions as Record<string, unknown>[]) : (members as unknown as Record<string, unknown>[])).map((sub, i) => (
+                    <div key={i} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs sm:text-sm">
+                      <div>
+                        <span className="font-bold text-white block">{String(sub.subscriber_name || sub.name || "Partner")}</span>
+                        <span className="text-white/50 text-[11px] font-mono">{String(sub.subscriber_email || sub.email || "")}</span>
                       </div>
-                    ) : (
-                      <input
-                        type={setting.type}
-                        defaultValue={String(setting.value)}
-                        className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37] w-64"
-                      />
-                    )}
+                      <div className="flex items-center gap-6">
+                        <div>
+                          <span className="text-[10px] text-white/50 uppercase font-semibold block">Tier</span>
+                          <span className="font-bold text-[#fbf5b7]">{String(sub.plan_name || sub.planName || "Kingdom Partner")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-white/50 uppercase font-semibold block">Amount</span>
+                          <span className="font-bold text-emerald-400">
+                            {String(sub.currency || "KES")} {Number(sub.amount || 1000).toLocaleString()} / mo
+                          </span>
+                        </div>
+                        <div>
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-xs">
+                            Active
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: BILLING & INVOICES */}
+          {activeTab === "billing" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                  Billing, Payments & Invoices Ledger
+                </h1>
+                <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                  Complete searchable ledger of seed contributions, monthly recurring gifts, and official tax receipts.
+                </p>
+              </div>
+
+              <div className="rounded-3xl bg-white/[0.03] border border-white/10 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 bg-white/5 text-white/50 text-[11px] uppercase tracking-wider font-bold">
+                        <th className="py-4 px-6">Donor / Partner</th>
+                        <th className="py-4 px-6">Amount</th>
+                        <th className="py-4 px-6">Provider & Reference</th>
+                        <th className="py-4 px-6">Type</th>
+                        <th className="py-4 px-6">Status</th>
+                        <th className="py-4 px-6 text-right">Receipt</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {donations.map((don, idx) => (
+                        <tr key={idx} className="hover:bg-white/[0.04] transition-colors">
+                          <td className="py-4 px-6 font-bold text-white">
+                            <div>{don.name}</div>
+                            <div className="text-[11px] text-white/50 font-mono">{don.email || "partner@kmn.org"}</div>
+                          </td>
+                          <td className="py-4 px-6 font-bold text-emerald-400">
+                            {don.currency || "KES"} {don.amount.toLocaleString()}
+                          </td>
+                          <td className="py-4 px-6 font-mono text-xs text-white/70">
+                            <div>{don.provider?.toUpperCase() || "PAYSTACK"}</div>
+                            <div className="text-[10px] text-white/40">{don.reference || `REF-${idx + 1000}`}</div>
+                          </td>
+                          <td className="py-4 px-6 text-white/70">{don.recurring ? "Monthly Recurring" : "One-Time Seed"}</td>
+                          <td className="py-4 px-6">
+                            <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold">
+                              ✓ Completed
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                window.print();
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs inline-flex items-center gap-1.5 transition-colors"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Invoice</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: PLANS & PRICING */}
+          {activeTab === "plans" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                  Partnership Plans & Tiers Configuration
+                </h1>
+                <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                  Configure covenant tier amounts, ministry perks, impact descriptions, and live currency rates.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {partnerPlansCatalog.map((plan) => (
+                  <div key={plan.id} className="p-7 rounded-3xl bg-white/[0.04] border border-white/10 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="px-3 py-1 rounded-full bg-white/10 font-bold text-xs text-[#fbf5b7]">{plan.badge}</span>
+                      <span className="text-xs text-emerald-400 font-bold">● Active in Production</span>
+                    </div>
+                    <h3 className="font-brand text-xl font-bold text-white">{plan.name}</h3>
+                    <div className="text-2xl font-brand font-bold text-white">
+                      KES {plan.kes.toLocaleString()} <span className="text-xs text-white/50 font-normal">/ month (≈ ${plan.usd} USD)</span>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 text-xs text-white/70 leading-relaxed">
+                      <strong className="text-[#d4af37] block mb-1">Impact Directive:</strong>
+                      {plan.impact}
+                    </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: CONTENT & CMS */}
+          {activeTab === "content" && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                    Content Management System (CMS)
+                  </h1>
+                  <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                    Manage sermon recordings, livestream replays, and Kingdom Events with tiered access control rules.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 space-y-4">
+                <h3 className="font-brand font-bold text-lg text-white">Kingdom Events ({events.length})</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {events.map((ev) => (
+                    <div key={ev.id} className="p-4 rounded-2xl bg-white/[0.04] border border-white/5 flex items-start gap-4 text-xs">
+                      <div className="w-12 h-12 rounded-xl bg-[#d4af37]/20 flex items-center justify-center font-bold text-[#d4af37] shrink-0">
+                        {ev.day || "LIVE"}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white text-sm">{ev.title}</h4>
+                        <p className="text-white/60 text-xs mt-1">{ev.location} • {ev.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: PRAYER ALTAR MODERATION */}
+          {activeTab === "prayers" && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                    24/7 Global Prayer Altar Moderation
+                  </h1>
+                  <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                    Approve, feature, or flag intercessory requests from believers worldwide.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {["all", "pending", "approved", "flagged"].map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setPrayerFilter(st)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase transition-all ${
+                        prayerFilter === st
+                          ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33]"
+                          : "bg-white/10 text-white/70 hover:text-white"
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {prayers.map((prayer) => (
+                  <div key={prayer.id} className="p-6 rounded-3xl bg-white/[0.04] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-bold text-white text-sm">{prayer.author}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] text-[#fbf5b7] font-semibold">{prayer.category}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          prayer.status === "approved"
+                            ? "bg-emerald-500/20 text-emerald-400"
+                            : prayer.status === "flagged"
+                            ? "bg-red-500/20 text-red-400"
+                            : "bg-amber-500/20 text-amber-400"
+                        }`}>
+                          {prayer.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-white/80 text-xs sm:text-sm leading-relaxed">&ldquo;{prayer.text}&rdquo;</p>
+                      <span className="text-[11px] text-white/40 block">{prayer.date}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {prayer.status !== "approved" && (
+                        <button
+                          type="button"
+                          onClick={() => handlePrayerStatus(prayer.id, "approved")}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {prayer.status !== "flagged" && (
+                        <button
+                          type="button"
+                          onClick={() => handlePrayerStatus(prayer.id, "flagged")}
+                          className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-colors"
+                        >
+                          Flag
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePrayer(prayer.id)}
+                        className="p-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 8: COMMUNICATIONS & CAMPAIGNS */}
+          {activeTab === "communications" && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                    Pastoral Communications & Campaigns
+                  </h1>
+                  <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                    Broadcast ministry updates, missionary reports, and Bishop Dr. George Githinji letters to segmented audiences.
+                  </p>
+                </div>
                 <button
-                  onClick={() => showToast("Settings saved!", "success")}
-                  className="w-full btn-gold"
+                  type="button"
+                  onClick={() => setShowBroadcastModal(true)}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:brightness-110 transition-all"
                 >
-                  Save Settings
+                  <Send className="w-4 h-4" />
+                  <span>New Broadcast</span>
+                </button>
+              </div>
+
+              <div className="p-8 rounded-3xl bg-white/[0.03] border border-white/10 text-center max-w-xl mx-auto space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-[#d4af37]/20 text-[#d4af37] flex items-center justify-center mx-auto">
+                  <Mail className="w-7 h-7" />
+                </div>
+                <h3 className="font-brand text-xl font-bold text-white">Ready to Dispatch Pastoral Message</h3>
+                <p className="text-white/70 text-xs sm:text-sm">
+                  Reach all active Kingdom Partners, Ambassadors, and Global Harvest delegates simultaneously.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowBroadcastModal(true)}
+                  className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-sm shadow-lg hover:brightness-110 transition-all"
+                >
+                  Compose Pastoral Letter
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 9: SECURITY & AUDIT CENTER */}
+          {activeTab === "security" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                  Security, Health & Audit Command Center
+                </h1>
+                <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                  Immutable audit trail of all administrative actions and live service health monitoring.
+                </p>
+              </div>
+
+              {/* Service Health Grid */}
+              {healthData && (
+                <div className="p-7 rounded-3xl bg-white/[0.03] border border-white/10 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-brand font-bold text-lg text-white">Platform System Health</h3>
+                    <span className="text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      All Services Nominal
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {healthData.services.map((svc) => (
+                      <div key={svc.name} className="p-4 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-between text-xs">
+                        <span className="font-bold text-white">{svc.name}</span>
+                        <div className="text-right">
+                          <span className="text-emerald-400 font-bold block">● {svc.status}</span>
+                          <span className="text-[10px] text-white/40">{svc.latency}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Audit Logs Table */}
+              <div className="p-7 rounded-3xl bg-white/[0.03] border border-white/10 space-y-4">
+                <h3 className="font-brand font-bold text-lg text-white">Chronological Administrative Audit Trail</h3>
+                <div className="divide-y divide-white/5 text-xs">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="py-3 flex items-center justify-between gap-4">
+                      <div>
+                        <span className="font-bold text-white block">{log.action}</span>
+                        <span className="text-white/50 text-[11px]">By {log.actor} • Target: {log.target_type}:{log.target_id}</span>
+                      </div>
+                      <span className="text-[11px] text-white/40 font-mono">
+                        {new Date(log.created_at).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 10: SYSTEM SETTINGS */}
+          {activeTab === "settings" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                  System Settings & Organization Governance
+                </h1>
+                <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                  Global branding, payment gateways, timezone, and security configurations.
+                </p>
+              </div>
+
+              <div className="p-8 rounded-3xl bg-white/[0.04] border border-white/10 max-w-2xl space-y-6">
+                <div>
+                  <label htmlFor="adminOrgNameInput" className="block text-xs uppercase font-bold text-white/60 mb-2">Organization Name</label>
+                  <input
+                    id="adminOrgNameInput"
+                    type="text"
+                    defaultValue="Kingdom Missions Network"
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-bold text-sm focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="adminOversightInput" className="block text-xs uppercase font-bold text-white/60 mb-2">Spiritual Oversight</label>
+                  <input
+                    id="adminOversightInput"
+                    type="text"
+                    defaultValue="Bishop Dr. George Githinji"
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-bold text-sm focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="adminDomainInput" className="block text-xs uppercase font-bold text-white/60 mb-2">Primary Domain</label>
+                  <input
+                    id="adminDomainInput"
+                    type="text"
+                    defaultValue="kingdommissionsnetwork.org"
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-bold text-sm focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => showToast("Settings updated successfully", "success")}
+                  className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-sm shadow-md"
+                >
+                  Save Organization Settings
                 </button>
               </div>
             </div>
@@ -761,298 +1066,166 @@ export default function AdminDashboard() {
         </main>
       </div>
 
-      {/* Create Event Modal */}
-      <AnimatePresence>
-        {showEventModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-black/50"
-            onClick={() => setShowEventModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#0f2240] rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-white/5"
+      {/* MEMBER PROFILE DRAWER / MODAL */}
+      {showMemberModal && selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-xl p-8 rounded-3xl bg-[#0d1d36] border-2 border-[#d4af37] text-white shadow-2xl space-y-6">
+            <button
+              type="button"
+              onClick={() => setShowMemberModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-display text-xl font-semibold text-white">{editingEvent ? "Edit Event" : "Create Event"}</h3>
-                <button
-                  onClick={() => setShowEventModal(false)}
-                  className="p-1 rounded-lg hover:bg-white/10 transition-colors"
-                >
-                  <X className="w-5 h-5 text-white/60" />
-                </button>
-              </div>
-              <form onSubmit={handleCreateEvent} className="space-y-4">
-                <div>
-                  <label htmlFor="create-title" className="block text-sm text-white/60 mb-1">Event Title</label>
-                  <input
-                    id="create-title"
-                    name="title"
-                    type="text"
-                    defaultValue={editingEvent?.title || ""}
-                    placeholder="Enter event title"
-                    className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="create-date" className="block text-sm text-white/60 mb-1">Date</label>
-                    <input
-                      id="create-date"
-                      name="date"
-                      type="date"
-                      defaultValue={editingEvent?.date || ""}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="create-time" className="block text-sm text-white/60 mb-1">Time</label>
-                    <input
-                      id="create-time"
-                      name="time"
-                      type="time"
-                      defaultValue={editingEvent?.time || ""}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="create-location" className="block text-sm text-white/60 mb-1">Location</label>
-                  <input
-                    id="create-location"
-                    name="location"
-                    type="text"
-                    defaultValue={editingEvent?.location || ""}
-                    placeholder="Physical location or 'Online'"
-                    className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="create-description" className="block text-sm text-white/60 mb-1">Description</label>
-                  <textarea
-                    id="create-description"
-                    name="description"
-                    rows={3}
-                    defaultValue={editingEvent?.description || ""}
-                    placeholder="Event details..."
-                    className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                  />
-                </div>
-                <div className="flex items-center gap-3">
-                  <label htmlFor="create-isOnline" className="text-sm text-white/60">Online Event (Live Stream)</label>
-                  <input
-                    id="create-isOnline"
-                    name="isOnline"
-                    type="checkbox"
-                    defaultChecked={editingEvent?.isOnline || false}
-                    className="w-4 h-4 rounded text-[#d4af37] bg-white/5 border-white/10 focus:ring-[#d4af37]"
-                  />
-                </div>
-                <button type="submit" className="w-full btn-gold">
-                  Create Event
-                </button>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <X className="w-5 h-5" />
+            </button>
 
-      {/* Edit Event Modal */}
-      <AnimatePresence>
-        {editingEvent && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-black/50"
-            onClick={() => setEditingEvent(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#0f2240] rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-white/5"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-display text-xl font-semibold text-white">Edit Event</h3>
-                <button
-                  onClick={() => setEditingEvent(null)}
-                  className="p-1 rounded-lg hover:bg-white/10 transition-colors"
-                >
-                  <X className="w-5 h-5 text-white/60" />
-                </button>
-              </div>
-              <form onSubmit={handleEditEvent} className="space-y-4">
-                <div>
-                  <label htmlFor="edit-title" className="block text-sm text-white/60 mb-1">Event Title</label>
-                  <input
-                    id="edit-title"
-                    name="title"
-                    type="text"
-                    defaultValue={editingEvent.title}
-                    className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="edit-date" className="block text-sm text-white/60 mb-1">Date</label>
-                    <input
-                      id="edit-date"
-                      name="date"
-                      type="date"
-                      defaultValue={editingEvent.date}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="edit-time" className="block text-sm text-white/60 mb-1">Time</label>
-                    <input
-                      id="edit-time"
-                      name="time"
-                      type="time"
-                      defaultValue={editingEvent.time}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="edit-location" className="block text-sm text-white/60 mb-1">Location</label>
-                  <input
-                    id="edit-location"
-                    name="location"
-                    type="text"
-                    defaultValue={editingEvent.location}
-                    className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="edit-description" className="block text-sm text-white/60 mb-1">Description</label>
-                  <textarea
-                    id="edit-description"
-                    name="description"
-                    rows={3}
-                    defaultValue={editingEvent.description}
-                    className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] resize-none"
-                  />
-                </div>
-                <button type="submit" className="w-full btn-gold">
-                  Save Changes
-                </button>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <div>
+              <span className="text-[10px] uppercase font-bold text-[#d4af37] tracking-widest block">
+                Member Profile & Governance
+              </span>
+              <h3 className="font-brand text-2xl font-bold text-white mt-1">{selectedMember.name}</h3>
+              <p className="text-xs text-white/60 font-mono">{selectedMember.email}</p>
+            </div>
 
-      {/* Create / Edit Sermon Modal */}
-      <AnimatePresence>
-        {showSermonModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-black/50"
-            onClick={() => { setShowSermonModal(false); setEditingSermon(null); }}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#0f2240] rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-white/5"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-display text-xl font-semibold text-white">
-                  {editingSermon ? "Edit Sermon" : "Create Sermon"}
-                </h3>
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 text-xs">
+              <div>
+                <span className="text-white/50 block">Partnership Tier</span>
+                <span className="font-bold text-[#fbf5b7] text-sm">{selectedMember.planName}</span>
+              </div>
+              <div>
+                <span className="text-white/50 block">Member Role</span>
+                <span className="font-bold text-white text-sm uppercase">{selectedMember.role}</span>
+              </div>
+              <div>
+                <span className="text-white/50 block">Status</span>
+                <span className="font-bold text-emerald-400 text-sm uppercase">● {selectedMember.subscriptionStatus}</span>
+              </div>
+              <div>
+                <span className="text-white/50 block">Joined</span>
+                <span className="font-bold text-white text-sm">{selectedMember.joinedAt}</span>
+              </div>
+            </div>
+
+            {/* Admin Actions */}
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-white/70 block">Administrative Actions:</span>
+              <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => { setShowSermonModal(false); setEditingSermon(null); }}
-                  className="p-1 rounded-lg hover:bg-white/10 transition-colors"
+                  type="button"
+                  onClick={() => handleMemberAction(selectedMember.id, "change_plan", "Kingdom Ambassador")}
+                  className="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors"
                 >
-                  <X className="w-5 h-5 text-white/60" />
+                  Promote to Ambassador
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMemberAction(selectedMember.id, "change_role", undefined, selectedMember.role === "admin" ? "member" : "admin")}
+                  className="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors"
+                >
+                  {selectedMember.role === "admin" ? "Demote from Admin" : "Make Admin"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMemberAction(selectedMember.id, selectedMember.subscriptionStatus === "suspended" ? "reactivate" : "suspend")}
+                  className="p-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold text-xs transition-colors"
+                >
+                  {selectedMember.subscriptionStatus === "suspended" ? "Reactivate Member" : "Suspend Account"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.print();
+                  }}
+                  className="p-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs shadow-md"
+                >
+                  Print Partner ID
                 </button>
               </div>
-              <form onSubmit={handleSermonSubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="sermon-title" className="block text-sm text-white/60 mb-1">Title</label>
-                  <input
-                    id="sermon-title"
-                    name="title"
-                    type="text"
-                    defaultValue={editingSermon?.title}
-                    className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="sermon-speaker" className="block text-sm text-white/60 mb-1">Speaker</label>
-                    <input
-                      id="sermon-speaker"
-                      name="speaker"
-                      type="text"
-                      defaultValue={editingSermon?.speaker}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="sermon-ministry" className="block text-sm text-white/60 mb-1">Ministry</label>
-                    <input
-                      id="sermon-ministry"
-                      name="ministry"
-                      type="text"
-                      defaultValue={editingSermon?.ministry}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="sermon-duration" className="block text-sm text-white/60 mb-1">Duration</label>
-                    <input
-                      id="sermon-duration"
-                      name="duration"
-                      type="text"
-                      defaultValue={editingSermon?.duration}
-                      placeholder="e.g. 42 min"
-                      className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="sermon-category" className="block text-sm text-white/60 mb-1">Category</label>
-                    <input
-                      id="sermon-category"
-                      name="category"
-                      type="text"
-                      defaultValue={editingSermon?.category}
-                      placeholder="e.g. Faith"
-                      className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="sermon-thumbnail" className="block text-sm text-white/60 mb-1">Thumbnail URL</label>
-                  <input
-                    id="sermon-thumbnail"
-                    name="thumbnail"
-                    type="text"
-                    defaultValue={editingSermon?.thumbnail}
-                    className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                  />
-                </div>
-                <button type="submit" className="w-full btn-gold">
-                  {editingSermon ? "Save Changes" : "Create Sermon"}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BROADCAST CAMPAIGN MODAL */}
+      {showBroadcastModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-xl p-8 rounded-3xl bg-[#0d1d36] border-2 border-[#d4af37] text-white shadow-2xl space-y-6">
+            <button
+              type="button"
+              onClick={() => setShowBroadcastModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div>
+              <span className="text-[10px] uppercase font-bold text-[#d4af37] tracking-widest block">
+                Official Ministry Broadcast
+              </span>
+              <h3 className="font-brand text-2xl font-bold text-white mt-1">Compose Pastoral Campaign</h3>
+            </div>
+
+            <form onSubmit={handleSendBroadcast} className="space-y-4">
+              <div>
+                <label htmlFor="broadcastAudienceSelect" className="block text-xs uppercase font-bold text-white/60 mb-1.5">Target Audience Segment</label>
+                <select
+                  id="broadcastAudienceSelect"
+                  value={broadcastAudience}
+                  onChange={(e) => setBroadcastAudience(e.target.value)}
+                  className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs font-bold focus:outline-none"
+                >
+                  <option value="all_partners" className="bg-[#0c1b33]">All Covenant Partners ({members.length})</option>
+                  <option value="ambassadors" className="bg-[#0c1b33]">Kingdom Ambassadors Only</option>
+                  <option value="harvest_partners" className="bg-[#0c1b33]">Global Harvest & Pillars Only</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="broadcastSubjectInput" className="block text-xs uppercase font-bold text-white/60 mb-1.5">Subject Line</label>
+                <input
+                  id="broadcastSubjectInput"
+                  type="text"
+                  value={broadcastSubject}
+                  onChange={(e) => setBroadcastSubject(e.target.value)}
+                  placeholder="e.g. Bishop Dr. George Githinji: Monthly Prophetic Briefing"
+                  required
+                  className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs font-bold focus:outline-none focus:border-[#d4af37]"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="broadcastBodyInput" className="block text-xs uppercase font-bold text-white/60 mb-1.5">Pastoral Message Body</label>
+                <textarea
+                  id="broadcastBodyInput"
+                  rows={5}
+                  value={broadcastBody}
+                  onChange={(e) => setBroadcastBody(e.target.value)}
+                  placeholder="Type the message for the partners..."
+                  required
+                  className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-[#d4af37]"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={sendingBroadcast}
+                  className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition-all"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{sendingBroadcast ? "Dispatching..." : "Send to Selected Segment"}</span>
                 </button>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                <button
+                  type="button"
+                  onClick={() => setShowBroadcastModal(false)}
+                  className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

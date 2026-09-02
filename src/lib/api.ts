@@ -219,7 +219,7 @@ export const api = {
   },
 
   subscriptions: {
-    getPricing: async () => {
+    getPricing: async (amount: number = 1000) => {
       return request<{
         planName: string;
         kesAmount: number;
@@ -228,9 +228,9 @@ export const api = {
         interval: string;
         provider: string;
         description: string;
-      }>("/subscriptions/pricing");
+      }>(`/subscriptions/pricing?amount=${amount}`);
     },
-    initialize: async (data: { email: string; name?: string; interval?: "monthly" | "yearly"; currency?: "KES" | "USD" }) => {
+    initialize: async (data: { email: string; name?: string; interval?: "monthly" | "yearly"; currency?: "KES" | "USD"; planId?: string; planName?: string; amount?: number }) => {
       return request<{
         authorization_url?: string;
         reference?: string;
@@ -243,7 +243,7 @@ export const api = {
     verify: async (reference: string) => {
       return request<{ status: string; amount: number; currency: string; reference: string }>(`/subscriptions/verify/${reference}`);
     },
-    paypalCreate: async (data: { name?: string; email?: string }) => {
+    paypalCreate: async (data: { name?: string; email?: string; amount?: number; planName?: string }) => {
       return request<{ id: string; usdAmount: number; kesAmount: number; exchangeRate: number }>("/subscriptions/paypal/create", {
         method: "POST",
         body: JSON.stringify(data),
@@ -261,13 +261,63 @@ export const api = {
   },
 
   admin: {
-    stats: async (): Promise<{ totalUsers: number; totalPrayers: number; pendingPrayers: number; totalSermons: number; monthlyGiving: number; activeEvents: number; totalYtd: number; donorCount: number }> => {
+    stats: async (): Promise<{
+      totalUsers: number;
+      activeSubscriptions: number;
+      mrrKes: number;
+      mrrUsd: number;
+      arrKes: number;
+      arrUsd: number;
+      churnRate: string;
+      failedPaymentsCount: number;
+      totalPrayers: number;
+      pendingPrayers: number;
+      flaggedPrayers: number;
+      totalSermons: number;
+      monthlyGiving: number;
+      activeEvents: number;
+      totalYtd: number;
+      donorCount: number;
+    }> => {
       return await request("/admin/stats", { headers: authHeaders() });
+    },
+    attention: async (): Promise<{
+      alerts: { id: string; type: "warning" | "danger" | "success" | "info"; title: string; description: string; actionLabel: string; tab: string }[];
+    }> => {
+      return await request("/admin/attention", { headers: authHeaders() });
+    },
+    members: async (params?: { search?: string; status?: string; role?: string }): Promise<{
+      id: string | number;
+      name: string;
+      email: string;
+      role: string;
+      planName: string;
+      subscriptionStatus: string;
+      amount: number;
+      currency: string;
+      joinedAt: string;
+    }[]> => {
+      const q = new URLSearchParams();
+      if (params?.search) q.set("search", params.search);
+      if (params?.status) q.set("status", params.status);
+      if (params?.role) q.set("role", params.role);
+      const qs = q.toString() ? `?${q.toString()}` : "";
+      return await request(`/admin/members${qs}`, { headers: authHeaders() });
+    },
+    memberAction: async (id: string | number, data: { action: string; planName?: string; role?: string; message?: string }) => {
+      return request(`/admin/members/${id}/action`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+      });
+    },
+    subscriptions: async (): Promise<Record<string, unknown>[]> => {
+      return await request("/admin/subscriptions", { headers: authHeaders() });
     },
     users: async (): Promise<{ id: number; name: string; email: string; role: string; status: string }[]> => {
       return await request("/admin/users", { headers: authHeaders() });
     },
-    donations: async (): Promise<{ name: string; amount: number; date: string; recurring: boolean }[]> => {
+    donations: async (): Promise<{ id?: number; name: string; email?: string; amount: number; currency?: string; provider?: string; reference?: string; status?: string; date: string; recurring: boolean }[]> => {
       return await request("/admin/donations", { headers: authHeaders() });
     },
     prayers: async (status?: string): Promise<Record<string, unknown>[]> => {
@@ -286,6 +336,12 @@ export const api = {
         method: "DELETE",
         headers: authHeaders(),
       });
+    },
+    auditLogs: async (): Promise<{ id: number; actor: string; action: string; target_type: string; target_id: string; details: Record<string, unknown>; created_at: string }[]> => {
+      return await request("/admin/audit-logs", { headers: authHeaders() });
+    },
+    health: async (): Promise<{ status: string; services: { name: string; status: string; latency: string }[]; lastChecked: string }> => {
+      return await request("/admin/health", { headers: authHeaders() });
     },
   },
 
