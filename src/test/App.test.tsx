@@ -10,7 +10,7 @@ describe("App", () => {
         <App />
       </HashRouter>
     );
-    const headings = await screen.findAllByText(/Kingdom Mission Network/i);
+    const headings = await screen.findAllByText(/Kingdom Missions? Network/i);
     expect(headings.length).toBeGreaterThanOrEqual(1);
   });
 

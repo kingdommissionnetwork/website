@@ -3,55 +3,82 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://kingdommissionsnetwork.org/</loc>
-    <lastmod>2026-09-01</lastmod>
+    <lastmod>2026-09-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
       <image:loc>https://kingdommissionsnetwork.org/logo.png</image:loc>
       <image:title>Kingdom Missions Network Logo</image:title>
-      <image:caption>Kingdom Missions Network — Global Believers Community</image:caption>
+      <image:caption>Kingdom Missions Network — Official Global Platform</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://kingdommissionsnetwork.org/bishop-hero.png</image:loc>
+      <image:title>Bishop Dr. George Githinji — Founder and Spiritual Overseer</image:title>
+      <image:caption>Bishop Dr. George Githinji leading global intercession and kingdom missions</image:caption>
     </image:image>
   </url>
   <url>
     <loc>https://kingdommissionsnetwork.org/about</loc>
-    <lastmod>2026-09-01</lastmod>
-    <changefreq>monthly</changefreq>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://kingdommissionsnetwork.org/bishop-hero.png</image:loc>
+      <image:title>Bishop Dr. George Githinji</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://kingdommissionsnetwork.org/prayer-wall</loc>
-    <lastmod>2026-09-01</lastmod>
-    <changefreq>daily</changefreq>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://kingdommissionsnetwork.org/bible</loc>
-    <lastmod>2026-09-01</lastmod>
+    <lastmod>2026-09-02</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.85</priority>
   </url>
   <url>
     <loc>https://kingdommissionsnetwork.org/sermons</loc>
-    <lastmod>2026-09-01</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
   </url>
   <url>
     <loc>https://kingdommissionsnetwork.org/events</loc>
-    <lastmod>2026-09-01</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
   </url>
   <url>
     <loc>https://kingdommissionsnetwork.org/subscribe</loc>
-    <lastmod>2026-09-01</lastmod>
+    <lastmod>2026-09-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://kingdommissionsnetwork.org/give</loc>
-    <lastmod>2026-09-01</lastmod>
+    <loc>https://kingdommissionsnetwork.org/donations</loc>
+    <lastmod>2026-09-02</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://kingdommissionsnetwork.org/privacy</loc>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://kingdommissionsnetwork.org/terms</loc>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://kingdommissionsnetwork.org/accessibility</loc>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
 </urlset>
