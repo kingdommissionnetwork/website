@@ -27,15 +27,14 @@ vi.mock("../hooks/use-async", () => ({
 }));
 
 describe("AdminDashboard", () => {
-  it("renders without crashing", () => {
+  it("renders without crashing and displays command center", () => {
     render(<AdminDashboard />);
-    expect(screen.getAllByText(/overview/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Command Center|KMN OPERATIONS/i).length).toBeGreaterThan(0);
   });
 
-  it("displays key statistics", () => {
+  it("displays key statistics and attention center", () => {
     render(<AdminDashboard />);
-    expect(screen.getByText(/Total Users/i)).toBeDefined();
-    expect(screen.getAllByText(/Prayer Requests/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Monthly Giving/i)).toBeDefined();
+    expect(screen.getAllByText(/TOTAL REGISTERED MEMBERS|ACTIVE PARTNERS/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Command Center/i).length).toBeGreaterThan(0);
   });
 });

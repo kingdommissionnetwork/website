@@ -62,7 +62,8 @@ export const subscriptionRoutes = new Hono();
 // Pricing calculation endpoint
 subscriptionRoutes.get("/pricing", async (c) => {
   const wiseToken = getSecret(c, "WISE_API_TOKEN");
-  const calculation = await computeKesToUsd(1000, wiseToken);
+  const amountParam = Number(c.req.query("amount")) || 1000;
+  const calculation = await computeKesToUsd(amountParam, wiseToken);
   return c.json({
     planName: "Kingdom Partner",
     kesAmount: calculation.kesAmount,
@@ -70,7 +71,7 @@ subscriptionRoutes.get("/pricing", async (c) => {
     exchangeRate: calculation.rate,
     provider: calculation.provider,
     interval: "monthly",
-    description: "Monthly partnership subscription to support Kingdom Mission Network (1,000 KES / month)",
+    description: `Monthly partnership subscription to support Kingdom Missions Network (${calculation.kesAmount.toLocaleString()} KES / month)`,
   });
 });
 
@@ -85,20 +86,22 @@ subscriptionRoutes.post(
       interval: z.enum(["monthly", "yearly"]).default("monthly"),
       currency: z.enum(["KES", "USD"]).default("KES"),
       planId: z.string().optional(),
+      planName: z.string().optional().default("Kingdom Partner"),
+      amount: z.number().min(50).optional().default(1000),
     })
   ),
   async (c) => {
     const secret = getSecret(c, "PAYSTACK_SECRET_KEY");
     if (!secret) return c.json({ error: "Payment gateway not configured" }, 503);
 
-    const { email, name, interval, currency } = c.req.valid("json");
+    const { email, name, interval, currency, planName, amount } = c.req.valid("json");
+    const targetKes = amount || 1000;
     const wiseToken = getSecret(c, "WISE_API_TOKEN");
-    const conversion = await computeKesToUsd(1000, wiseToken);
+    const conversion = await computeKesToUsd(targetKes, wiseToken);
 
     const callbackUrl = `${c.req.header("origin") || "http://localhost:3000"}/subscribe?paystack_callback=1`;
 
-    // 1000 KES in cents = 100,000
-    const chargeAmount = currency === "KES" ? 1000 * 100 : Math.round(conversion.usdAmount * 100);
+    const chargeAmount = currency === "KES" ? Math.round(targetKes * 100) : Math.round(conversion.usdAmount * 100);
 
     const result = await paystackPost(
       "/transaction/initialize",
@@ -110,8 +113,9 @@ subscriptionRoutes.post(
         metadata: {
           name,
           subscriptionType: "kingdom_partner",
+          planName: planName || "Kingdom Partner",
           interval,
-          kesAmount: 1000,
+          kesAmount: targetKes,
           usdAmount: conversion.usdAmount,
           exchangeRate: conversion.rate,
         },
@@ -126,7 +130,7 @@ subscriptionRoutes.post(
     return c.json({
       ...(result.data as Record<string, unknown>),
       usdAmount: conversion.usdAmount,
-      kesAmount: 1000,
+      kesAmount: targetKes,
       exchangeRate: conversion.rate,
     });
   }
@@ -152,6 +156,7 @@ subscriptionRoutes.get("/verify/:reference", async (c) => {
     const metadata = (data.metadata as Record<string, unknown>) || {};
     const subscriberEmail = (customer.email as string) || (metadata.email as string) || "";
     const subscriberName = (metadata.name as string) || "Kingdom Partner";
+    const planName = (metadata.planName as string) || "Kingdom Partner";
     const kesAmount = Number(metadata.kesAmount) || 1000;
     const usdAmount = Number(metadata.usdAmount) || 7.72;
     const exchangeRate = Number(metadata.exchangeRate) || 0.00772;
@@ -163,7 +168,7 @@ subscriptionRoutes.get("/verify/:reference", async (c) => {
       {
         subscriber_name: subscriberName,
         subscriber_email: subscriberEmail,
-        plan_name: "Kingdom Partner",
+        plan_name: planName,
         amount: kesAmount,
         currency: "KES",
         usd_amount: usdAmount,
@@ -214,6 +219,8 @@ subscriptionRoutes.post(
     z.object({
       name: z.string().default("Kingdom Partner"),
       email: z.string().email().optional(),
+      amount: z.number().min(50).optional().default(1000),
+      planName: z.string().optional().default("Kingdom Partner"),
     })
   ),
   async (c) => {
@@ -221,8 +228,10 @@ subscriptionRoutes.post(
     const clientSecret = getSecret(c, "PAYPAL_CLIENT_SECRET");
     if (!clientId || !clientSecret) return c.json({ error: "PayPal not configured" }, 503);
 
+    const { amount, planName } = c.req.valid("json");
+    const targetKes = amount || 1000;
     const wiseToken = getSecret(c, "WISE_API_TOKEN");
-    const conversion = await computeKesToUsd(1000, wiseToken);
+    const conversion = await computeKesToUsd(targetKes, wiseToken);
     const accessToken = await getPayPalAccessToken(clientId, clientSecret);
 
     const res = await fetch("https://api-m.paypal.com/v2/checkout/orders", {
@@ -239,7 +248,7 @@ subscriptionRoutes.post(
               currency_code: "USD",
               value: conversion.usdAmount.toFixed(2),
             },
-            description: `Kingdom Partner Monthly Subscription (1,000 KES ≈ $${conversion.usdAmount.toFixed(2)} USD)`,
+            description: `${planName || "Kingdom Partner"} Monthly Subscription (${targetKes.toLocaleString()} KES ≈ $${conversion.usdAmount.toFixed(2)} USD)`,
           },
         ],
       }),
@@ -249,7 +258,7 @@ subscriptionRoutes.post(
     return c.json({
       id: data.id as string,
       usdAmount: conversion.usdAmount,
-      kesAmount: 1000,
+      kesAmount: targetKes,
       exchangeRate: conversion.rate,
     });
   }
