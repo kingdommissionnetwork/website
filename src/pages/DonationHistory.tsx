@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { DollarSign, ArrowLeft, Loader2 } from "lucide-react";
+import { DollarSign, ArrowLeft, Loader2, Download, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import SEO from "../components/SEO";
 import AmbientParticles from "../components/AmbientParticles";
+import brandLogo from "../assets/logo.png";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
@@ -23,6 +24,7 @@ export default function DonationHistory() {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
   const { user } = useAuth();
   const { showToast } = useToast();
 
@@ -124,14 +126,129 @@ export default function DonationHistory() {
                     <p className="text-xs text-[#6b7c93]">{new Date(d.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
                   </div>
                 </div>
-                {d.recurring && (
-                  <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium">Monthly</span>
-                )}
+                <div className="flex items-center gap-3">
+                  {d.recurring && (
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">Monthly</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDonation(d)}
+                    className="px-3 py-1.5 rounded-lg bg-[#0c1b33]/5 hover:bg-[#0c1b33]/10 text-[#0c1b33] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>Official Receipt</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Official Tax Invoice & Donation Receipt Modal */}
+      {selectedDonation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-xl p-8 rounded-3xl bg-gradient-to-br from-[#0c1b33] via-[#112440] to-[#1a1208] border-2 border-[#d4af37] shadow-[0_0_50px_rgba(212,175,55,0.3)] text-white">
+            <button
+              type="button"
+              onClick={() => setSelectedDonation(null)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Document Header with Logo */}
+            <div className="flex items-center gap-4 pb-6 border-b border-white/15 mb-6">
+              <img
+                src={brandLogo}
+                alt="Kingdom Missions Network"
+                className="w-16 h-16 rounded-2xl object-contain border-2 border-[#d4af37] p-1.5 bg-[#0c1b33] drop-shadow-[0_0_12px_rgba(212,175,55,0.5)]"
+                width="64"
+                height="64"
+              />
+              <div>
+                <span className="font-brand text-xl font-bold text-white tracking-wider block">
+                  KINGDOM MISSIONS NETWORK
+                </span>
+                <span className="text-xs text-[#d4af37] uppercase tracking-[0.2em] font-bold block">
+                  Official Giving Receipt & Tax Document
+                </span>
+                <span className="text-[11px] text-white/50 block mt-0.5">
+                  Registered Faith-Based Global Missions Network
+                </span>
+              </div>
+            </div>
+
+            {/* Receipt Summary Card */}
+            <div className="p-6 rounded-2xl bg-white/[0.05] border border-white/10 space-y-4 mb-6 relative overflow-hidden">
+              <div className="absolute -right-6 -bottom-6 opacity-10 pointer-events-none">
+                <img src={brandLogo} alt="" className="w-40 h-40 object-contain" />
+              </div>
+
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 relative z-10">
+                <div>
+                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Total Seed Gift</span>
+                  <span className="font-brand text-2xl font-bold text-emerald-400">
+                    {selectedDonation.currency || "USD"} ${selectedDonation.amount.toFixed(2)}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Status</span>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold inline-block mt-0.5">
+                    ✓ Verified Official Record
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-xs relative z-10">
+                <div>
+                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Donor / Partner</span>
+                  <span className="font-bold text-white">{selectedDonation.donor_name || user?.name || "Kingdom Covenant Partner"}</span>
+                  <span className="text-white/60 block text-[11px]">{selectedDonation.donor_email || email}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Receipt Number</span>
+                  <span className="font-mono font-bold text-[#fbf5b7]">
+                    KMN-REC-{selectedDonation.id}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Contribution Type</span>
+                  <span className="text-white/80">{selectedDonation.recurring ? "Monthly Recurring Covenant Seed" : "One-Time Kingdom Offering"}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Contribution Date</span>
+                  <span className="text-white/80">
+                    {new Date(selectedDonation.created_at).toLocaleDateString("en-US", { dateStyle: "long" })}
+                  </span>
+                </div>
+                <div className="col-span-2 pt-2 border-t border-white/10">
+                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Spiritual Oversight</span>
+                  <span className="text-white/80">Bishop Dr. George Githinji — Presiding Prelate</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>Print Official Receipt</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedDonation(null)}
+                className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

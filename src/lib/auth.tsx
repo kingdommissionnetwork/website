@@ -1,7 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import { Shield, Lock, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { api } from "./api";
+import brandLogo from "../assets/logo.png";
 
 interface User {
   id: number;
@@ -156,9 +157,7 @@ export function AdminGuard({ children }: { children: ReactNode }) {
       <div className="min-h-screen bg-[#071324] flex items-center justify-center p-4">
         <div className="bg-[#0d1d36] rounded-3xl p-8 sm:p-10 max-w-md w-full border-2 border-[#d4af37]/40 shadow-2xl text-white space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-14 h-14 rounded-2xl bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center mx-auto text-[#fbf5b7]">
-              <Shield className="w-7 h-7" />
-            </div>
+            <img src={brandLogo} alt="Kingdom Missions Network" className="w-20 h-20 mx-auto object-contain drop-shadow-[0_0_12px_rgba(212,175,55,0.5)]" width="80" height="80" />
             <h1 className="font-brand text-2xl font-bold text-white">Security Verification</h1>
             <p className="text-xs text-white/60">Enter your 6-digit Multi-Factor Security Passcode to complete sign-in.</p>
           </div>
@@ -195,9 +194,7 @@ export function AdminGuard({ children }: { children: ReactNode }) {
       <div className="min-h-screen bg-[#071324] flex items-center justify-center p-4">
         <div className="bg-[#0d1d36] rounded-3xl p-8 sm:p-10 max-w-md w-full border border-white/10 shadow-2xl text-white space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-14 h-14 rounded-2xl bg-[#d4af37]/20 flex items-center justify-center mx-auto text-[#d4af37]">
-              <Mail className="w-7 h-7" />
-            </div>
+            <img src={brandLogo} alt="Kingdom Missions Network" className="w-16 h-16 mx-auto object-contain drop-shadow-[0_0_12px_rgba(212,175,55,0.5)]" width="64" height="64" />
             <h1 className="font-brand text-2xl font-bold text-white">Administrator Recovery</h1>
             <p className="text-xs text-white/60">Enter your authorized administrative email address to reset access.</p>
           </div>
@@ -252,9 +249,7 @@ export function AdminGuard({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] flex items-center justify-center p-4">
       <div className="bg-[#0d1d36] rounded-3xl p-8 sm:p-10 max-w-md w-full border-2 border-[#d4af37]/30 shadow-2xl text-white space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center mx-auto text-[#fbf5b7]">
-            <Lock className="w-7 h-7" />
-          </div>
+          <img src={brandLogo} alt="Kingdom Missions Network" className="w-24 h-24 mx-auto object-contain drop-shadow-[0_0_16px_rgba(212,175,55,0.6)]" width="96" height="96" />
           <span className="text-[10px] uppercase tracking-[0.25em] font-extrabold text-[#d4af37] block">
             Kingdom Missions Network
           </span>
@@ -306,10 +301,7 @@ export function AdminGuard({ children }: { children: ReactNode }) {
             {submitting ? (
               <div className="w-4 h-4 border-2 border-[#0c1b33] border-t-transparent rounded-full animate-spin" />
             ) : (
-              <>
-                <Shield className="w-4 h-4" />
-                Authenticate Administrative Access
-              </>
+              "Authenticate Administrative Access"
             )}
           </button>
         </form>

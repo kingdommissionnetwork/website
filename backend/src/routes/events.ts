@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { requireAdmin } from "../lib/jwt";
 import { getEnv } from "../lib/env";
-import { Resend } from "resend";
+import { sendEventRsvpEmail } from "../lib/email";
 
 export const eventRoutes = new Hono();
 
@@ -87,16 +87,17 @@ eventRoutes.post("/:id/rsvp", zValidator("json", rsvpSchema), async (c) => {
   }).select().single();
   if (error) return c.json({ error: error.message }, 500);
 
-  const resendKey = getEnv("RESEND_API_KEY") || process.env.RESEND_API_KEY;
-  if (resendKey) {
-    const resend = new Resend(resendKey);
-    const fromAddress = getEnv("RESEND_EVENTS_EMAIL") || getEnv("RESEND_FROM_EMAIL") || process.env.RESEND_EVENTS_EMAIL || "Kingdom Mission Network <events@kingdommissionnetwork.org>";
-    await resend.emails.send({
-      from: fromAddress,
-      to: email,
-      subject: "Event RSVP Confirmation",
-      html: `<p>Hi ${name},</p><p>Thank you for your RSVP! We look forward to seeing you.</p>`,
+  const { data: event } = await supabase.from("events").select("title, date, location, description").eq("id", eventId).single();
+  const eventTitle = event?.title || "Kingdom Missions Event";
+
+  try {
+    await sendEventRsvpEmail(c, email, name, eventTitle, {
+      eventDate: event?.date,
+      eventLocation: event?.location,
+      eventDescription: event?.description,
     });
+  } catch (err) {
+    console.error("[EMAIL] Failed to send RSVP confirmation:", err);
   }
 
   return c.json(rsvp, 201);
