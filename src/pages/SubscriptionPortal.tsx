@@ -24,6 +24,7 @@ import SEO from "../components/SEO";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
+import brandLogo from "../assets/logo.png";
 
 const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "";
 
@@ -680,16 +681,30 @@ export default function SubscriptionPortal() {
             {/* Holographic Watermark Glow */}
             <div className="absolute top-0 right-0 w-48 h-48 bg-[radial-gradient(circle,rgba(212,175,55,0.15)_0%,transparent_70%)] pointer-events-none blur-2xl" />
 
-            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
-              <div>
-                <span className="font-brand text-base font-bold text-white tracking-wider block">
-                  KINGDOM MISSIONS NETWORK
-                </span>
-                <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#d4af37]">
-                  Official Global Partner Credential
-                </span>
+            {/* Background Logo Watermark */}
+            <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
+              <img src={brandLogo} alt="" className="w-56 h-56 object-contain" />
+            </div>
+
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6 relative z-10">
+              <div className="flex items-center gap-3">
+                <img
+                  src={brandLogo}
+                  alt="Kingdom Missions Network"
+                  className="w-12 h-12 rounded-xl object-contain border border-[#d4af37]/40 p-1 bg-white/5 drop-shadow-[0_0_10px_rgba(212,175,55,0.4)]"
+                  width="48"
+                  height="48"
+                />
+                <div>
+                  <span className="font-brand text-base font-bold text-white tracking-wider block">
+                    KINGDOM MISSIONS NETWORK
+                  </span>
+                  <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#d4af37]">
+                    Official Global Partner Credential
+                  </span>
+                </div>
               </div>
-              <ShieldCheck className="w-8 h-8 text-[#d4af37]" />
+              <ShieldCheck className="w-7 h-7 text-[#d4af37]" />
             </div>
 
             <div className="space-y-4 mb-6">
@@ -878,9 +893,13 @@ export default function SubscriptionPortal() {
             </button>
 
             <div className="text-center mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center mx-auto mb-3 text-[#d4af37]">
-                <ShieldCheck className="w-7 h-7" />
-              </div>
+              <img
+                src={brandLogo}
+                alt="Kingdom Missions Network"
+                className="w-16 h-16 rounded-2xl mx-auto mb-3 object-contain border-2 border-[#d4af37] p-1.5 bg-[#0c1b33] drop-shadow-[0_0_16px_rgba(212,175,55,0.5)]"
+                width="64"
+                height="64"
+              />
               <h3 className="font-brand text-2xl font-bold text-white">Official Partner Credential</h3>
               <p className="text-xs text-emerald-400 font-semibold mt-1">
                 {isSubscribed ? "✓ Covenant Partnership Activated" : "Official Verification Ready"}
@@ -888,9 +907,15 @@ export default function SubscriptionPortal() {
             </div>
 
             {/* Credential Card Display */}
-            <div className="p-6 rounded-2xl bg-white/[0.05] border border-white/15 space-y-4 mb-6">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <span className="font-brand text-sm font-bold text-white">KINGDOM MISSIONS NETWORK</span>
+            <div className="p-6 rounded-2xl bg-white/[0.05] border border-white/15 space-y-4 mb-6 relative overflow-hidden">
+              <div className="absolute -right-6 -bottom-6 opacity-10 pointer-events-none">
+                <img src={brandLogo} alt="" className="w-36 h-36 object-contain" />
+              </div>
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 relative z-10">
+                <div className="flex items-center gap-2.5">
+                  <img src={brandLogo} alt="" className="w-6 h-6 object-contain" width="24" height="24" />
+                  <span className="font-brand text-sm font-bold text-white">KINGDOM MISSIONS NETWORK</span>
+                </div>
                 <span className="text-[10px] font-bold text-[#d4af37] tracking-wider uppercase">{activePlan.badge}</span>
               </div>
               <div>

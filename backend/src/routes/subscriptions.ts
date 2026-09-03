@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { computeKesToUsd } from "../lib/exchangeRate";
-import { sendDonationEmail } from "../lib/email";
+import { sendDonationEmail, sendPartnerWelcomeEmail } from "../lib/email";
 
 function getSecret(c: { env?: unknown }, key: string): string {
   const env = c.env as Record<string, string> | undefined;
@@ -200,7 +200,15 @@ subscriptionRoutes.get("/verify/:reference", async (c) => {
       { onConflict: "payment_reference", ignoreDuplicates: true }
     );
 
-    await sendDonationEmail(c, subscriberEmail, subscriberName, kesAmount, "KES");
+    await sendDonationEmail(c, subscriberEmail, subscriberName, kesAmount, "KES", {
+      reference,
+      planName,
+    });
+    try {
+      await sendPartnerWelcomeEmail(c, subscriberEmail, subscriberName, planName || "Kingdom Partner", kesAmount, "KES");
+    } catch (err) {
+      console.error("[EMAIL] Partner welcome error:", err);
+    }
   }
 
   return c.json({
@@ -339,7 +347,14 @@ subscriptionRoutes.post(
         status: "completed",
       });
 
-      await sendDonationEmail(c, email, fullName, usdAmount, "USD");
+      await sendDonationEmail(c, email, fullName, usdAmount, "USD", {
+        reference: orderId,
+      });
+      try {
+        await sendPartnerWelcomeEmail(c, email, fullName, "Kingdom Partner", usdAmount, "USD");
+      } catch (err) {
+        console.error("[EMAIL] Partner welcome error:", err);
+      }
     }
 
     return c.json({ status: data.status, id: data.id });

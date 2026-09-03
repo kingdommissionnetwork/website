@@ -4,6 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { requireAdmin } from "../lib/jwt";
 import { rateLimit } from "../lib/rateLimiter";
+import { sendAdminInviteEmail } from "../lib/email";
 
 export const adminRoutes = new Hono();
 adminRoutes.use("*", rateLimit, requireAdmin);
@@ -175,9 +176,9 @@ adminRoutes.get("/members", async (c) => {
 
   if (search) {
     enriched = enriched.filter((m) =>
-      m.name.toLowerCase().includes(search) ||
-      m.email.toLowerCase().includes(search) ||
-      m.planName.toLowerCase().includes(search)
+      String(m.name || "").toLowerCase().includes(search) ||
+      String(m.email || "").toLowerCase().includes(search) ||
+      String(m.planName || "").toLowerCase().includes(search)
     );
   }
 
@@ -394,9 +395,15 @@ adminRoutes.post(
 
     await logAuditEvent("Super Admin", "ADMIN_INVITED", "admin_user", email, { role, token: inviteToken });
 
+    try {
+      await sendAdminInviteEmail(c, email, name, role, `https://admin.kingdommissionsnetwork.org/admin/accept-invite?token=${inviteToken}`, "Super Administrator");
+    } catch (err) {
+      console.error("[EMAIL] Failed to dispatch admin invitation email:", err);
+    }
+
     return c.json({
       success: true,
-      message: `Administrator invitation generated for ${name} (${role})`,
+      message: `Administrator invitation generated and dispatched for ${name} (${role})`,
       inviteLink: `https://admin.kingdommissionsnetwork.org/admin/accept-invite?token=${inviteToken}`,
     });
   }

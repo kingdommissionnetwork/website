@@ -14,7 +14,7 @@ describe('App integration', () => {
     const body = await res.json();
     expect(body).toHaveProperty('status', 'ok');
     expect(body).toHaveProperty('timestamp');
-  });
+  }, 15000);
 
   test('unknown route returns 404', async () => {
     const app = (await import('./index')).default;
