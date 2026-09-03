@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export const useAuth = () => useContext(AuthContext);
 
 export function AdminGuard({ children }: { children: ReactNode }) {
-  const { isAuthenticated, loading, login } = useAuth();
+  const { user, isAuthenticated, loading, login, logout } = useAuth();
   const [mode, setMode] = useState<"login" | "mfa" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -114,7 +114,29 @@ export function AdminGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (isAuthenticated) return <>{children}</>;
+  if (isAuthenticated) {
+    if (user?.role === "admin" || user?.role === "superadmin") {
+      return <>{children}</>;
+    }
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] flex items-center justify-center p-4">
+        <div className="bg-[#0d1d36] rounded-3xl p-8 sm:p-10 max-w-md w-full border-2 border-red-500/30 shadow-2xl text-white space-y-6 text-center">
+          <img src={brandLogo} alt="Kingdom Missions Network" className="w-16 h-16 mx-auto object-contain drop-shadow-[0_0_12px_rgba(212,175,55,0.5)]" width="64" height="64" />
+          <h1 className="font-brand text-2xl font-bold text-white">Access Restricted</h1>
+          <p className="text-xs text-white/70">
+            You are signed in as <span className="font-bold text-white">{user?.email}</span> ({user?.role || "member"}), but administrative access requires an authorized <span className="text-[#d4af37] font-bold">Admin</span> or <span className="text-[#d4af37] font-bold">Super Admin</span> account.
+          </p>
+          <button
+            type="button"
+            onClick={() => { logout(); window.location.reload(); }}
+            className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-sm shadow-md hover:brightness-110 transition-all"
+          >
+            Sign Out & Switch Account
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
