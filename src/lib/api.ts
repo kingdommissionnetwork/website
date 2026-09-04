@@ -1,4 +1,5 @@
 import { type PrayerRequest, type Sermon, type Event, type BibleBook, type BibleVerse } from "../data/demoData";
+import { normalizeEvent } from "./events";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -132,8 +133,8 @@ export const api = {
   events: {
     list: async (): Promise<Event[]> => {
       try {
-        const res = await request<Event[]>("/events");
-        return Array.isArray(res) ? res : [];
+        const res = await request<Record<string, unknown>[]>("/events");
+        return Array.isArray(res) ? res.map(normalizeEvent) : [];
       } catch {
         return [];
       }

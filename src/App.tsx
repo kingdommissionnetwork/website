@@ -14,6 +14,7 @@ const PrayerWall = lazy(() => import("./pages/PrayerWall"));
 const BibleReader = lazy(() => import("./pages/BibleReader"));
 const Sermons = lazy(() => import("./pages/Sermons"));
 const Events = lazy(() => import("./pages/Events"));
+const PastEvents = lazy(() => import("./pages/PastEvents"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const DonationHistory = lazy(() => import("./pages/DonationHistory"));
 const SubscriptionPortal = lazy(() => import("./pages/SubscriptionPortal"));
@@ -68,6 +69,7 @@ export default function App() {
                   <Route path="/bible" element={<BibleReader />} />
                   <Route path="/bible/:book/:chapter" element={<BibleReader />} />
                   <Route path="/sermons" element={<Sermons />} />
+                  <Route path="/events/past" element={<PastEvents />} />
                   <Route path="/events" element={<Events />} />
                   <Route path="/donations" element={<DonationHistory />} />
                   <Route path="/subscribe" element={<SubscriptionPortal />} />
