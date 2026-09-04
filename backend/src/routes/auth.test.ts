@@ -2,10 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { expect, test, describe, vi, beforeAll } from 'vitest';
 import { Hono } from 'hono';
 import { authRoutes } from './auth';
-import { getSupabase } from '../lib/supabase';
+import { getSupabase, createAuthClient } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
   getSupabase: vi.fn(),
+  createAuthClient: vi.fn(),
 }));
 
 vi.mock('../lib/rateLimiter', () => ({
@@ -20,9 +21,9 @@ app.route('/', authRoutes);
 
 describe('Auth Routes', () => {
   beforeAll(() => {
-    vi.mocked(getSupabase).mockReturnValue({
+    const mockClient = {
       auth: {
-        signInWithPassword: vi.fn().mockResolvedValue({ data: { user: { id: '1' } }, error: null }),
+        signInWithPassword: vi.fn().mockResolvedValue({ data: { user: { id: '1', email: 'test@test.com' } }, error: null }),
         signUp: vi.fn().mockResolvedValue({ data: { user: { id: '1' } }, error: null }),
         resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
         signInWithIdToken: vi.fn().mockResolvedValue({ data: { user: { id: '1' } }, error: null }),
@@ -35,7 +36,10 @@ describe('Auth Routes', () => {
         insert: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: { id: '1', name: 'Test', email: 'test@test.com', role: 'member' }, error: null }),
       }),
-    } as unknown as SupabaseClient);
+    } as unknown as SupabaseClient;
+
+    vi.mocked(getSupabase).mockReturnValue(mockClient);
+    vi.mocked(createAuthClient).mockReturnValue(mockClient);
   });
 
   test('POST /login with valid credentials', async () => {

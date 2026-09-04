@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { getSupabase } from "../lib/supabase";
+import { getSupabase, createAuthClient } from "../lib/supabase";
 import { signToken, verifyToken } from "../lib/jwt";
 import { rateLimit, strictRateLimit } from "../lib/rateLimiter";
 import { setCookie, getCookie } from "hono/cookie";
@@ -26,13 +26,34 @@ const googleSchema = z.object({
 authRoutes.post("/login", rateLimit, zValidator("json", loginSchema), async (c) => {
   const { email, password } = c.req.valid("json");
 
-  const supabase = getSupabase();
-  const { data: authUser, error } = await supabase.auth.signInWithPassword({ email, password });
+  const authClient = createAuthClient();
+  const { data: authUser, error } = await authClient.auth.signInWithPassword({ email, password });
   if (error || !authUser.user) {
     return c.json({ error: "Invalid credentials" }, 401);
   }
 
-  const { data: user } = await supabase.from("users").select("*").eq("id", authUser.user.id).single();
+  const supabase = getSupabase();
+  let { data: user } = await supabase.from("users").select("*").eq("id", authUser.user.id).single();
+  
+  if (!user && authUser.user.email) {
+    // Fallback: check by email in case auth ID differs
+    const { data: userByEmail } = await supabase.from("users").select("*").eq("email", authUser.user.email).single();
+    if (userByEmail) {
+      user = userByEmail;
+    } else {
+      // Auto-provision profile if missing
+      const isSuperAdmin = authUser.user.email.toLowerCase() === "admin@kingdommissionsnetwork.org";
+      const role = isSuperAdmin ? "superadmin" : "member";
+      const { data: created } = await supabase.from("users").insert({
+        id: authUser.user.id,
+        name: isSuperAdmin ? "Executive Super Admin" : (authUser.user.user_metadata?.full_name || authUser.user.email.split("@")[0] || "User"),
+        email: authUser.user.email,
+        role,
+      }).select().single();
+      user = created;
+    }
+  }
+
   if (!user) {
     return c.json({ error: "User not found" }, 404);
   }
@@ -54,8 +75,8 @@ authRoutes.post("/login", rateLimit, zValidator("json", loginSchema), async (c) 
 authRoutes.post("/register", strictRateLimit, zValidator("json", registerSchema), async (c) => {
   const { name, email, password } = c.req.valid("json");
 
-  const supabase = getSupabase();
-  const { data: authUser, error } = await supabase.auth.signUp({ email, password });
+  const authClient = createAuthClient();
+  const { data: authUser, error } = await authClient.auth.signUp({ email, password });
   if (error) {
     if (error.message.includes("already")) {
       return c.json({ error: "Email already registered" }, 409);
@@ -66,6 +87,7 @@ authRoutes.post("/register", strictRateLimit, zValidator("json", registerSchema)
     return c.json({ error: "Registration failed" }, 500);
   }
 
+  const supabase = getSupabase();
   await supabase.from("users").insert({ id: authUser.user.id, name, email, role: "member" });
   const { data: user } = await supabase.from("users").select("*").eq("id", authUser.user.id).single();
 
@@ -86,10 +108,10 @@ authRoutes.post("/register", strictRateLimit, zValidator("json", registerSchema)
 });
 
 authRoutes.post("/google", zValidator("json", googleSchema), async (c) => {
-  const supabase = getSupabase();
+  const authClient = createAuthClient();
   const { token: idToken } = c.req.valid("json");
 
-  const { data, error } = await supabase.auth.signInWithIdToken({
+  const { data, error } = await authClient.auth.signInWithIdToken({
     provider: "google",
     token: idToken,
   });
@@ -97,6 +119,7 @@ authRoutes.post("/google", zValidator("json", googleSchema), async (c) => {
     return c.json({ error: "Google authentication failed" }, 401);
   }
 
+  const supabase = getSupabase();
   const authUser = data.user;
   let { data: user } = await supabase.from("users").select("*").eq("id", authUser.id).single();
   if (!user) {
