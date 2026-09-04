@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { setEnv } from "./lib/env";
 import { authRoutes } from "./routes/auth";
 import { prayerRoutes } from "./routes/prayers";
 import { sermonRoutes } from "./routes/sermons";
@@ -13,15 +14,31 @@ import { paymentRoutes } from "./routes/payments";
 import { subscriptionRoutes } from "./routes/subscriptions";
 import * as Sentry from "@sentry/cloudflare";
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Record<string, string> }>();
+
+app.use("*", async (c, next) => {
+  setEnv(c.env as Record<string, string>);
+  await next();
+});
 
 app.use("*", cors({
-  origin: (origin) => {
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    if (!origin || origin.startsWith("http://localhost:") || origin === frontendUrl) {
-      return origin || frontendUrl;
-    }
-    return frontendUrl;
+  origin: (origin, c) => {
+    const allowed = [
+      "https://kingdommissionsnetwork.org",
+      "https://www.kingdommissionsnetwork.org",
+      "https://kingdommissionnetwork.org",
+      "https://www.kingdommissionnetwork.org",
+      "https://website.pages.dev",
+      "https://hkn-website.pages.dev",
+      "https://heavenlykingdomnetwork.org",
+      "https://www.heavenlykingdomnetwork.org",
+      "https://KingdomMissionNetwork.hkmministries.org",
+    ];
+    if (!origin || origin.startsWith("http://localhost:")) return origin || "";
+    if (allowed.includes(origin)) return origin;
+    const frontendUrl = (c.env as Record<string, string> | undefined)?.FRONTEND_URL;
+    if (frontendUrl && origin === frontendUrl) return origin;
+    return "";
   },
   credentials: true,
 }));

@@ -1,5 +1,6 @@
-# This wrangler.toml is for local dev only.
-# Production API runs as Cloudflare Pages Functions via functions/api/[[path]].ts
+# This wrangler.toml is for backend-only local dev.
+# Production deploys as a Cloudflare Worker with static assets
+# via the root wrangler.toml (main = "backend/src/index.ts").
 name = "hkn-api-dev"
 main = "src/index.ts"
 compatibility_date = "2025-03-01"
