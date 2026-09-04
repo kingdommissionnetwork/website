@@ -24,11 +24,15 @@ vi.mock("../lib/auth", () => ({
   useAuth: () => ({ user: null }),
 }));
 
+import { MemoryRouter } from "react-router-dom";
+
 describe("SubscriptionPortal", () => {
   it("renders partnership packages and partner heading", async () => {
     render(
       <HelmetProvider>
-        <SubscriptionPortal />
+        <MemoryRouter>
+          <SubscriptionPortal />
+        </MemoryRouter>
       </HelmetProvider>
     );
     const headings = await screen.findAllByText(/Kingdom Ambassador|Seed Partner|Global Harvest Partner/i);
@@ -39,7 +43,9 @@ describe("SubscriptionPortal", () => {
   it("renders live currency exchange calculation and perks", async () => {
     render(
       <HelmetProvider>
-        <SubscriptionPortal />
+        <MemoryRouter>
+          <SubscriptionPortal />
+        </MemoryRouter>
       </HelmetProvider>
     );
     const badges = await screen.findAllByText(/Live Rate/i);

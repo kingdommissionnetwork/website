@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -22,9 +23,16 @@ import {
   RefreshCw,
   UserPlus,
   Copy,
+  Menu,
+  PanelLeftClose,
+  PanelLeft,
+  ExternalLink,
+  LogOut,
+  ChevronRight,
 } from "lucide-react";
 import SEO from "../components/SEO";
 import { api } from "../lib/api";
+import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
 import brandLogo from "../assets/logo.png";
 
@@ -143,7 +151,10 @@ function normalizePrayer(p: Record<string, unknown>): AdminPrayer {
 }
 
 export default function AdminDashboard() {
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [memberStatusFilter, setMemberStatusFilter] = useState("all");
   const [selectedMember, setSelectedMember] = useState<AdminMember | null>(null);
@@ -310,44 +321,296 @@ export default function AdminDashboard() {
     return matchesSearch && matchesStatus;
   });
 
+  const downloadMembersCSV = () => {
+    const headers = ["ID", "Name", "Email", "Role", "Plan", "Status", "Amount", "Currency", "Joined At"];
+    const rows = filteredMembers.map((m) => [
+      m.id,
+      m.name,
+      m.email,
+      m.role,
+      m.planName,
+      m.subscriptionStatus,
+      m.amount,
+      m.currency,
+      m.joinedAt,
+    ]);
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((r) => r.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(",")),
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `kmn-members-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast("Members directory exported to CSV", "success");
+  };
+
+  const downloadDonationsCSV = () => {
+    const headers = ["Reference", "Donor Name", "Email", "Amount", "Currency", "Provider", "Type", "Status", "Date"];
+    const rows = donations.map((d) => [
+      d.reference || d.id || "",
+      d.name,
+      d.email || "",
+      d.amount,
+      d.currency || "KES",
+      d.provider || "paystack",
+      d.recurring ? "Recurring" : "One-Time",
+      d.status || "completed",
+      d.date,
+    ]);
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((r) => r.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(",")),
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `kmn-donations-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast("Donations ledger exported to CSV", "success");
+  };
+
+  const currentTabLabel = sidebarSections.flatMap((s) => s.items).find((i) => i.id === activeTab)?.label || "Command Center";
+
   return (
-    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#071324] text-white flex flex-col">
+    <div className="min-h-screen bg-[#071324] text-white flex flex-col font-outfit">
       <SEO title="Enterprise Operations Hub — Kingdom Missions Network" description="Operational Command Center, Members, Subscriptions, and Governance." />
 
-      <div className="flex-1 flex flex-col lg:flex-row">
-        {/* Master Sidebar */}
-        <aside className="w-full lg:w-72 bg-[#09182d] border-r border-white/10 p-5 shrink-0 flex flex-col justify-between">
+      {/* Sticky Command Top Bar */}
+      <header className="sticky top-0 z-40 bg-[#09182d]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          {/* Mobile Drawer Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+            className="lg:hidden p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          {/* Desktop Collapse Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="hidden lg:flex p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
+            title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isSidebarCollapsed ? <PanelLeft className="w-4 h-4 text-[#d4af37]" /> : <PanelLeftClose className="w-4 h-4 text-[#d4af37]" />}
+          </button>
+
+          {/* Breadcrumbs */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-white/40 font-semibold uppercase tracking-wider hidden sm:inline">KMN OPERATIONS</span>
+            <ChevronRight className="w-3.5 h-3.5 text-white/30 hidden sm:inline" />
+            <span className="text-[#fbf5b7] font-bold">{currentTabLabel}</span>
+          </div>
+        </div>
+
+        {/* Right Actions */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Live Status Pill */}
+          <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Production Live</span>
+          </div>
+
+          {/* Quick Action: Broadcast */}
+          <button
+            type="button"
+            onClick={() => setShowBroadcastModal(true)}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d4af37]/20 hover:bg-[#d4af37]/30 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-bold transition-all"
+          >
+            <Send className="w-3.5 h-3.5 text-[#d4af37]" />
+            <span>Broadcast</span>
+          </button>
+
+          {/* Quick Action: Invite Admin */}
+          <button
+            type="button"
+            onClick={() => setShowInviteModal(true)}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 text-xs font-semibold transition-all"
+          >
+            <UserPlus className="w-3.5 h-3.5 text-[#d4af37]" />
+            <span>Invite</span>
+          </button>
+
+          {/* View Public Live Site Link */}
+          <Link
+            to="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-semibold transition-colors"
+            title="View Public Website"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Live Site</span>
+          </Link>
+
+          {/* Admin Profile Pill & Logout */}
+          <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+            <div className="w-8 h-8 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center font-bold text-[#fbf5b7] text-xs">
+              {user?.name ? user.name.slice(0, 2).toUpperCase() : "OP"}
+            </div>
+            <div className="hidden xl:block text-left text-xs">
+              <span className="font-bold text-white block leading-tight truncate max-w-[120px]">{user?.name || "Super Admin"}</span>
+              <span className="text-[10px] text-[#d4af37] font-semibold uppercase">{user?.role || "super_admin"}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-300 transition-colors"
+              title="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Drawer (Slide-out Off-Canvas Navigation) */}
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+          <div className="relative w-72 max-w-[85vw] bg-[#09182d] border-r border-white/10 p-5 flex flex-col justify-between z-10 shadow-2xl">
+            <div className="space-y-6">
+              <div className="pb-4 border-b border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={brandLogo}
+                    alt="Kingdom Missions Network"
+                    className="w-10 h-10 rounded-xl object-contain border border-[#d4af37]/40 p-1 bg-white/5 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]"
+                    width="40"
+                    height="40"
+                  />
+                  <div>
+                    <span className="font-brand text-sm font-bold text-white tracking-wider block">
+                      KMN OPERATIONS
+                    </span>
+                    <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#d4af37]">
+                      Command Center
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className="p-1 rounded-lg bg-white/10 text-white/70"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Navigation Groups */}
+              <div className="space-y-5 overflow-y-auto max-h-[calc(100vh-220px)]">
+                {sidebarSections.map((section) => (
+                  <div key={section.title}>
+                    <span className="text-[10px] uppercase font-bold text-white/40 tracking-[0.2em] block mb-2 px-3">
+                      {section.title}
+                    </span>
+                    <div className="space-y-1">
+                      {section.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = activeTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveTab(item.id);
+                              setIsMobileSidebarOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+                              isActive
+                                ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-bold"
+                                : "text-white/70 hover:text-white hover:bg-white/5"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Icon className={`w-4 h-4 ${isActive ? "text-[#0c1b33]" : "text-[#d4af37]"}`} />
+                              <span>{item.label}</span>
+                            </div>
+                            {item.id === "prayers" && stats.pendingPrayers > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-[#0c1b33] text-[10px] font-extrabold">
+                                {stats.pendingPrayers}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs">
+              <span className="text-white/60">Super Administrator</span>
+              <button
+                type="button"
+                onClick={loadAllData}
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/70"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Workspace Body */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Master Sidebar (Desktop) */}
+        <aside
+          className={`hidden lg:flex shrink-0 bg-[#09182d] border-r border-white/10 flex-col justify-between transition-all duration-300 ${
+            isSidebarCollapsed ? "w-20 p-3" : "w-72 p-5"
+          }`}
+        >
           <div className="space-y-6">
             <div className="pb-4 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <img
                   src={brandLogo}
                   alt="Kingdom Missions Network"
-                  className="w-10 h-10 rounded-xl object-contain border border-[#d4af37]/40 p-1 bg-white/5 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]"
+                  className="w-10 h-10 rounded-xl object-contain border border-[#d4af37]/40 p-1 bg-white/5 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)] shrink-0"
                   width="40"
                   height="40"
                 />
-                <div>
-                  <span className="font-brand text-sm font-bold text-white tracking-wider block">
-                    KMN OPERATIONS
-                  </span>
-                  <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#d4af37]">
-                    Enterprise Master Hub
-                  </span>
-                </div>
+                {!isSidebarCollapsed && (
+                  <div>
+                    <span className="font-brand text-sm font-bold text-white tracking-wider block">
+                      KMN OPERATIONS
+                    </span>
+                    <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#d4af37]">
+                      Command Center
+                    </span>
+                  </div>
+                )}
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
-                Live
-              </span>
+              {!isSidebarCollapsed && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                  Live
+                </span>
+              )}
             </div>
 
             {/* Navigation Groups */}
             <div className="space-y-6">
               {sidebarSections.map((section) => (
                 <div key={section.title}>
-                  <span className="text-[10px] uppercase font-bold text-white/40 tracking-[0.2em] block mb-2 px-3">
-                    {section.title}
-                  </span>
+                  {!isSidebarCollapsed && (
+                    <span className="text-[10px] uppercase font-bold text-white/40 tracking-[0.2em] block mb-2 px-3">
+                      {section.title}
+                    </span>
+                  )}
                   <div className="space-y-1">
                     {section.items.map((item) => {
                       const Icon = item.icon;
@@ -357,17 +620,20 @@ export default function AdminDashboard() {
                           key={item.id}
                           type="button"
                           onClick={() => setActiveTab(item.id)}
-                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+                          title={isSidebarCollapsed ? item.label : undefined}
+                          className={`w-full flex items-center ${
+                            isSidebarCollapsed ? "justify-center px-2 py-3" : "justify-between px-3.5 py-2.5"
+                          } rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                             isActive
                               ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-bold"
                               : "text-white/70 hover:text-white hover:bg-white/5"
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <Icon className={`w-4 h-4 ${isActive ? "text-[#0c1b33]" : "text-[#d4af37]"}`} />
-                            <span>{item.label}</span>
+                            <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-[#0c1b33]" : "text-[#d4af37]"}`} />
+                            {!isSidebarCollapsed && <span>{item.label}</span>}
                           </div>
-                          {item.id === "prayers" && stats.pendingPrayers > 0 && (
+                          {!isSidebarCollapsed && item.id === "prayers" && stats.pendingPrayers > 0 && (
                             <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-[#0c1b33] text-[10px] font-extrabold">
                               {stats.pendingPrayers}
                             </span>
@@ -383,28 +649,32 @@ export default function AdminDashboard() {
 
           {/* Admin User Badge */}
           <div className="pt-6 border-t border-white/10 mt-6 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center font-bold text-[#fbf5b7]">
-                OP
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center font-bold text-[#fbf5b7] shrink-0">
+                {user?.name ? user.name.slice(0, 2).toUpperCase() : "OP"}
               </div>
-              <div>
-                <span className="font-bold text-white block leading-tight">Super Administrator</span>
-                <span className="text-[10px] text-white/50 font-mono">Role: super_admin</span>
-              </div>
+              {!isSidebarCollapsed && (
+                <div className="min-w-0">
+                  <span className="font-bold text-white block leading-tight truncate">{user?.name || "Super Administrator"}</span>
+                  <span className="text-[10px] text-white/50 font-mono">Role: {user?.role || "super_admin"}</span>
+                </div>
+              )}
             </div>
-            <button
-              type="button"
-              onClick={loadAllData}
-              title="Refresh all metrics"
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-            </button>
+            {!isSidebarCollapsed && (
+              <button
+                type="button"
+                onClick={loadAllData}
+                title="Refresh all metrics"
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              </button>
+            )}
           </div>
         </aside>
 
         {/* Main Content Pane */}
-        <main className="flex-1 p-6 sm:p-8 lg:p-10 bg-[#071324] overflow-y-auto">
+        <main className="flex-1 p-6 sm:p-8 lg:p-10 bg-[#071324] overflow-y-auto min-w-0">
           {/* TAB 1: COMMAND CENTER / OVERVIEW */}
           {activeTab === "overview" && (
             <div className="space-y-8">
@@ -609,18 +879,29 @@ export default function AdminDashboard() {
                     className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 text-xs sm:text-sm focus:outline-none focus:border-[#d4af37]"
                   />
                 </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Filter className="w-4 h-4 text-white/50 shrink-0" />
-                  <select
-                    value={memberStatusFilter}
-                    onChange={(e) => setMemberStatusFilter(e.target.value)}
-                    className="px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs sm:text-sm focus:outline-none"
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                    <Filter className="w-4 h-4 text-white/50 shrink-0" />
+                    <select
+                      value={memberStatusFilter}
+                      onChange={(e) => setMemberStatusFilter(e.target.value)}
+                      className="px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs sm:text-sm focus:outline-none"
+                    >
+                      <option value="all" className="bg-[#0c1b33]">All Statuses</option>
+                      <option value="active" className="bg-[#0c1b33]">Active</option>
+                      <option value="trial" className="bg-[#0c1b33]">Trial</option>
+                      <option value="suspended" className="bg-[#0c1b33]">Suspended</option>
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={downloadMembersCSV}
+                    className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all shrink-0"
+                    title="Export Members to CSV"
                   >
-                    <option value="all" className="bg-[#0c1b33]">All Statuses</option>
-                    <option value="active" className="bg-[#0c1b33]">Active</option>
-                    <option value="trial" className="bg-[#0c1b33]">Trial</option>
-                    <option value="suspended" className="bg-[#0c1b33]">Suspended</option>
-                  </select>
+                    <Download className="w-4 h-4 text-[#d4af37]" />
+                    <span className="hidden sm:inline">Export CSV</span>
+                  </button>
                 </div>
               </div>
 
@@ -741,13 +1022,23 @@ export default function AdminDashboard() {
           {/* TAB 4: BILLING & INVOICES */}
           {activeTab === "billing" && (
             <div className="space-y-6">
-              <div>
-                <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
-                  Billing, Payments & Invoices Ledger
-                </h1>
-                <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
-                  Complete searchable ledger of seed contributions, monthly recurring gifts, and official tax receipts.
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                    Billing, Payments & Invoices Ledger
+                  </h1>
+                  <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                    Complete searchable ledger of seed contributions, monthly recurring gifts, and official tax receipts.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={downloadDonationsCSV}
+                  className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shrink-0 self-start sm:self-auto"
+                >
+                  <Download className="w-4 h-4 text-[#d4af37]" />
+                  <span>Export Ledger CSV</span>
+                </button>
               </div>
 
               <div className="rounded-3xl bg-white/[0.03] border border-white/10 overflow-hidden">

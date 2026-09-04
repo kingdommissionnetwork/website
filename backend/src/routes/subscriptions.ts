@@ -4,6 +4,8 @@ import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { computeKesToUsd } from "../lib/exchangeRate";
 import { sendDonationEmail, sendPartnerWelcomeEmail } from "../lib/email";
+import { signToken } from "../lib/jwt";
+import { setCookie } from "hono/cookie";
 
 function getSecret(c: { env?: unknown }, key: string): string {
   const env = c.env as Record<string, string> | undefined;
@@ -55,6 +57,62 @@ async function getPayPalAccessToken(clientId: string, clientSecret: string): Pro
   });
   const data = (await res.json()) as Record<string, unknown>;
   return data.access_token as string;
+}
+
+// Seamless auto-provisioning & authenticated session minting for new/returning subscribers
+async function provisionSubscriberUser(
+  c: import("hono").Context,
+  name: string,
+  email: string
+) {
+  if (!email) return null;
+  const supabase = getSupabase();
+  let user: { id: string | number; name: string; email: string; role: string } | null = null;
+
+  try {
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingUser) {
+      user = existingUser;
+    } else {
+      const newId = crypto.randomUUID();
+      const { data: insertedUser, error } = await supabase
+        .from("users")
+        .insert({ id: newId, name: name || "Kingdom Partner", email, role: "member" })
+        .select("*")
+        .single();
+      user = !error && insertedUser ? insertedUser : { id: newId, name: name || "Kingdom Partner", email, role: "member" };
+    }
+
+    if (user) {
+      const token = await signToken({
+        userId: user.id,
+        role: user.role || "member",
+        name: user.name,
+        email: user.email,
+      });
+
+      setCookie(c, "token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "Lax",
+        maxAge: 60 * 60 * 24 * 7,
+        path: "/",
+      });
+
+      return {
+        user: { id: user.id, name: user.name, email: user.email, role: user.role },
+        token,
+      };
+    }
+  } catch (err) {
+    console.error("[AUTO-PROVISION] User session error:", err);
+  }
+  return null;
 }
 
 export const subscriptionRoutes = new Hono();
@@ -209,6 +267,18 @@ subscriptionRoutes.get("/verify/:reference", async (c) => {
     } catch (err) {
       console.error("[EMAIL] Partner welcome error:", err);
     }
+
+    const authSession = await provisionSubscriberUser(c, subscriberName, subscriberEmail);
+
+    return c.json({
+      status: data.status,
+      amount: (data.amount as number) / 100,
+      currency: data.currency,
+      reference,
+      user: authSession?.user || null,
+      token: authSession?.token || null,
+      planName,
+    });
   }
 
   return c.json({
@@ -216,6 +286,8 @@ subscriptionRoutes.get("/verify/:reference", async (c) => {
     amount: (data.amount as number) / 100,
     currency: data.currency,
     reference,
+    user: null,
+    token: null,
   });
 });
 
@@ -355,9 +427,19 @@ subscriptionRoutes.post(
       } catch (err) {
         console.error("[EMAIL] Partner welcome error:", err);
       }
+
+      const authSession = await provisionSubscriberUser(c, fullName, email);
+
+      return c.json({
+        status: data.status,
+        id: data.id,
+        user: authSession?.user || null,
+        token: authSession?.token || null,
+        planName: "Kingdom Partner",
+      });
     }
 
-    return c.json({ status: data.status, id: data.id });
+    return c.json({ status: data.status, id: data.id, user: null, token: null });
   }
 );
 
