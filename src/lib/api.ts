@@ -1,4 +1,4 @@
-import { demoEvents, type PrayerRequest, type Sermon, type Event, type BibleBook, type BibleVerse } from "../data/demoData";
+import { type PrayerRequest, type Sermon, type Event, type BibleBook, type BibleVerse } from "../data/demoData";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -133,16 +133,9 @@ export const api = {
     list: async (): Promise<Event[]> => {
       try {
         const res = await request<Event[]>("/events");
-        if (Array.isArray(res) && res.length > 0) {
-          const hasZimbabwe = res.some((e) => e.title?.toLowerCase().includes("zimbabwe"));
-          if (!hasZimbabwe) {
-            return [...demoEvents.slice(0, 3), ...res];
-          }
-          return res;
-        }
-        return demoEvents;
+        return Array.isArray(res) ? res : [];
       } catch {
-        return demoEvents;
+        return [];
       }
     },
     create: async (eventData: {
