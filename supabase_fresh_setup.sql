@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS public.events (
     id BIGSERIAL PRIMARY KEY,
     title TEXT NOT NULL,
     date TEXT NOT NULL,
+    end_date TEXT,
     day TEXT NOT NULL,
     month TEXT NOT NULL,
     time TEXT NOT NULL,
@@ -201,10 +202,10 @@ INSERT INTO public.sermons (title, speaker, ministry, duration, category, thumbn
 ('Healing is the Children''s Bread', 'Evangelist Mark Peters', 'Healing Rooms International', '1 hr 5 min', 'Healing', '/images/sermon-thumb-3.jpg', 'June 4, 2026')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO public.events (title, date, day, month, time, timezone, location, is_online, image, description) VALUES
-('Zimbabwe Kingdom Missions Conference', '2026-10-06', '06', 'OCT', '9:00 AM - 7:00 PM', 'CAT', 'Harare, Zimbabwe', false, '/images/zimbabwe-conference.jpg', 'October 6-10, 2026. An apostolic gathering of leaders, ministers, and believers across nations uniting in prayer, revival fire, and kingdom impact in Zimbabwe. Register to participate or partner with this transformative mission.'),
-('Pakistan Kingdom Gospel Mission', '2026-12-01', '01', 'DEC', '5:00 PM - 9:00 PM', 'PKT', 'Lahore, Pakistan', false, '/images/pakistan-mission.jpg', 'December 1-6, 2026. An extraordinary week of evangelistic mass crusades, pastors empowerment seminars, and salvation outreach reaching unreached souls in Pakistan. Support this groundbreaking mission through Kingdom Partnership.'),
-('New Dawn Conference', '2027-03-12', '12', 'MAR', '8:30 AM - 6:30 PM', 'EAT', 'HKM Ministries, Jomvu, Mombasa', false, '/images/new-dawn-conference-2027.jpg', 'March 12-16, 2027. New Dawn - A Fresh Wind, A New Fire (Acts 2:2-4). A prophetic gathering with Rev. Susan Sarah (Host), Dr. Bishop George Githinji (Nairobi) and Dr. Apostle Cookhorn (USA). Enquiries: +254 726-912577 / +254 724 672208.')
+INSERT INTO public.events (title, date, end_date, day, month, time, timezone, location, is_online, image, description) VALUES
+('Zimbabwe Kingdom Missions Conference', '2026-10-06', '2026-10-10', '06', 'OCT', '9:00 AM - 7:00 PM', 'CAT', 'Harare, Zimbabwe', false, '/images/zimbabwe-conference.jpg', 'October 6-10, 2026. An apostolic gathering of leaders, ministers, and believers across nations uniting in prayer, revival fire, and kingdom impact in Zimbabwe. Register to participate or partner with this transformative mission.'),
+('Pakistan Kingdom Gospel Mission', '2026-12-01', '2026-12-06', '01', 'DEC', '5:00 PM - 9:00 PM', 'PKT', 'Lahore, Pakistan', false, '/images/pakistan-mission.jpg', 'December 1-6, 2026. An extraordinary week of evangelistic mass crusades, pastors empowerment seminars, and salvation outreach reaching unreached souls in Pakistan. Support this groundbreaking mission through Kingdom Partnership.'),
+('New Dawn Conference', '2027-03-12', '2027-03-16', '12', 'MAR', '8:30 AM - 6:30 PM', 'EAT', 'HKM Ministries, Jomvu, Mombasa', false, '/images/new-dawn-conference-2027.jpg', 'March 12-16, 2027. New Dawn - A Fresh Wind, A New Fire (Acts 2:2-4). A prophetic gathering with Rev. Susan Sarah (Host), Dr. Bishop George Githinji (Nairobi) and Dr. Apostle Cookhorn (USA). Enquiries: +254 726-912577 / +254 724 672208.')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.prayers (name, anonymous, category, text, prayers, comments, status) VALUES

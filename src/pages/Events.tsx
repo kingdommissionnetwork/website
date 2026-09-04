@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import SEO from "../components/SEO";
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Calendar,
   CalendarDays,
   CalendarPlus,
@@ -36,26 +36,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import ScrollReveal from "../components/ScrollReveal";
 import AmbientParticles from "../components/AmbientParticles";
 import { api } from "../lib/api";
+import { parseEventDate, getUpcomingEvents } from "../lib/events";
 import type { Event } from "../data/demoData";
 import { useToast } from "../lib/toast";
 
 /* ---------- helpers ---------- */
-
-function parseEventDate(value: string): Date {
-  const [y, m, d] = value.split("-").map(Number);
-  if (y && m && d) return new Date(y, m - 1, d);
-  const fallback = new Date(value);
-  return Number.isNaN(fallback.getTime()) ? new Date() : fallback;
-}
-
-function startOfToday(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function isUpcoming(event: Event, today: Date): boolean {
-  return parseEventDate(event.date).getTime() >= today.getTime();
-}
 
 function downloadICS(event: Event) {
   const start = event.date.replace(/-/g, "");
@@ -123,7 +108,6 @@ export default function Events() {
   });
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [showPast, setShowPast] = useState(false);
   const [rsvpForm, setRsvpForm] = useState({ name: "", email: "" });
   const { showToast } = useToast();
 
@@ -137,8 +121,6 @@ export default function Events() {
       .catch(() => setLoading(false));
   }, []);
 
-  const today = useMemo(() => startOfToday(), []);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return events.filter((e) => {
@@ -149,20 +131,8 @@ export default function Events() {
     });
   }, [events, query, formatFilter]);
 
-  const upcoming = useMemo(
-    () =>
-      filtered
-        .filter((e) => isUpcoming(e, today))
-        .sort((a, b) => parseEventDate(a.date).getTime() - parseEventDate(b.date).getTime()),
-    [filtered, today]
-  );
-  const past = useMemo(
-    () =>
-      filtered
-        .filter((e) => !isUpcoming(e, today))
-        .sort((a, b) => parseEventDate(b.date).getTime() - parseEventDate(a.date).getTime()),
-    [filtered, today]
-  );
+  // Expired gatherings leave this page automatically and live on /events/past.
+  const upcoming = useMemo(() => getUpcomingEvents(filtered), [filtered]);
 
   const featured = upcoming[0] ?? null;
   const countdown = useCountdown(featured ? featured.date : null);
@@ -201,7 +171,8 @@ export default function Events() {
     if (event.endDate) return t >= s && t <= parseEventDate(event.endDate).getTime();
     return t === s;
   };
-  const eventsForDate = (date: Date) => filtered.filter((e) => isEventOnDate(e, date));
+  // Calendar only marks gatherings that have not expired.
+  const eventsForDate = (date: Date) => upcoming.filter((e) => isEventOnDate(e, date));
 
   const handleRsvp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -479,9 +450,18 @@ export default function Events() {
                   <h2 className="font-display text-2xl font-semibold text-[#0c1b33]">
                     Upcoming gatherings
                   </h2>
-                  <span className="text-xs font-semibold text-[#6b7c93]">
-                    {upcoming.length} event{upcoming.length === 1 ? "" : "s"}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold text-[#6b7c93]">
+                      {upcoming.length} event{upcoming.length === 1 ? "" : "s"}
+                    </span>
+                    <Link
+                      to="/events/past"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#8b5e3c] hover:underline"
+                    >
+                      Past gatherings
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
                 </div>
 
                 {upcoming.length === 0 ? (
@@ -578,53 +558,6 @@ export default function Events() {
                     })}
                   </div>
                 )}
-
-                {/* ---------- PAST ---------- */}
-                {past.length > 0 && (
-                  <div className="mt-10">
-                    <button
-                      onClick={() => setShowPast((v) => !v)}
-                      aria-expanded={showPast}
-                      className="flex items-center gap-2 text-sm font-bold text-[#6b7c93] hover:text-[#0c1b33] transition-colors"
-                    >
-                      <ChevronDown
-                        className={`w-4 h-4 transition-transform ${showPast ? "rotate-180" : ""}`}
-                      />
-                      Past gatherings ({past.length})
-                    </button>
-                    {showPast && (
-                      <div className="mt-4 space-y-3 opacity-80">
-                        {past.map((event) => {
-                          const d = parseEventDate(event.date);
-                          return (
-                            <div
-                              key={event.id}
-                              className="flex items-center gap-4 bg-[#f8f6f3] rounded-2xl border border-[#0c1b33]/5 p-4"
-                            >
-                              <div className="bg-white rounded-xl px-3 py-2 text-center min-w-[62px] border border-[#0c1b33]/10">
-                                <p className="text-[10px] font-bold text-[#8b5e3c] uppercase">
-                                  {event.month || format(d, "MMM").toUpperCase()}
-                                </p>
-                                <p className="text-xl font-bold text-[#0c1b33] font-display">
-                                  {event.day || format(d, "d")}
-                                </p>
-                              </div>
-                              <div className="min-w-0">
-                                <h3 className="font-semibold text-sm text-[#0c1b33] line-clamp-1">
-                                  {event.title}
-                                </h3>
-                                <p className="text-xs text-[#6b7c93] flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  {event.location} · {format(d, "yyyy")}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
               </>
             ) : (
               <CalendarPanel
@@ -635,7 +568,7 @@ export default function Events() {
                 selectedDate={selectedDate}
                 setSelectedDate={setSelectedDate}
                 eventsForDate={eventsForDate}
-                filtered={filtered}
+                filtered={upcoming}
                 setSelectedEvent={setSelectedEvent}
               />
             )}

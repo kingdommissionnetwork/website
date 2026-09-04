@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Calendar, MapPin, Video, ChevronRight, Crown, Sparkles } from "lucide-react";
 import ScrollReveal from "../../components/ScrollReveal";
 import { api } from "../../lib/api";
+import { getUpcomingEvents } from "../../lib/events";
 import type { Event } from "../../data/demoData";
 
 export default function EventsPreviewSection() {
@@ -11,7 +12,7 @@ export default function EventsPreviewSection() {
 
   useEffect(() => {
     api.events.list().then((data) => {
-      setEvents(data.slice(0, 6));
+      setEvents(getUpcomingEvents(Array.isArray(data) ? data : []).slice(0, 6));
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);

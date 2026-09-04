@@ -3,7 +3,6 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { requireAdmin } from "../lib/jwt";
-import { getEnv } from "../lib/env";
 import { sendEventRsvpEmail } from "../lib/email";
 
 export const eventRoutes = new Hono();
@@ -18,6 +17,7 @@ eventRoutes.get("/", async (c) => {
 const createEventSchema = z.object({
   title: z.string().min(1).max(200),
   date: z.string().min(1).max(20),
+  endDate: z.string().min(1).max(20).optional(),
   time: z.string().min(1).max(20),
   location: z.string().min(1).max(200),
   description: z.string().min(1).max(2000),
@@ -31,6 +31,7 @@ const createEventSchema = z.object({
 const updateEventSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   date: z.string().min(1).max(20).optional(),
+  endDate: z.string().min(1).max(20).optional().nullable(),
   time: z.string().min(1).max(20).optional(),
   location: z.string().min(1).max(200).optional(),
   description: z.string().min(1).max(2000).optional(),
@@ -41,6 +42,16 @@ const updateEventSchema = z.object({
   image: z.string().max(500).optional(),
 });
 
+// API payloads use camelCase, DB columns use snake_case.
+function toEventRow(data: Record<string, unknown>): Record<string, unknown> {
+  const { isOnline, endDate, ...rest } = data;
+  return {
+    ...rest,
+    ...(isOnline !== undefined ? { is_online: isOnline } : {}),
+    ...(endDate !== undefined ? { end_date: endDate } : {}),
+  };
+}
+
 const rsvpSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),
@@ -50,11 +61,11 @@ eventRoutes.post("/", requireAdmin, zValidator("json", createEventSchema), async
   const supabase = getSupabase();
   const data = c.req.valid("json");
   const d = new Date(data.date);
-  const { data: event, error } = await supabase.from("events").insert({
+  const { data: event, error } = await supabase.from("events").insert(toEventRow({
     ...data,
     month: data.month || d.toLocaleString("en-US", { month: "short" }).toUpperCase(),
     day: data.day || String(d.getDate()).padStart(2, "0"),
-  }).select().single();
+  })).select().single();
   if (error) return c.json({ error: error.message }, 500);
   return c.json(event, 201);
 });
@@ -63,7 +74,7 @@ eventRoutes.patch("/:id", requireAdmin, zValidator("json", updateEventSchema), a
   const supabase = getSupabase();
   const id = Number(c.req.param("id"));
   const body = c.req.valid("json");
-  const { data: event, error } = await supabase.from("events").update(body).eq("id", id).select().single();
+  const { data: event, error } = await supabase.from("events").update(toEventRow({ ...body })).eq("id", id).select().single();
   if (error) return c.json({ error: error.message }, 500);
   return c.json(event);
 });
