@@ -57,6 +57,17 @@ adminRoutes.get("/stats", async (c) => {
   const arrKes = mrrKes * 12;
   const arrUsd = Number((arrKes * 0.00772).toFixed(2));
 
+  // Churn = cancelled subscriptions as a share of all subscriptions on record.
+  const totalSubs = (activeSubs || []).length;
+  const cancelledSubs = (activeSubs || []).filter((s: { status?: string }) => s.status === "cancelled").length;
+  const churnRate = totalSubs > 0 ? `${((cancelledSubs / totalSubs) * 100).toFixed(1)}%` : "0.0%";
+
+  // Failed payment attempts recorded in the donations ledger.
+  const { count: failedPayments } = await supabase
+    .from("donations")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "failed");
+
   // Monthly giving YTD
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -74,6 +85,17 @@ adminRoutes.get("/stats", async (c) => {
   const totalYtd = (ytdDonations || []).reduce((sum: number, d: { amount: number }) => sum + Number(d.amount), 0);
   const donorNames = new Set((ytdDonations || []).map((d: { donor_name?: string }) => d.donor_name || "Anonymous"));
 
+  // Active events = gatherings whose last day has not passed yet.
+  // Falls back to the total count when the end_date column is unavailable.
+  let activeEvents = allEvents || 0;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const { data: eventDates } = await supabase.from("events").select("date, end_date");
+  if (eventDates) {
+    activeEvents = eventDates.filter(
+      (e: { date?: string; end_date?: string }) => String(e.end_date || e.date || "") >= todayStr
+    ).length;
+  }
+
   return c.json({
     totalUsers: totalUsers || 0,
     activeSubscriptions: activeSubscriptionsCount || 0,
@@ -81,14 +103,14 @@ adminRoutes.get("/stats", async (c) => {
     mrrUsd,
     arrKes,
     arrUsd,
-    churnRate: "2.4%",
-    failedPaymentsCount: 0,
+    churnRate,
+    failedPaymentsCount: failedPayments || 0,
     totalPrayers: allPrayers || 0,
     pendingPrayers: pendingPrayers || 0,
     flaggedPrayers: flaggedPrayers || 0,
     totalSermons: totalSermons || 0,
     monthlyGiving,
-    activeEvents: allEvents || 0,
+    activeEvents,
     totalYtd,
     donorCount: donorNames.size,
   });
@@ -126,8 +148,8 @@ adminRoutes.get("/attention", async (c) => {
   alerts.push({
     id: "system_health",
     type: "success",
-    title: "All Core Systems Operational",
-    description: "Database, Paystack, PayPal, and Wise exchange rate gateways active.",
+    title: "No Urgent Items",
+    description: "All monitored queues are clear. Open the Security tab for live per-service status.",
     actionLabel: "View Health",
     tab: "security",
   });
@@ -322,34 +344,57 @@ adminRoutes.get("/audit-logs", async (c) => {
     .limit(50);
   
   if (error || !data) {
-    // Return structured fallback logs
-    return c.json([
-      {
-        id: 1,
-        actor: "Super Admin",
-        action: "PLATFORM_INITIALIZED",
-        target_type: "system",
-        target_id: "KMN-CORE",
-        details: { status: "operational" },
-        created_at: new Date().toISOString(),
-      },
-    ]);
+    // No mock entries: an empty trail is the honest state until real
+    // admin actions are logged.
+    return c.json([]);
   }
   return c.json(data);
 });
 
-// 9. SYSTEM HEALTH STATUS
+// 9. SYSTEM HEALTH STATUS — live checks only, no canned latencies.
 adminRoutes.get("/health", async (c) => {
+  const started = Date.now();
+  const supabase = getSupabase();
+  const env = (c.env || {}) as Record<string, string>;
+  const configured = (key: string) => Boolean(env[key]);
+
+  // Real database round-trip; its latency is measured, not invented.
+  const dbStart = Date.now();
+  const { error: dbError } = await supabase.from("users").select("id").limit(1);
+  const dbLatency = Date.now() - dbStart;
+
+  const services = [
+    { name: "API Gateway (Cloudflare / Hono)", status: "operational", latency: `${Date.now() - started}ms` },
+    {
+      name: "Supabase Postgres Database",
+      status: dbError ? "down" : "operational",
+      latency: `${dbLatency}ms`,
+    },
+    {
+      name: "Paystack Payment Engine",
+      status: configured("PAYSTACK_SECRET_KEY") ? "operational" : "not configured",
+      latency: "—",
+    },
+    {
+      name: "PayPal International Gateway",
+      status: configured("PAYPAL_CLIENT_ID") && configured("PAYPAL_CLIENT_SECRET") ? "operational" : "not configured",
+      latency: "—",
+    },
+    {
+      name: "Wise Financial Exchange Rate API",
+      status: configured("WISE_API_TOKEN") ? "operational" : "not configured",
+      latency: "—",
+    },
+    {
+      name: "Email & Notification Dispatcher",
+      status: configured("RESEND_API_KEY") ? "operational" : "not configured",
+      latency: "—",
+    },
+  ];
+
   return c.json({
-    status: "healthy",
-    services: [
-      { name: "API Gateway (Cloudflare / Hono)", status: "operational", latency: "12ms" },
-      { name: "Supabase Postgres Database", status: "operational", latency: "24ms" },
-      { name: "Paystack Payment Engine", status: "operational", latency: "45ms" },
-      { name: "PayPal International Gateway", status: "operational", latency: "52ms" },
-      { name: "Wise Financial Exchange Rate API", status: "operational", latency: "38ms" },
-      { name: "Email & Notification Dispatcher", status: "operational", latency: "15ms" },
-    ],
+    status: dbError ? "degraded" : "healthy",
+    services,
     lastChecked: new Date().toISOString(),
   });
 });
