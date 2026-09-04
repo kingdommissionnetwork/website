@@ -171,7 +171,7 @@ export default function AdminDashboard() {
     mrrUsd: 0,
     arrKes: 0,
     arrUsd: 0,
-    churnRate: "2.4%",
+    churnRate: "–",
     failedPaymentsCount: 0,
     totalPrayers: 0,
     pendingPrayers: 0,
@@ -1315,10 +1315,17 @@ export default function AdminDashboard() {
                 <div className="p-7 rounded-3xl bg-white/[0.03] border border-white/10 space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-brand font-bold text-lg text-white">Platform System Health</h3>
-                    <span className="text-xs text-emerald-400 font-bold flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      All Services Nominal
-                    </span>
+                    {healthData.services.every((svc) => svc.status === "operational") ? (
+                      <span className="text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        All Services Nominal
+                      </span>
+                    ) : (
+                      <span className="text-xs text-amber-400 font-bold flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                        Attention Needed
+                      </span>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1326,7 +1333,7 @@ export default function AdminDashboard() {
                       <div key={svc.name} className="p-4 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-between text-xs">
                         <span className="font-bold text-white">{svc.name}</span>
                         <div className="text-right">
-                          <span className="text-emerald-400 font-bold block">● {svc.status}</span>
+                          <span className={`font-bold block ${svc.status === "operational" ? "text-emerald-400" : svc.status === "not configured" ? "text-amber-400" : "text-red-400"}`}>● {svc.status}</span>
                           <span className="text-[10px] text-white/40">{svc.latency}</span>
                         </div>
                       </div>
