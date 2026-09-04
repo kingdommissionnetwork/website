@@ -12,7 +12,6 @@ import {
   ChevronDown,
   Crown,
   ArrowRight,
-  Sparkles,
   Globe,
 } from "lucide-react";
 import {
