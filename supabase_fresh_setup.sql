@@ -202,10 +202,9 @@ INSERT INTO public.sermons (title, speaker, ministry, duration, category, thumbn
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.events (title, date, day, month, time, timezone, location, is_online, image, description) VALUES
-('Global Worship Night', '2026-09-20', '20', 'SEP', '7:00 PM', 'EST', 'Online', true, '/images/event-worship-night.jpg', 'Join believers worldwide for an evening of powerful worship, testimony, and intercession.'),
-('Kingdom Leadership Conference', '2026-09-25', '25', 'SEP', '9:00 AM', 'PST', 'Nairobi & Global Stream', true, '/images/event-conference.jpg', 'Equipping pastors, ministry workers, and kingdom professionals for greater global impact.'),
-('Youth Revival Night', '2026-09-28', '28', 'SEP', '6:00 PM', 'EAT', 'Online Stream', true, '/images/event-worship-night.jpg', 'Igniting the fire of the Holy Spirit in the next generation across Africa and the nations.'),
-('Global Prayer & Fasting Summit', '2026-10-05', '05', 'OCT', '8:00 AM', 'EST', 'Online', true, '/images/event-conference.jpg', 'A 3-day virtual summit dedicated to prayer, fasting, and spiritual awakening.')
+('Zimbabwe Kingdom Missions Conference', '2026-10-06', '06', 'OCT', '9:00 AM - 7:00 PM', 'CAT', 'Harare, Zimbabwe', false, '/images/zimbabwe-conference.jpg', 'October 6-10, 2026. An apostolic gathering of leaders, ministers, and believers across nations uniting in prayer, revival fire, and kingdom impact in Zimbabwe. Register to participate or partner with this transformative mission.'),
+('Pakistan Kingdom Gospel Mission', '2026-12-01', '01', 'DEC', '5:00 PM - 9:00 PM', 'PKT', 'Lahore, Pakistan', false, '/images/pakistan-mission.jpg', 'December 1-6, 2026. An extraordinary week of evangelistic mass crusades, pastors empowerment seminars, and salvation outreach reaching unreached souls in Pakistan. Support this groundbreaking mission through Kingdom Partnership.'),
+('New Dawn Conference', '2027-03-12', '12', 'MAR', '8:30 AM - 6:30 PM', 'EAT', 'HKM Ministries, Jomvu, Mombasa', false, '/images/new-dawn-conference-2027.jpg', 'March 12-16, 2027. New Dawn - A Fresh Wind, A New Fire (Acts 2:2-4). A prophetic gathering with Rev. Susan Sarah (Host), Dr. Bishop George Githinji (Nairobi) and Dr. Apostle Cookhorn (USA). Enquiries: +254 726-912577 / +254 724 672208.')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.prayers (name, anonymous, category, text, prayers, comments, status) VALUES
