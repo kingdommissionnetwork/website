@@ -247,7 +247,15 @@ export const api = {
       }>("/subscriptions/initialize", { method: "POST", body: JSON.stringify(data) });
     },
     verify: async (reference: string) => {
-      return request<{ status: string; amount: number; currency: string; reference: string }>(`/subscriptions/verify/${reference}`);
+      return request<{
+        status: string;
+        amount: number;
+        currency: string;
+        reference: string;
+        user?: AuthUser | null;
+        token?: string | null;
+        planName?: string;
+      }>(`/subscriptions/verify/${reference}`);
     },
     paypalCreate: async (data: { name?: string; email?: string; amount?: number; planName?: string }) => {
       return request<{ id: string; usdAmount: number; kesAmount: number; exchangeRate: number }>("/subscriptions/paypal/create", {
@@ -256,7 +264,13 @@ export const api = {
       });
     },
     paypalCapture: async (data: { orderId: string; subscriberName?: string }) => {
-      return request<{ status: string; id: string }>("/subscriptions/paypal/capture", {
+      return request<{
+        status: string;
+        id: string;
+        user?: AuthUser | null;
+        token?: string | null;
+        planName?: string;
+      }>("/subscriptions/paypal/capture", {
         method: "POST",
         body: JSON.stringify(data),
       });

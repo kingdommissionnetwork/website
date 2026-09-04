@@ -18,6 +18,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   loginWithGoogle: (token: string) => Promise<boolean>;
   logout: () => void;
+  setSession: (user: User, token?: string) => void;
   isAuthenticated: boolean;
   loading: boolean;
 }
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   register: async () => ({ ok: false }),
   loginWithGoogle: async () => false,
   logout: () => {},
+  setSession: () => {},
   isAuthenticated: false,
   loading: true,
 });
@@ -44,6 +46,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => { /* not logged in — that's fine */ })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
+  }, []);
+
+  const setSession = useCallback((sessionUser: User, token?: string) => {
+    if (token) {
+      try {
+        localStorage.setItem("hkn-token", token);
+      } catch {
+        // local storage not available
+      }
+    }
+    setUser(sessionUser);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -87,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, login, register, loginWithGoogle, logout, isAuthenticated: !!user, loading }}
+      value={{ user, login, register, loginWithGoogle, logout, setSession, isAuthenticated: !!user, loading }}
     >
       {children}
     </AuthContext.Provider>

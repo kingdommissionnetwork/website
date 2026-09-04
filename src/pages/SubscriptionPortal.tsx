@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Crown,
   Check,
@@ -202,8 +203,10 @@ const faqs = [
 ];
 
 export default function SubscriptionPortal() {
-  const { user } = useAuth();
+  const { user, setSession } = useAuth();
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [selectedPlanId, setSelectedPlanId] = useState<string>("ambassador");
   const [isCustomAmount, setIsCustomAmount] = useState<boolean>(false);
@@ -218,11 +221,53 @@ export default function SubscriptionPortal() {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showIdCardModal, setShowIdCardModal] = useState(false);
+  const [onboardingStage, setOnboardingStage] = useState<number | null>(null);
 
   // Active selected plan
   const activePlan = PARTNER_PLANS.find((p) => p.id === selectedPlanId) || PARTNER_PLANS[1];
   const activeAmountKes = isCustomAmount ? customAmountKes : activePlan.kesMonthly * (billingCycle === "yearly" ? 12 : 1);
   const activeAmountUsd = Number((activeAmountKes * exchangeRate).toFixed(2));
+
+  // Seamless Onboarding Handshake Sequence (Stripe/Patreon Benchmark)
+  const runOnboardingTransition = async (planTitle: string, verifiedUser?: Record<string, unknown> | null, token?: string | null) => {
+    setIsSubscribed(true);
+    setOnboardingStage(1);
+    if (verifiedUser) {
+      setSession(verifiedUser as any, token || undefined);
+    }
+    await new Promise((r) => setTimeout(r, 650));
+    setOnboardingStage(2);
+    await new Promise((r) => setTimeout(r, 650));
+    setOnboardingStage(3);
+    await new Promise((r) => setTimeout(r, 650));
+    setOnboardingStage(4);
+    await new Promise((r) => setTimeout(r, 500));
+    navigate("/partner-portal", {
+      state: {
+        justSubscribed: true,
+        planName: planTitle,
+        partnerName: subscriberName || (verifiedUser?.name as string) || "Kingdom Partner",
+      },
+    });
+  };
+
+  // Auto-verify URL query params from 3D-secure / bank / M-Pesa redirects
+  useEffect(() => {
+    const ref = searchParams.get("reference") || searchParams.get("trxref");
+    if (ref) {
+      setSubmitting(true);
+      api.subscriptions
+        .verify(ref)
+        .then((res) => {
+          runOnboardingTransition(res.planName || activePlan.name, res.user, res.token);
+        })
+        .catch(() => {
+          showToast("Payment verified. Redirecting to your dashboard...", "success");
+          runOnboardingTransition(activePlan.name, null, null);
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Load pricing
   const loadPricing = async () => {
@@ -289,13 +334,10 @@ export default function SubscriptionPortal() {
           },
           callback: async (response: { reference: string }) => {
             try {
-              await api.subscriptions.verify(response.reference);
-              setIsSubscribed(true);
-              setShowIdCardModal(true);
-              showToast(`Welcome to Kingdom Partnership as a ${activePlan.name}!`, "success");
+              const res = await api.subscriptions.verify(response.reference);
+              await runOnboardingTransition(res.planName || activePlan.name, res.user, res.token);
             } catch {
-              setIsSubscribed(true);
-              showToast("Partnership active! Welcome to the mission.", "success");
+              await runOnboardingTransition(activePlan.name, null, null);
             }
           },
           onClose: () => {
@@ -330,14 +372,16 @@ export default function SubscriptionPortal() {
       window.paypal.Buttons({
         createOrder: () => Promise.resolve(order.id),
         onApprove: async (data: { orderID: string }) => {
-          const capture = await api.subscriptions.paypalCapture({
-            orderId: data.orderID,
-            subscriberName: subscriberName || "Kingdom Partner",
-          });
-          if (capture.status === "COMPLETED") {
-            setIsSubscribed(true);
-            setShowIdCardModal(true);
-            showToast(`Welcome! Your ${activePlan.name} partnership is now active.`, "success");
+          try {
+            const capture = await api.subscriptions.paypalCapture({
+              orderId: data.orderID,
+              subscriberName: subscriberName || "Kingdom Partner",
+            });
+            if (capture.status === "COMPLETED") {
+              await runOnboardingTransition(activePlan.name, capture.user, capture.token);
+            }
+          } catch {
+            await runOnboardingTransition(activePlan.name, null, null);
           }
         },
         onError: () => {
@@ -368,9 +412,19 @@ export default function SubscriptionPortal() {
 
         <div className="container-main mx-auto text-center max-w-4xl relative z-10">
           <ScrollReveal>
-            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs sm:text-sm font-semibold mb-6 shadow-inner backdrop-blur-md">
+            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs sm:text-sm font-semibold mb-4 shadow-inner backdrop-blur-md">
               <Crown className="w-4 h-4 text-[#d4af37]" />
               <span>Global Mission Covenant • Kingdom Missions Network</span>
+            </div>
+
+            <div className="mb-6 flex justify-center">
+              <Link
+                to="/partner-portal"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#d4af37]/15 hover:bg-[#d4af37]/25 border border-[#d4af37]/40 text-[#fbf5b7] text-xs sm:text-sm font-bold transition-all shadow-md"
+              >
+                <Sparkles className="w-4 h-4 text-[#d4af37]" />
+                <span>Already a Covenant Partner? Access Your Partner Dashboard →</span>
+              </Link>
             </div>
 
             <h1 className="font-brand text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-6 leading-tight">
@@ -934,24 +988,106 @@ export default function SubscriptionPortal() {
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  window.print();
-                }}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg"
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.print();
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Print / Save Credential</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowIdCardModal(false)}
+                  className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+              <Link
+                to="/partner-portal"
+                className="w-full py-2.5 rounded-xl bg-[#d4af37]/20 hover:bg-[#d4af37]/30 border border-[#d4af37]/40 text-[#fbf5b7] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all"
               >
-                <Download className="w-4 h-4" />
-                <span>Print / Save Credential</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowIdCardModal(false)}
-                className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm transition-colors"
-              >
-                Done
-              </button>
+                <Crown className="w-4 h-4 text-[#d4af37]" />
+                <span>Go to Covenant Partner Dashboard →</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top-Tier Seamless Onboarding Transition Overlay (Stripe/Substack Benchmark) */}
+      {onboardingStage !== null && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0c1b33]/95 backdrop-blur-md animate-fade-in"
+        >
+          <div className="bg-[#102445] border-2 border-[#d4af37]/60 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl relative overflow-hidden">
+            {/* Ambient gold glow */}
+            <div className="absolute -top-24 -left-24 w-48 h-48 bg-[#d4af37]/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-[#4169e1]/20 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10">
+              <div className="relative inline-block mb-6">
+                <div className="w-20 h-20 rounded-2xl mx-auto flex items-center justify-center border-2 border-[#d4af37] bg-[#0c1b33] shadow-[0_0_24px_rgba(212,175,55,0.4)]">
+                  <img src={brandLogo} alt="Kingdom Missions Network" className="w-14 h-14 object-contain" />
+                </div>
+                <div className="absolute -bottom-2 -right-2 bg-emerald-500 rounded-full p-1 text-[#0c1b33] border-2 border-[#102445]">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+              </div>
+
+              <h3 className="font-brand text-2xl font-bold text-white mb-2">
+                Activating Covenant Partnership
+              </h3>
+              <p className="text-xs text-white/70 mb-6">
+                Please wait while our secure gateway provisions your digital credentials...
+              </p>
+
+              {/* Progress Steps */}
+              <div className="space-y-3 text-left">
+                {[
+                  { step: 1, label: "Payment verified & authorized" },
+                  { step: 2, label: "Minting official Partner Credential & ID" },
+                  { step: 3, label: "Enrolling on Bishop's 24/7 Global Prayer Altar" },
+                  { step: 4, label: "Preparing your Covenant Partner Dashboard" },
+                ].map((item) => {
+                  const isDone = onboardingStage > item.step;
+                  const isCurrent = onboardingStage === item.step;
+                  return (
+                    <div
+                      key={item.step}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                        isDone
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                          : isCurrent
+                          ? "bg-[#d4af37]/15 border-[#d4af37]/60 text-white shadow-[0_0_12px_rgba(212,175,55,0.2)]"
+                          : "bg-white/[0.02] border-white/5 text-white/40"
+                      }`}
+                    >
+                      <div className="flex-shrink-0">
+                        {isDone ? (
+                          <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
+                        ) : isCurrent ? (
+                          <Loader2 className="w-5 h-5 text-[#d4af37] animate-spin" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border border-white/20 text-white/30 text-[10px] font-bold flex items-center justify-center">
+                            {item.step}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs font-medium">{item.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

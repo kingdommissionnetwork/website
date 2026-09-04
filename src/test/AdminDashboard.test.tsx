@@ -26,14 +26,24 @@ vi.mock("../hooks/use-async", () => ({
   }),
 }));
 
+import { MemoryRouter } from "react-router-dom";
+
 describe("AdminDashboard", () => {
   it("renders without crashing and displays command center", () => {
-    render(<AdminDashboard />);
+    render(
+      <MemoryRouter>
+        <AdminDashboard />
+      </MemoryRouter>
+    );
     expect(screen.getAllByText(/Command Center|KMN OPERATIONS/i).length).toBeGreaterThan(0);
   });
 
   it("displays key statistics and attention center", () => {
-    render(<AdminDashboard />);
+    render(
+      <MemoryRouter>
+        <AdminDashboard />
+      </MemoryRouter>
+    );
     expect(screen.getAllByText(/TOTAL REGISTERED MEMBERS|ACTIVE PARTNERS/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Command Center/i).length).toBeGreaterThan(0);
   });
