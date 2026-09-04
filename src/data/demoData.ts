@@ -25,14 +25,19 @@ export interface Event {
   id: string;
   title: string;
   date: string;
+  endDate?: string;
+  dateRange?: string;
   day: string;
   month: string;
   time: string;
   timezone: string;
   location: string;
+  country?: string;
   isOnline: boolean;
   image: string;
   description: string;
+  badge?: string;
+  partnershipUrl?: string;
 }
 
 export interface BibleBook {
@@ -198,6 +203,60 @@ export const demoSermons: Sermon[] = [
 ];
 
 export const demoEvents: Event[] = [
+  {
+    id: "zimbabwe-2026",
+    title: "Zimbabwe Kingdom Missions Conference",
+    date: "2026-10-06",
+    endDate: "2026-10-10",
+    dateRange: "October 6–10, 2026",
+    day: "06–10",
+    month: "OCT",
+    time: "9:00 AM – 7:00 PM",
+    timezone: "CAT",
+    location: "Harare, Zimbabwe",
+    country: "Zimbabwe",
+    isOnline: false,
+    image: "/images/zimbabwe-conference.jpg",
+    badge: "International Summit",
+    partnershipUrl: "/subscribe",
+    description: "An apostolic gathering of leaders, ministers, and believers across nations uniting in prayer, revival fire, and kingdom impact in Zimbabwe. Register to participate or partner with this transformative mission.",
+  },
+  {
+    id: "pakistan-2026",
+    title: "Pakistan Kingdom Gospel Mission",
+    date: "2026-12-01",
+    endDate: "2026-12-06",
+    dateRange: "December 1–6, 2026",
+    day: "01–06",
+    month: "DEC",
+    time: "5:00 PM – 9:00 PM",
+    timezone: "PKT",
+    location: "Lahore, Pakistan",
+    country: "Pakistan",
+    isOnline: false,
+    image: "/images/pakistan-mission.jpg",
+    badge: "Gospel Crusade & Outreach",
+    partnershipUrl: "/subscribe",
+    description: "An extraordinary week of evangelistic mass crusades, pastors' empowerment seminars, and salvation outreach reaching unreached souls in Pakistan. Support this groundbreaking mission through Kingdom Partnership.",
+  },
+  {
+    id: "mombasa-2027",
+    title: "New Dawn Conference — Mombasa",
+    date: "2027-03-12",
+    endDate: "2027-03-14",
+    dateRange: "March 12–14, 2027",
+    day: "12–14",
+    month: "MAR",
+    time: "8:30 AM – 6:30 PM",
+    timezone: "EAT",
+    location: "Mombasa, Kenya",
+    country: "Kenya",
+    isOnline: false,
+    image: "/images/new-dawn-mombasa.jpg",
+    badge: "Flagship Annual Summit",
+    partnershipUrl: "/subscribe",
+    description: "A prophetic landmark conference heralding a new spiritual season and dawn of revival, dynamic worship, and apostolic commissioning at the coastal city of Mombasa. Reserve your seat and sponsor the harvest via our partner packages.",
+  },
   {
     id: "1",
     title: "Global Worship Night",

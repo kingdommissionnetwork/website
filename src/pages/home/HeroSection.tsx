@@ -1,12 +1,53 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Play, Heart, ShieldCheck, Sparkles } from "lucide-react";
+import { Play, Heart, ShieldCheck, Sparkles, Calendar, MapPin, ArrowRight, Crown, Globe, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import AmbientParticles from "../../components/AmbientParticles";
 import ScrollReveal from "../../components/ScrollReveal";
 import bishopHeroImg from "../../assets/bishop-hero.png";
 
+const UPCOMING_MISSIONS = [
+  {
+    id: "zimbabwe",
+    title: "Zimbabwe Kingdom Missions Conference",
+    dates: "October 6–10, 2026",
+    shortDates: "Oct 6–10, 2026",
+    location: "Harare, Zimbabwe",
+    flag: "🇿🇼",
+    badge: "International Summit",
+    summary: "An apostolic gathering uniting leaders, pastors, and believers across nations for revival fire and kingdom breakthrough in Zimbabwe.",
+    image: "/images/zimbabwe-conference.jpg",
+  },
+  {
+    id: "pakistan",
+    title: "Pakistan Kingdom Gospel Mission",
+    dates: "December 1–6, 2026",
+    shortDates: "Dec 1–6, 2026",
+    location: "Lahore, Pakistan",
+    flag: "🇵🇰",
+    badge: "Gospel Crusade & Outreach",
+    summary: "A historic week of mass evangelistic crusades, pastors' empowerment seminars, and salvation harvest reaching unreached souls across Pakistan.",
+    image: "/images/pakistan-mission.jpg",
+  },
+  {
+    id: "mombasa",
+    title: "New Dawn Conference — Mombasa",
+    dates: "March 12–14, 2027",
+    shortDates: "Mar 12–14, 2027",
+    location: "Mombasa, Kenya",
+    flag: "🇰🇪",
+    badge: "Flagship Annual Conference",
+    summary: "A prophetic landmark conference heralding a new spiritual dawn, dynamic worship, and apostolic commissioning at the coastal city of Mombasa.",
+    image: "/images/new-dawn-mombasa.jpg",
+  },
+];
+
 export default function HeroSection() {
+  const [activeTab, setActiveTab] = useState(0);
+  const currentEvent = UPCOMING_MISSIONS[activeTab];
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#071324] via-[#0c1b33] to-[#1a1107] pt-[72px] md:pt-[100px] lg:pt-[108px] pb-12 md:pb-16 px-4 sm:px-6 lg:px-8">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#071324] via-[#0c1b33] to-[#1a1107] pt-[72px] md:pt-[100px] lg:pt-[108px] pb-14 md:pb-20 px-4 sm:px-6 lg:px-8">
       {/* Dynamic Warm Orange & Gold Background Glows */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] md:w-[650px] h-[400px] md:h-[650px] bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,transparent_70%)] pointer-events-none blur-2xl" />
       <div className="absolute top-12 right-0 md:right-10 w-[350px] md:w-[550px] h-[350px] md:h-[550px] bg-[radial-gradient(circle,rgba(249,115,22,0.16)_0%,transparent_65%)] pointer-events-none blur-3xl" />
@@ -60,10 +101,11 @@ export default function HeroSection() {
                   <span>Watch Sermons</span>
                 </Link>
                 <Link
-                  to="/about"
-                  className="w-full sm:w-auto px-6 py-3 rounded-full text-white/70 hover:text-white font-medium text-sm transition-colors flex items-center justify-center gap-1.5 active:scale-95"
+                  to="/subscribe"
+                  className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#d4af37]/15 hover:bg-[#d4af37]/25 border border-[#d4af37]/50 text-[#fbf5b7] font-semibold text-sm transition-all flex items-center justify-center gap-2 backdrop-blur-sm active:scale-95 shadow-[0_0_15px_rgba(212,175,55,0.15)]"
                 >
-                  <span>About Us →</span>
+                  <Crown className="w-4 h-4 text-[#d4af37]" />
+                  <span>Partnership Packages</span>
                 </Link>
               </div>
             </ScrollReveal>
@@ -127,6 +169,135 @@ export default function HeroSection() {
             </ScrollReveal>
           </div>
         </div>
+
+        {/* Global Missions & Conferences Announcement Banner */}
+        <ScrollReveal delay={450}>
+          <div className="mt-10 md:mt-14 rounded-3xl bg-gradient-to-r from-white/[0.07] via-white/[0.04] to-white/[0.07] border border-[#d4af37]/40 shadow-[0_12px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl p-4 sm:p-6 md:p-7 relative overflow-hidden">
+            {/* Ambient inner glow */}
+            <div className="absolute -top-24 -right-24 w-72 h-72 bg-[#d4af37]/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-[#f97316]/15 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Banner Top Header with Tabs */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-3 w-3 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#d4af37] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[#d4af37]" />
+                </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-[#d4af37]" />
+                    <span className="text-xs uppercase font-extrabold tracking-wider text-[#d4af37]">
+                      Upcoming Global Missions & Conferences
+                    </span>
+                  </div>
+                  <h3 className="text-sm sm:text-base font-bold text-white mt-0.5">
+                    Register to Attend or Partner with the Global Harvest
+                  </h3>
+                </div>
+              </div>
+
+              {/* Event Switcher Tabs */}
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                {UPCOMING_MISSIONS.map((mission, idx) => (
+                  <button
+                    key={mission.id}
+                    onClick={() => setActiveTab(idx)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 ${
+                      activeTab === idx
+                        ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-[0_0_15px_rgba(212,175,55,0.4)]"
+                        : "bg-white/[0.08] hover:bg-white/[0.14] text-white/80 border border-white/10"
+                    }`}
+                  >
+                    <span>{mission.flag}</span>
+                    <span>{mission.shortDates.split(",")[0]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Active Event Card Body */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentEvent.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+                className="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-7 items-center pt-4 sm:pt-5"
+              >
+                {/* Event Image Banner */}
+                <div className="md:col-span-5 relative rounded-2xl overflow-hidden aspect-video md:aspect-[16/10] group shadow-lg border border-white/15">
+                  <img
+                    src={currentEvent.image}
+                    alt={currentEvent.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  
+                  {/* Floating Date Badge */}
+                  <div className="absolute top-3 left-3 bg-[#0c1b33]/90 border border-[#d4af37]/60 text-white rounded-xl px-3 py-1 text-xs font-bold flex items-center gap-1.5 shadow-md backdrop-blur-md">
+                    <Calendar className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>{currentEvent.dates}</span>
+                  </div>
+
+                  {/* Location Badge */}
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white">
+                    <span className="flex items-center gap-1 font-semibold text-[#fbf5b7] drop-shadow">
+                      <MapPin className="w-3.5 h-3.5 text-[#d4af37]" />
+                      {currentEvent.location}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm text-[10px] font-medium uppercase tracking-wider">
+                      {currentEvent.badge}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Event Content & Direct Dual CTAs */}
+                <div className="md:col-span-7 flex flex-col justify-between space-y-3 sm:space-y-4">
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#fbf5b7] text-[11px] font-bold uppercase tracking-wider mb-2">
+                      <span>{currentEvent.flag}</span>
+                      <span>{currentEvent.badge}</span>
+                    </div>
+                    <h4 className="font-display text-xl sm:text-2xl md:text-3xl font-bold text-white leading-tight">
+                      {currentEvent.title}
+                    </h4>
+                    <p className="text-white/80 text-xs sm:text-sm leading-relaxed mt-2 font-normal">
+                      {currentEvent.summary}
+                    </p>
+                  </div>
+
+                  {/* Action Buttons: Register & Partnership Packages */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
+                    <Link
+                      to="/events"
+                      className="px-5 py-2.5 rounded-xl bg-white/[0.12] hover:bg-white/[0.20] border border-white/25 text-white font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 backdrop-blur-md active:scale-95 hover:border-[#d4af37]"
+                    >
+                      <Calendar className="w-4 h-4 text-[#d4af37]" />
+                      <span>Register / RSVP for Event</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+
+                    <Link
+                      to="/subscribe"
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] transition-all flex items-center justify-center gap-2 active:scale-95"
+                    >
+                      <Crown className="w-4 h-4 text-[#0c1b33]" />
+                      <span>Support via Partnership Packages</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+
+                  <p className="text-[11px] text-white/50 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    Open to international participants • Sponsor souls, crusades, and Bibles through monthly partnership tiers.
+                  </p>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </ScrollReveal>
       </div>
 
       {/* Bottom transition blend */}
