@@ -36,8 +36,10 @@ import { useToast } from "../lib/toast";
 export default function Events() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  // Default to October 2026 (Zimbabwe Conference month)
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 9, 1));
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [rsvpForm, setRsvpForm] = useState({ name: "", email: "" });
