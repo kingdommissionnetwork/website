@@ -207,7 +207,7 @@ export default function GiveSection() {
         amount: parsedAmount,
         currency: "KES",
         purpose: offlinePurpose,
-        provider: "M-Pesa Paybill (400200)",
+        provider: "M-Pesa Paybill (522522)",
         reference: offlineRef.trim().toUpperCase(),
         date: new Date().toLocaleDateString("en-US", {
           month: "long",
@@ -405,7 +405,7 @@ export default function GiveSection() {
                           Official Ministry Bank Clearing
                         </span>
                         <h3 className="font-brand text-xl sm:text-2xl font-bold text-white">
-                          Kingdom Churches
+                          Heavenly God Kingdom Churches
                         </h3>
                       </div>
                     </div>
@@ -425,19 +425,19 @@ export default function GiveSection() {
                             M-Pesa Paybill (Business No)
                           </span>
                           <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/30 text-emerald-300 font-bold">
-                            Co-op Bank
+                            KCB Bank
                           </span>
                         </div>
                         <div className="font-brand text-2xl sm:text-3xl font-extrabold text-[#fbf5b7] tracking-wider mb-2">
-                          400200
+                          522522
                         </div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => copyToClipboard("400200", "Paybill 400200")}
+                        onClick={() => copyToClipboard("522522", "Paybill 522522")}
                         className="w-full py-2 px-3 rounded-xl bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-xs font-bold transition-all flex items-center justify-center gap-1.5 text-white/90 group-hover:bg-white/20"
                       >
-                        {copiedKey === "Paybill 400200" ? (
+                        {copiedKey === "Paybill 522522" ? (
                           <>
                             <Check className="w-3.5 h-3.5 text-emerald-400" />
                             <span>Copied!</span>
@@ -496,11 +496,11 @@ export default function GiveSection() {
                         Account Name
                       </span>
                       <div className="font-bold text-sm sm:text-base text-white mb-2">
-                        KINGDOM CHURCHES
+                        HEAVENLY GOD KINGDOM CHURCHES
                       </div>
                       <button
                         type="button"
-                        onClick={() => copyToClipboard("KINGDOM CHURCHES", "Account Name")}
+                        onClick={() => copyToClipboard("HEAVENLY GOD KINGDOM CHURCHES", "Account Name")}
                         className="text-[11px] text-[#d4af37] hover:underline flex items-center gap-1 font-semibold"
                       >
                         <Copy className="w-3 h-3" />
@@ -514,10 +514,10 @@ export default function GiveSection() {
                         Bank & Branch
                       </span>
                       <div className="font-bold text-sm sm:text-base text-white">
-                        Co-operative Bank of Kenya
+                        KCB Bank Kenya
                       </div>
                       <div className="text-xs text-white/70">
-                        Kayole Branch · Code 324
+                         KCB Pay Bill · Code 522522
                       </div>
                     </div>
                   </div>
@@ -525,7 +525,7 @@ export default function GiveSection() {
                   <div className="p-3.5 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-white/80 flex items-start gap-2.5">
                     <Sparkles className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
                     <span>
-                      Funds sent to Paybill <strong>400200</strong> with Account <strong>1335674365</strong> deposit immediately into the official Kingdom Churches ministry account.
+                      Funds sent to Paybill <strong>522522</strong> with Account <strong>1335674365</strong> deposit immediately into the official Heavenly God Kingdom Churches ministry account.
                     </span>
                   </div>
                 </div>
@@ -550,7 +550,7 @@ export default function GiveSection() {
                         2
                       </div>
                       <div className="text-xs text-[#334155] leading-relaxed">
-                        Enter Business Number: <strong className="text-[#0c1b33] font-mono">400200</strong>.
+                        Enter Business Number: <strong className="text-[#0c1b33] font-mono">522522</strong>.
                       </div>
                     </div>
                     <div className="p-4 rounded-2xl bg-[#f8fafd] border border-[#0c1b33]/5 flex items-start gap-3">
@@ -566,7 +566,7 @@ export default function GiveSection() {
                         4
                       </div>
                       <div className="text-xs text-[#334155] leading-relaxed">
-                        Enter your Amount &amp; PIN, verify name shows <strong>Kingdom Churches</strong>, and send.
+                        Enter your Amount &amp; PIN, verify name shows <strong>Heavenly God Kingdom Churches</strong>, and send.
                       </div>
                     </div>
                   </div>
@@ -956,7 +956,7 @@ export default function GiveSection() {
                 Official Digital Ministry Receipt
               </span>
               <h3 className="font-brand text-2xl font-bold text-white mt-1">
-                Kingdom Churches
+                Heavenly God Kingdom Churches
               </h3>
               <p className="text-[11px] text-white/70">
                 Under the Auspices of Kingdom Mission Network
