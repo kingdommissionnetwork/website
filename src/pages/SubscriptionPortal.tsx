@@ -932,7 +932,7 @@ export default function SubscriptionPortal() {
                     <div className="flex items-center gap-2">
                       <Building2 className="w-5 h-5 text-[#d4af37]" />
                       <span className="text-xs font-extrabold uppercase tracking-wider text-[#d4af37]">
-                        Kingdom Churches · Co-op Bank
+                        Heavenly God Kingdom Churches · KCB Bank
                       </span>
                     </div>
                     <span className="text-xs text-white/60">
@@ -948,15 +948,15 @@ export default function SubscriptionPortal() {
                           M-Pesa Paybill No
                         </span>
                         <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">
-                          400200
+                          522522
                         </span>
                       </div>
                       <button
                         type="button"
-                        onClick={() => copyToClipboard("400200", "Paybill 400200")}
+                        onClick={() => copyToClipboard("522522", "Paybill 522522")}
                         className="py-1 px-2.5 rounded-lg bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-[11px] font-bold transition-all flex items-center gap-1"
                       >
-                        {copiedKey === "Paybill 400200" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        {copiedKey === "Paybill 522522" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                         <span>Copy</span>
                       </button>
                     </div>
@@ -983,7 +983,7 @@ export default function SubscriptionPortal() {
                   </div>
 
                   <div className="text-[11px] text-white/70 leading-relaxed">
-                    Send <strong>KES {activeAmountKes.toLocaleString()}</strong> to Paybill <strong>400200</strong>, Account <strong>1335674365</strong>, then enter your M-Pesa transaction code below to instantly activate your partner privileges.
+                    Send <strong>KES {activeAmountKes.toLocaleString()}</strong> to Paybill <strong>522522</strong>, Account <strong>1335674365</strong>, then enter your M-Pesa transaction code below to instantly activate your partner privileges.
                   </div>
                 </div>
 
@@ -1033,7 +1033,7 @@ export default function SubscriptionPortal() {
                       className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono font-bold tracking-wider placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
                     />
                     <span className="text-[10px] text-white/50 mt-1 block">
-                      Found in your M-Pesa SMS after sending KES {activeAmountKes.toLocaleString()} to 400200
+                      Found in your M-Pesa SMS after sending KES {activeAmountKes.toLocaleString()} to 522522
                     </span>
                   </div>
 
