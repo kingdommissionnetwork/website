@@ -18,6 +18,10 @@ import {
   ShieldCheck,
   Download,
   X,
+  Copy,
+  Smartphone,
+  CreditCard,
+  Building2,
 } from "lucide-react";
 import ScrollReveal from "../components/ScrollReveal";
 import AmbientParticles from "../components/AmbientParticles";
@@ -222,6 +226,25 @@ export default function SubscriptionPortal() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showIdCardModal, setShowIdCardModal] = useState(false);
   const [onboardingStage, setOnboardingStage] = useState<number | null>(null);
+  const [subMethod, setSubMethod] = useState<"mpesa" | "card" | "paypal">("mpesa");
+  const [mpesaRefCode, setMpesaRefCode] = useState("");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, label: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text);
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+    }
+    setCopiedKey(label);
+    showToast(`${label} copied to clipboard!`, "success");
+    setTimeout(() => setCopiedKey(null), 2500);
+  };
 
   // Active selected plan
   const activePlan = PARTNER_PLANS.find((p) => p.id === selectedPlanId) || PARTNER_PLANS[1];
@@ -298,6 +321,47 @@ export default function SubscriptionPortal() {
       };
     }
   }, []);
+
+  // M-Pesa Paybill subscription flow (Immediate)
+  const handleMpesaSubscription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subscriberName.trim()) {
+      showToast("Please enter your full name", "error");
+      return;
+    }
+    if (!subscriberEmail.trim() || !subscriberEmail.includes("@")) {
+      showToast("Please enter a valid email address", "error");
+      return;
+    }
+    if (!mpesaRefCode.trim()) {
+      showToast("Please enter your M-Pesa transaction confirmation code", "error");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await api.payments.reportOffline({
+        amount: activeAmountKes,
+        currency: "KES",
+        donor_name: subscriberName.trim(),
+        donor_email: subscriberEmail.trim(),
+        payment_provider: "mpesa_paybill",
+        payment_reference: mpesaRefCode.trim().toUpperCase(),
+        notes: `Covenant Partner Plan: ${activePlan.name} (${billingCycle})`,
+        recurring: billingCycle === "monthly",
+      });
+
+      showToast("M-Pesa payment submitted! Activating your partner dashboard...", "success");
+      await runOnboardingTransition(activePlan.name, {
+        name: subscriberName.trim(),
+        email: subscriberEmail.trim(),
+      });
+    } catch {
+      showToast("Could not record payment. Please try again.", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // Paystack flow (KES or USD)
   const handlePaystack = async () => {
@@ -815,45 +879,224 @@ export default function SubscriptionPortal() {
               </p>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handlePaystack();
-              }}
-              className="space-y-6"
-            >
-              <div>
-                <label htmlFor="partnerNameInput" className="block text-xs uppercase font-bold text-white/70 mb-2">
-                  Full Name / Ministry Name
-                </label>
-                <input
-                  id="partnerNameInput"
-                  type="text"
-                  value={subscriberName}
-                  onChange={(e) => setSubscriberName(e.target.value)}
-                  placeholder="Enter your full name"
-                  required
-                  className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
-                />
+            {/* Payment Method Selector */}
+            <div className="flex items-center justify-center mb-8">
+              <div className="inline-flex p-1.5 rounded-2xl bg-white/10 border border-white/15 max-w-md w-full">
+                <button
+                  type="button"
+                  onClick={() => setSubMethod("mpesa")}
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    subMethod === "mpesa"
+                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-extrabold"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  <Smartphone className="w-4 h-4" />
+                  <span>M-Pesa Paybill</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 text-[10px] font-bold">
+                    Active
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubMethod("card")}
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    subMethod === "card"
+                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-extrabold"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>Card</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubMethod("paypal")}
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    subMethod === "paypal"
+                      ? "bg-[#0070ba] text-white shadow-md font-extrabold"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  <span>PayPal</span>
+                </button>
               </div>
+            </div>
 
-              <div>
-                <label htmlFor="partnerEmailInput" className="block text-xs uppercase font-bold text-white/70 mb-2">
-                  Email Address (For receipt & Partner ID Card delivery)
-                </label>
-                <input
-                  id="partnerEmailInput"
-                  type="email"
-                  value={subscriberEmail}
-                  onChange={(e) => setSubscriberEmail(e.target.value)}
-                  placeholder="your.email@example.com"
-                  required
-                  className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
-                />
+            {/* METHOD 1: M-PESA PAYBILL DIRECT (IMMEDIATE) */}
+            {subMethod === "mpesa" && (
+              <div className="space-y-6">
+                {/* Official Bank / Paybill Details Tile */}
+                <div className="p-6 rounded-2xl bg-white/[0.06] border border-[#d4af37]/40 shadow-inner">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-[#d4af37]" />
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-[#d4af37]">
+                        Kingdom Churches · Co-op Bank
+                      </span>
+                    </div>
+                    <span className="text-xs text-white/60">
+                      Amount: <strong className="text-[#fbf5b7]">KES {activeAmountKes.toLocaleString()}</strong>
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    {/* Paybill */}
+                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-white/60 uppercase font-semibold block">
+                          M-Pesa Paybill No
+                        </span>
+                        <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">
+                          400200
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard("400200", "Paybill 400200")}
+                        className="py-1 px-2.5 rounded-lg bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-[11px] font-bold transition-all flex items-center gap-1"
+                      >
+                        {copiedKey === "Paybill 400200" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>Copy</span>
+                      </button>
+                    </div>
+
+                    {/* Account Number */}
+                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-white/60 uppercase font-semibold block">
+                          Account Number
+                        </span>
+                        <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">
+                          1335674365
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard("1335674365", "Account 1335674365")}
+                        className="py-1 px-2.5 rounded-lg bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-[11px] font-bold transition-all flex items-center gap-1"
+                      >
+                        {copiedKey === "Account 1335674365" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>Copy</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-white/70 leading-relaxed">
+                    Send <strong>KES {activeAmountKes.toLocaleString()}</strong> to Paybill <strong>400200</strong>, Account <strong>1335674365</strong>, then enter your M-Pesa transaction code below to instantly activate your partner privileges.
+                  </div>
+                </div>
+
+                {/* Partner Form with M-Pesa Code */}
+                <form onSubmit={handleMpesaSubscription} className="space-y-4">
+                  <div>
+                    <label htmlFor="partnerNameMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                      Full Name / Ministry Name *
+                    </label>
+                    <input
+                      id="partnerNameMpesa"
+                      type="text"
+                      value={subscriberName}
+                      onChange={(e) => setSubscriberName(e.target.value)}
+                      placeholder="Enter your full name"
+                      required
+                      className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="partnerEmailMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                      Email Address (For receipt & Partner ID Card delivery) *
+                    </label>
+                    <input
+                      id="partnerEmailMpesa"
+                      type="email"
+                      value={subscriberEmail}
+                      onChange={(e) => setSubscriberEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      required
+                      className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="mpesaRefInput" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                      M-Pesa Transaction Code *
+                    </label>
+                    <input
+                      id="mpesaRefInput"
+                      type="text"
+                      value={mpesaRefCode}
+                      onChange={(e) => setMpesaRefCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. SI84XYZ123"
+                      required
+                      className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono font-bold tracking-wider placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                    />
+                    <span className="text-[10px] text-white/50 mt-1 block">
+                      Found in your M-Pesa SMS after sending KES {activeAmountKes.toLocaleString()} to 400200
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Verifying &amp; Activating Covenant Partnership...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-5 h-5" />
+                        <span>Confirm M-Pesa Payment &amp; Activate Partner Access</span>
+                      </>
+                    )}
+                  </button>
+                </form>
               </div>
+            )}
 
-              {/* Action Buttons */}
-              <div className="pt-4 space-y-4">
+            {/* METHOD 2: CARD / PAYSTACK */}
+            {subMethod === "card" && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handlePaystack();
+                }}
+                className="space-y-6"
+              >
+                <div>
+                  <label htmlFor="partnerNameCard" className="block text-xs uppercase font-bold text-white/70 mb-2">
+                    Full Name / Ministry Name
+                  </label>
+                  <input
+                    id="partnerNameCard"
+                    type="text"
+                    value={subscriberName}
+                    onChange={(e) => setSubscriberName(e.target.value)}
+                    placeholder="Enter your full name"
+                    required
+                    className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="partnerEmailCard" className="block text-xs uppercase font-bold text-white/70 mb-2">
+                    Email Address (For receipt &amp; Partner ID Card delivery)
+                  </label>
+                  <input
+                    id="partnerEmailCard"
+                    type="email"
+                    value={subscriberEmail}
+                    onChange={(e) => setSubscriberEmail(e.target.value)}
+                    placeholder="your.email@example.com"
+                    required
+                    className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+
                 <button
                   type="submit"
                   disabled={submitting}
@@ -866,36 +1109,44 @@ export default function SubscriptionPortal() {
                     </>
                   ) : (
                     <>
-                      <Zap className="w-5 h-5" />
+                      <CreditCard className="w-5 h-5" />
                       <span>
-                        Subscribe via M-Pesa / Card ({currencyView === "KES" ? `KES ${activeAmountKes.toLocaleString()}` : `$${activeAmountUsd} USD`})
+                        Subscribe via Card ({currencyView === "KES" ? `KES ${activeAmountKes.toLocaleString()}` : `$${activeAmountUsd} USD`})
                       </span>
                     </>
                   )}
                 </button>
+              </form>
+            )}
 
-                {/* PayPal International option */}
+            {/* METHOD 3: PAYPAL */}
+            {subMethod === "paypal" && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-400/20 text-xs text-blue-200">
+                  International covenant partners can subscribe securely in USD ($${activeAmountUsd.toFixed(2)}/month) via PayPal.
+                </div>
                 <button
                   type="button"
                   onClick={handlePayPal}
+                  disabled={submitting}
                   className="w-full py-3.5 rounded-2xl bg-[#0070ba] hover:bg-[#005ea6] text-white font-bold text-xs sm:text-sm tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
                 >
-                  <span>Pay with PayPal (International USD ${activeAmountUsd})</span>
+                  <span>Launch PayPal Checkout (${activeAmountUsd.toFixed(2)} USD)</span>
                 </button>
                 <div id="paypal-subscription-container" className="pt-2" />
               </div>
+            )}
 
-              <div className="flex items-center justify-center gap-6 pt-4 text-xs text-white/50 border-t border-white/10">
-                <span className="flex items-center gap-1">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  256-Bit SSL Encryption
-                </span>
-                <span className="flex items-center gap-1">
-                  <Heart className="w-4 h-4 text-[#d4af37]" />
-                  Cancel Anytime
-                </span>
-              </div>
-            </form>
+            <div className="flex items-center justify-center gap-6 pt-6 text-xs text-white/50 border-t border-white/10 mt-6">
+              <span className="flex items-center gap-1">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                256-Bit SSL Encryption
+              </span>
+              <span className="flex items-center gap-1">
+                <Heart className="w-4 h-4 text-[#d4af37]" />
+                Cancel Anytime
+              </span>
+            </div>
           </div>
         </div>
       </section>

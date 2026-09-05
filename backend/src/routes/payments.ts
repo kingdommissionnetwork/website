@@ -226,3 +226,46 @@ paymentRoutes.get("/rate", async (c) => {
   const result = await fetchExchangeRate(source, target, wiseToken);
   return c.json({ rate: result.rate, source, target, provider: result.provider });
 });
+
+paymentRoutes.post("/report-offline", zValidator("json", z.object({
+  amount: z.number().positive().max(1_000_000),
+  currency: z.string().default("KES"),
+  donor_name: z.string().min(1).max(100),
+  donor_email: z.string().email(),
+  payment_provider: z.enum(["mpesa_paybill", "bank_transfer"]).default("mpesa_paybill"),
+  payment_reference: z.string().min(3).max(64),
+  recurring: z.boolean().default(false),
+  notes: z.string().max(255).optional(),
+})), async (c) => {
+  const { amount, currency, donor_name, donor_email, payment_provider, payment_reference, recurring } = c.req.valid("json");
+  const cleanRef = payment_reference.trim().toUpperCase();
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase.from("donations").insert({
+    amount,
+    currency,
+    donor_email,
+    donor_name,
+    recurring,
+    payment_provider,
+    payment_reference: cleanRef,
+    status: "pending_verification",
+  }).select().single();
+
+  if (error) {
+    // If reference already recorded, return friendly status
+    if (error.code === "23505" || error.message.includes("unique")) {
+      return c.json({ status: "already_recorded", message: "This transaction reference has already been submitted." }, 200);
+    }
+    return c.json({ error: error.message }, 500);
+  }
+
+  // Attempt to dispatch receipt email
+  try {
+    await sendDonationEmail(c, donor_email, donor_name, amount, currency);
+  } catch (emailErr) {
+    console.error("[Donation Email Error]", emailErr);
+  }
+
+  return c.json({ status: "success", donation: data }, 201);
+});
