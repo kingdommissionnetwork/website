@@ -222,6 +222,21 @@ export const api = {
     getRate: async (from = "KES", to = "USD") => {
       return request<{ rate: number; source: string; target: string; provider: string }>(`/payments/rate?from=${from}&to=${to}`);
     },
+    reportOffline: async (data: {
+      amount: number;
+      currency?: string;
+      donor_name: string;
+      donor_email: string;
+      payment_provider: "mpesa_paybill" | "bank_transfer";
+      payment_reference: string;
+      recurring?: boolean;
+      notes?: string;
+    }) => {
+      return request<{ status: string; message?: string; donation?: Record<string, unknown> }>("/payments/report-offline", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
   },
 
   subscriptions: {
