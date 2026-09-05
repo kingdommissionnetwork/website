@@ -104,9 +104,7 @@ export default function GiveSection() {
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
 
-  // Account format toggle: standard 10-digit vs 12-digit with prefix
-  const [usePrefixAccount, setUsePrefixAccount] = useState(false);
-  const currentAccountNumber = usePrefixAccount ? "011335674365" : "1335674365";
+  const currentAccountNumber = "1335674365";
 
   // Card / Online state
   const [amount, setAmount] = useState<number | "custom">(50);
@@ -458,14 +456,6 @@ export default function GiveSection() {
                           <span className="text-xs text-white/60 font-semibold uppercase tracking-wider">
                             Account Number
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => setUsePrefixAccount(!usePrefixAccount)}
-                            className="text-[10px] text-[#d4af37] underline hover:text-[#fbf5b7]"
-                            title="Switch between 10-digit MICR and 12-digit standard prefix format"
-                          >
-                            {usePrefixAccount ? "Format: 011..." : "Format: 133..."}
-                          </button>
                         </div>
                         <div className="font-brand text-2xl sm:text-3xl font-extrabold text-[#fbf5b7] tracking-wider mb-2 font-mono">
                           {currentAccountNumber}
