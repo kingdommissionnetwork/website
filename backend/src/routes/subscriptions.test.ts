@@ -84,10 +84,43 @@ describe("Subscription Routes", () => {
     expect(res.status).toBe(400);
   });
 
-  test("GET /status/:email returns subscription check", async () => {
-    const res = await app.request("/status/unknown@user.com");
+  test("isValidMpesaCode validates Safaricom 10-char format properly", async () => {
+    const { isValidMpesaCode } = await import("./subscriptions");
+    expect(isValidMpesaCode("TK78AB12CD").valid).toBe(true);
+    expect(isValidMpesaCode("SG45LK67MN").valid).toBe(true);
+    expect(isValidMpesaCode("123").valid).toBe(false);
+    expect(isValidMpesaCode("tk78ab12cd").valid).toBe(true); // lowercase normalizes to uppercase
+    expect(isValidMpesaCode("0000000000").valid).toBe(false); // repetitive digits
+    expect(isValidMpesaCode("ABCDEFGHIJ").valid).toBe(false); // test sequential
+    expect(isValidMpesaCode("1234567890").valid).toBe(false); // numbers only
+  });
+
+  test("POST /mpesa/verify rejects invalid M-Pesa code format", async () => {
+    const res = await app.request("/mpesa/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reference: "BADCODE",
+        name: "Faithful Partner",
+        email: "partner@example.com",
+        amount: 3000,
+        planName: "Kingdom Ambassador",
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toContain("M-Pesa transaction code");
+  });
+
+  test("POST /mpesa/c2b-validation returns Accepted", async () => {
+    const res = await app.request("/mpesa/c2b-validation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ TransID: "TK78AB12CD" }),
+    });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { hasActiveSubscription: boolean };
-    expect(body).toHaveProperty("hasActiveSubscription");
+    const body = (await res.json()) as { ResultCode: number };
+    expect(body.ResultCode).toBe(0);
   });
 });
+

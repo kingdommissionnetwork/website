@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   Crown,
   Heart,
@@ -192,27 +192,44 @@ export default function SubscriberDashboard() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
   const location = useLocation();
-  const navigate = useNavigate();
 
-  // Admin/SuperAdmin accounts must not access the partner portal — redirect them
-  // to their dedicated operations hub. This prevents the confusing render where an
-  // admin verifying an M-Pesa code would land here and see their own name/role.
-  useEffect(() => {
-    if (user && (user.role === "admin" || user.role === "superadmin")) {
-      navigate("/admin", { replace: true });
-    }
-  }, [user, navigate]);
+  // Extract payment / subscriber state from recent checkout or navigation
+  const navState = location.state as {
+    justSubscribed?: boolean;
+    planName?: string;
+    partnerName?: string;
+    partnerEmail?: string;
+    paymentReference?: string;
+    paymentProvider?: string;
+    amount?: number;
+    currency?: string;
+    subscription?: Record<string, unknown>;
+  } | null;
 
   const [activeTab, setActiveTab] = useState<SubscriberTab>("overview");
   const [, setLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState<boolean>(
-    Boolean(location.state?.justSubscribed)
+    Boolean(navState?.justSubscribed)
   );
-  const celebrationPlanName = (location.state?.planName as string) || "Kingdom Ambassador";
-  const celebrationPartnerName = (location.state?.partnerName as string) || user?.name || "Covenant Partner";
+  const celebrationPlanName = navState?.planName || (navState?.subscription?.plan_name as string) || "Kingdom Ambassador";
+  const celebrationPartnerName = navState?.partnerName || user?.name || "Covenant Partner";
 
-  // Subscription state
-  const [partnerTierKey, setPartnerTierKey] = useState<string>("ambassador");
+  // Target identity for this partner dashboard:
+  // Priority: 1. Verified payment state from checkout -> 2. Authenticated user profile -> 3. Fallback
+  const partnerName = navState?.partnerName || user?.name || "Faithful Covenant Partner";
+  const partnerEmail = navState?.partnerEmail || user?.email || "partner@kingdommissions.org";
+  const targetEmail = navState?.partnerEmail || user?.email || "";
+
+  // Subscription state initialized from verified payment or active tier
+  const [partnerTierKey, setPartnerTierKey] = useState<string>(() => {
+    const pName = (navState?.subscription?.plan_name as string) || navState?.planName || "";
+    const lower = pName.toLowerCase();
+    if (lower.includes("pillar")) return "pillar";
+    if (lower.includes("harvest")) return "harvest";
+    if (lower.includes("seed")) return "seed";
+    return "ambassador";
+  });
+
   const [subscriptionData, setSubscriptionData] = useState<{
     status: string;
     amount: number;
@@ -221,7 +238,32 @@ export default function SubscriberDashboard() {
     current_period_end?: string;
     payment_provider?: string;
     payment_reference?: string;
-  } | null>(null);
+  } | null>(() => {
+    if (navState?.subscription) {
+      const s = navState.subscription;
+      return {
+        status: String(s.status || "active"),
+        amount: Number(s.amount) || navState.amount || 3000,
+        currency: String(s.currency || navState.currency || "KES"),
+        created_at: String(s.created_at || new Date().toISOString()),
+        current_period_end: String(s.current_period_end || ""),
+        payment_provider: String(s.payment_provider || navState.paymentProvider || "mpesa_paybill"),
+        payment_reference: String(s.payment_reference || navState.paymentReference || ""),
+      };
+    }
+    if (navState?.paymentReference) {
+      return {
+        status: "active",
+        amount: navState.amount || 3000,
+        currency: navState.currency || "KES",
+        created_at: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
+        payment_provider: navState.paymentProvider || "mpesa_paybill",
+        payment_reference: navState.paymentReference,
+      };
+    }
+    return null;
+  });
 
   // Giving records state
   const [donations, setDonations] = useState<
@@ -234,7 +276,22 @@ export default function SubscriberDashboard() {
       recurring: boolean;
       status?: string;
     }[]
-  >([]);
+  >(() => {
+    if (navState?.paymentReference) {
+      return [
+        {
+          id: navState.paymentReference,
+          amount: navState.amount || 3000,
+          currency: navState.currency || "KES",
+          donor_name: partnerName,
+          created_at: new Date().toISOString(),
+          recurring: true,
+          status: "completed",
+        },
+      ];
+    }
+    return [];
+  });
 
   // Prayer submission state
   const [prayerSubject, setPrayerSubject] = useState("");
@@ -265,12 +322,12 @@ export default function SubscriberDashboard() {
   // Load subscriber details
   const loadSubscriberData = async () => {
     setLoading(true);
-    const email = user?.email || "";
+    const emailToQuery = targetEmail;
     try {
-      if (email) {
+      if (emailToQuery) {
         const [subRes, histRes] = await Promise.all([
-          api.subscriptions.getStatus(email).catch(() => ({ hasActiveSubscription: false, subscription: null })),
-          api.donations.history(email).catch(() => []),
+          api.subscriptions.getStatus(emailToQuery).catch(() => ({ hasActiveSubscription: false, subscription: null })),
+          api.donations.history(emailToQuery).catch(() => []),
         ]);
 
         if (subRes.subscription) {
@@ -281,8 +338,8 @@ export default function SubscriberDashboard() {
             currency: String(sub.currency || "KES"),
             created_at: String(sub.created_at || new Date().toISOString()),
             current_period_end: String(sub.current_period_end || ""),
-            payment_provider: String(sub.payment_provider || "paystack"),
-            payment_reference: String(sub.payment_reference || "KMN-SUB-84920"),
+            payment_provider: String(sub.payment_provider || "mpesa_paybill"),
+            payment_reference: String(sub.payment_reference || navState?.paymentReference || "KMN-SUB-84920"),
           });
 
           const planStr = String(sub.plan_name || "").toLowerCase();
@@ -290,52 +347,37 @@ export default function SubscriberDashboard() {
           else if (planStr.includes("harvest")) setPartnerTierKey("harvest");
           else if (planStr.includes("seed")) setPartnerTierKey("seed");
           else setPartnerTierKey("ambassador");
-        } else {
-          // Default demo partnership profile if browsing as authenticated member
+        } else if (!subscriptionData) {
+          // Default profile if no active subscription in DB yet
           setSubscriptionData({
             status: "active",
             amount: 3000,
             currency: "KES",
-            created_at: new Date(Date.now() - 60 * 86400 * 1000).toISOString(),
-            current_period_end: new Date(Date.now() + 25 * 86400 * 1000).toISOString(),
-            payment_provider: "paystack",
-            payment_reference: "KMN-SUB-84920",
+            created_at: new Date().toISOString(),
+            current_period_end: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
+            payment_provider: "mpesa_paybill",
+            payment_reference: navState?.paymentReference || "KMN-SUB-PENDING",
           });
         }
 
         if (Array.isArray(histRes) && histRes.length > 0) {
           setDonations(histRes as typeof donations);
-        } else {
+        } else if (navState?.paymentReference) {
           setDonations([
             {
-              amount: 3000,
-              currency: "KES",
-              donor_name: user?.name || "Covenant Partner",
-              created_at: new Date(Date.now() - 5 * 86400 * 1000).toISOString(),
+              id: navState.paymentReference,
+              amount: navState.amount || 3000,
+              currency: navState.currency || "KES",
+              donor_name: partnerName,
+              created_at: new Date().toISOString(),
               recurring: true,
-              status: "completed",
-            },
-            {
-              amount: 3000,
-              currency: "KES",
-              donor_name: user?.name || "Covenant Partner",
-              created_at: new Date(Date.now() - 35 * 86400 * 1000).toISOString(),
-              recurring: true,
-              status: "completed",
-            },
-            {
-              amount: 5000,
-              currency: "KES",
-              donor_name: user?.name || "Covenant Partner",
-              created_at: new Date(Date.now() - 65 * 86400 * 1000).toISOString(),
-              recurring: false,
               status: "completed",
             },
           ]);
         }
       }
     } catch {
-      showToast("Loaded offline partner profile.", "info");
+      // offline profile loaded
     } finally {
       setLoading(false);
     }
@@ -344,11 +386,9 @@ export default function SubscriberDashboard() {
   useEffect(() => {
     loadSubscriberData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, targetEmail]);
 
   const currentTier = PARTNER_TIERS[partnerTierKey] || PARTNER_TIERS.ambassador;
-  const partnerName = user?.name || "Faithful Covenant Partner";
-  const partnerEmail = user?.email || "partner@kingdommissions.org";
   const partnerIdNumber = `KMN-${new Date().getFullYear()}-${Math.abs(
     (partnerEmail.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) * 17) % 90000 + 10000
   )}`;

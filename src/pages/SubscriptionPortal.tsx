@@ -227,6 +227,11 @@ export default function SubscriptionPortal() {
   const [showIdCardModal, setShowIdCardModal] = useState(false);
   const [onboardingStage, setOnboardingStage] = useState<number | null>(null);
   const [subMethod, setSubMethod] = useState<"mpesa" | "card" | "paypal">("mpesa");
+  const [mpesaMode, setMpesaMode] = useState<"stk" | "manual">("stk");
+  const [mpesaPhone, setMpesaPhone] = useState("");
+  const [stkPending, setStkPending] = useState(false);
+  const [stkPromptSent, setStkPromptSent] = useState(false);
+  const [stkStatusMessage, setStkStatusMessage] = useState("");
   const [mpesaRefCode, setMpesaRefCode] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -252,14 +257,18 @@ export default function SubscriptionPortal() {
   const activeAmountUsd = Number((activeAmountKes * exchangeRate).toFixed(2));
 
   // Seamless Onboarding Handshake Sequence (Stripe/Patreon Benchmark)
-  const runOnboardingTransition = async (planTitle: string, verifiedUser?: Record<string, unknown> | null, token?: string | null) => {
+  const runOnboardingTransition = async (
+    planTitle: string,
+    verifiedUser?: Record<string, unknown> | null,
+    token?: string | null,
+    subscription?: Record<string, unknown> | null,
+    refCode?: string | null
+  ) => {
     setIsSubscribed(true);
     setOnboardingStage(1);
-    // Only hydrate the auth session when the backend returns a real authenticated user
-    // (i.e. with a server-issued token AND a valid role). M-Pesa offline reports do NOT
-    // create an auth session — skipping setSession here prevents corrupting the auth
-    // context with a partial object that has no `role`, which would break role-based routing.
-    if (verifiedUser && token && verifiedUser.role) {
+    // When a verified partner user is provisioned with a token, hydrate the auth session.
+    // This logs the partner in cleanly as a member, cleanly overriding any stale admin session.
+    if (verifiedUser && token) {
       setSession(verifiedUser as any, token);
     }
     await new Promise((r) => setTimeout(r, 650));
@@ -273,7 +282,13 @@ export default function SubscriptionPortal() {
       state: {
         justSubscribed: true,
         planName: planTitle,
-        partnerName: subscriberName || (verifiedUser?.name as string) || "Kingdom Partner",
+        partnerName: subscriberName.trim() || (verifiedUser?.name as string) || "Kingdom Partner",
+        partnerEmail: subscriberEmail.trim() || (verifiedUser?.email as string) || "",
+        paymentReference: refCode || "",
+        paymentProvider: "mpesa_paybill",
+        amount: activeAmountKes,
+        currency: "KES",
+        subscription: subscription || null,
       },
     });
   };
@@ -326,41 +341,151 @@ export default function SubscriptionPortal() {
     }
   }, []);
 
-  // M-Pesa Paybill subscription flow (Immediate)
-  const handleMpesaSubscription = async (e: React.FormEvent) => {
+  // M-Pesa STK Push (Express PIN Prompt - 100% Zero Code Entry)
+  const handleMpesaStkPush = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subscriberName.trim()) {
+    const name = subscriberName.trim();
+    const email = subscriberEmail.trim();
+    const phone = mpesaPhone.trim();
+
+    if (!name) {
       showToast("Please enter your full name", "error");
       return;
     }
-    if (!subscriberEmail.trim() || !subscriberEmail.includes("@")) {
+    if (!email || !email.includes("@")) {
       showToast("Please enter a valid email address", "error");
       return;
     }
-    if (!mpesaRefCode.trim()) {
+    if (!phone) {
+      showToast("Please enter your Safaricom M-Pesa phone number", "error");
+      return;
+    }
+
+    setSubmitting(true);
+    setStkPending(true);
+    setStkStatusMessage("Contacting Safaricom to prompt your phone...");
+
+    try {
+      const initRes = await api.subscriptions.initiateMpesaStk({
+        phoneNumber: phone,
+        name,
+        email,
+        amount: activeAmountKes,
+        planName: activePlan.name,
+        planId: activePlan.id,
+        interval: billingCycle,
+      });
+
+      setStkPromptSent(true);
+      setStkStatusMessage(`M-Pesa PIN prompt sent to ${phone}! Please enter your PIN on your phone.`);
+      showToast("M-Pesa PIN prompt sent! Please enter your PIN on your phone.", "info");
+
+      // Auto-poll checkout session every 2 seconds
+      const checkoutId = initRes.checkoutRequestId;
+      let attempts = 0;
+      const maxAttempts = 30; // 60s timeout
+
+      const pollTimer = setInterval(async () => {
+        attempts++;
+        try {
+          const qRes = await api.subscriptions.queryMpesaStk(checkoutId);
+          if (qRes.status === "completed") {
+            clearInterval(pollTimer);
+            setStkPending(false);
+            setStkStatusMessage("Payment confirmed! Opening your partner dashboard...");
+            showToast("Payment verified! Opening your partner covenant dashboard...", "success");
+            await runOnboardingTransition(
+              qRes.planName || activePlan.name,
+              qRes.user,
+              qRes.token,
+              qRes.subscription,
+              qRes.receiptCode
+            );
+          } else if (qRes.status === "failed") {
+            clearInterval(pollTimer);
+            setStkPending(false);
+            setStkPromptSent(false);
+            showToast("M-Pesa transaction was cancelled or declined on phone.", "error");
+          } else if (attempts >= maxAttempts) {
+            clearInterval(pollTimer);
+            setStkPending(false);
+            setStkPromptSent(false);
+            showToast("Transaction timeout. If you completed payment, you can enter the SMS receipt code below.", "info");
+            setMpesaMode("manual");
+          }
+        } catch {
+          // keep polling
+        }
+      }, 2000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to trigger M-Pesa STK Push.";
+      showToast(msg, "error");
+      setStkPending(false);
+      setStkPromptSent(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // M-Pesa Paybill subscription flow (Immediate Verification & Activation)
+  const handleMpesaSubscription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = subscriberName.trim();
+    const email = subscriberEmail.trim();
+    const cleanRef = mpesaRefCode.trim().toUpperCase();
+
+    if (!name) {
+      showToast("Please enter your full name", "error");
+      return;
+    }
+    if (!email || !email.includes("@")) {
+      showToast("Please enter a valid email address", "error");
+      return;
+    }
+    if (!cleanRef) {
       showToast("Please enter your M-Pesa transaction confirmation code", "error");
+      return;
+    }
+
+    // Client-side strict Safaricom format check (10 characters, e.g. TK78AB12CD)
+    if (cleanRef.length !== 10) {
+      showToast("M-Pesa transaction code must be exactly 10 characters long (e.g. TK78AB12CD).", "error");
+      return;
+    }
+    if (!/^[A-Z][A-Z0-9]{9}$/.test(cleanRef)) {
+      showToast("M-Pesa transaction code must start with a letter and contain valid alphanumeric characters (e.g. TK78AB12CD).", "error");
+      return;
+    }
+    const letters = (cleanRef.match(/[A-Z]/g) || []).length;
+    const digits = (cleanRef.match(/[0-9]/g) || []).length;
+    if (letters < 2 || digits < 2 || /^(.)\1{9}$/.test(cleanRef)) {
+      showToast("Invalid M-Pesa code format. Please check the transaction SMS from MPESA.", "error");
       return;
     }
 
     setSubmitting(true);
     try {
-      await api.payments.reportOffline({
+      const res = await api.subscriptions.verifyMpesa({
+        reference: cleanRef,
+        name,
+        email,
         amount: activeAmountKes,
-        currency: "KES",
-        donor_name: subscriberName.trim(),
-        donor_email: subscriberEmail.trim(),
-        payment_provider: "mpesa_paybill",
-        payment_reference: mpesaRefCode.trim().toUpperCase(),
-        notes: `Covenant Partner Plan: ${activePlan.name} (${billingCycle})`,
-        recurring: billingCycle === "monthly",
+        planName: activePlan.name,
+        planId: activePlan.id,
+        interval: billingCycle,
       });
 
-      showToast("M-Pesa payment submitted! Activating your partner dashboard...", "success");
-      // Do NOT pass verifiedUser for M-Pesa offline — the backend does not issue an
-      // auth session for these reports, so we navigate without touching auth state.
-      await runOnboardingTransition(activePlan.name, null, null);
-    } catch {
-      showToast("Could not record payment. Please try again.", "error");
+      showToast("M-Pesa payment verified! Activating your partner covenant dashboard...", "success");
+      await runOnboardingTransition(
+        res.planName || activePlan.name,
+        res.user,
+        res.token,
+        res.subscription,
+        cleanRef
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "M-Pesa verification failed. Please try again.";
+      showToast(msg, "error");
     } finally {
       setSubmitting(false);
     }
@@ -926,10 +1051,10 @@ export default function SubscriptionPortal() {
               </div>
             </div>
 
-            {/* METHOD 1: M-PESA PAYBILL DIRECT (IMMEDIATE) */}
+            {/* METHOD 1: M-PESA — STK Express or Manual Code */}
             {subMethod === "mpesa" && (
               <div className="space-y-6">
-                {/* Official Bank / Paybill Details Tile */}
+                {/* Official Paybill Details Tile */}
                 <div className="p-6 rounded-2xl bg-white/[0.06] border border-[#d4af37]/40 shadow-inner">
                   <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
                     <div className="flex items-center gap-2">
@@ -944,15 +1069,10 @@ export default function SubscriptionPortal() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                    {/* Paybill */}
                     <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] text-white/60 uppercase font-semibold block">
-                          M-Pesa Paybill No
-                        </span>
-                        <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">
-                          522522
-                        </span>
+                        <span className="text-[10px] text-white/60 uppercase font-semibold block">M-Pesa Paybill No</span>
+                        <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">522522</span>
                       </div>
                       <button
                         type="button"
@@ -963,16 +1083,10 @@ export default function SubscriptionPortal() {
                         <span>Copy</span>
                       </button>
                     </div>
-
-                    {/* Account Number */}
                     <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] text-white/60 uppercase font-semibold block">
-                          Account Number
-                        </span>
-                        <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">
-                          1335674365
-                        </span>
+                        <span className="text-[10px] text-white/60 uppercase font-semibold block">Account Number</span>
+                        <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">1335674365</span>
                       </div>
                       <button
                         type="button"
@@ -984,80 +1098,221 @@ export default function SubscriptionPortal() {
                       </button>
                     </div>
                   </div>
+                </div>
 
-                  <div className="text-[11px] text-white/70 leading-relaxed">
-                    Send <strong>KES {activeAmountKes.toLocaleString()}</strong> to Paybill <strong>522522</strong>, Account <strong>1335674365</strong>, then enter your M-Pesa transaction code below to instantly activate your partner privileges.
+                {/* M-Pesa Mode Toggle */}
+                <div className="flex items-center justify-center">
+                  <div className="inline-flex p-1 rounded-2xl bg-white/[0.08] border border-white/15 w-full">
+                    <button
+                      type="button"
+                      onClick={() => { setMpesaMode("stk"); setStkPending(false); setStkPromptSent(false); setStkStatusMessage(""); }}
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        mpesaMode === "stk"
+                          ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      <Smartphone className="w-3.5 h-3.5" />
+                      <span>Express Auto-Prompt</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/20 font-extrabold">✨ NEW</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMpesaMode("manual"); setStkPending(false); }}
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        mpesaMode === "manual"
+                          ? "bg-white/20 text-white shadow-md"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Enter Receipt Code</span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Partner Form with M-Pesa Code */}
-                <form onSubmit={handleMpesaSubscription} className="space-y-4">
-                  <div>
-                    <label htmlFor="partnerNameMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
-                      Full Name / Ministry Name *
-                    </label>
-                    <input
-                      id="partnerNameMpesa"
-                      type="text"
-                      value={subscriberName}
-                      onChange={(e) => setSubscriberName(e.target.value)}
-                      placeholder="Enter your full name"
-                      required
-                      className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
-                    />
-                  </div>
+                {/* ── STK PUSH EXPRESS MODE ── */}
+                {mpesaMode === "stk" && (
+                  <form onSubmit={handleMpesaStkPush} className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-300 leading-relaxed flex items-start gap-3">
+                      <Zap className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
+                      <span>
+                        <strong className="text-emerald-200 block mb-0.5">Zero code entry — fully automatic</strong>
+                        Enter your Safaricom number and tap the button. Your phone will instantly receive an M-Pesa PIN prompt. Just enter your PIN and your partner dashboard unlocks automatically.
+                      </span>
+                    </div>
 
-                  <div>
-                    <label htmlFor="partnerEmailMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
-                      Email Address (For receipt & Partner ID Card delivery) *
-                    </label>
-                    <input
-                      id="partnerEmailMpesa"
-                      type="email"
-                      value={subscriberEmail}
-                      onChange={(e) => setSubscriberEmail(e.target.value)}
-                      placeholder="your.email@example.com"
-                      required
-                      className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
-                    />
-                  </div>
+                    <div>
+                      <label htmlFor="partnerNameStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        Full Name / Ministry Name *
+                      </label>
+                      <input
+                        id="partnerNameStk"
+                        type="text"
+                        value={subscriberName}
+                        onChange={(e) => setSubscriberName(e.target.value)}
+                        placeholder="Enter your full name"
+                        required
+                        disabled={stkPending}
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37] disabled:opacity-50"
+                      />
+                    </div>
 
-                  <div>
-                    <label htmlFor="mpesaRefInput" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
-                      M-Pesa Transaction Code *
-                    </label>
-                    <input
-                      id="mpesaRefInput"
-                      type="text"
-                      value={mpesaRefCode}
-                      onChange={(e) => setMpesaRefCode(e.target.value.toUpperCase())}
-                      placeholder="e.g. SI84XYZ123"
-                      required
-                      className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono font-bold tracking-wider placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
-                    />
-                    <span className="text-[10px] text-white/50 mt-1 block">
-                      Found in your M-Pesa SMS after sending KES {activeAmountKes.toLocaleString()} to 522522
-                    </span>
-                  </div>
+                    <div>
+                      <label htmlFor="partnerEmailStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        Email Address (For receipt &amp; Partner ID) *
+                      </label>
+                      <input
+                        id="partnerEmailStk"
+                        type="email"
+                        value={subscriberEmail}
+                        onChange={(e) => setSubscriberEmail(e.target.value)}
+                        placeholder="your.email@example.com"
+                        required
+                        disabled={stkPending}
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37] disabled:opacity-50"
+                      />
+                    </div>
 
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Verifying &amp; Activating Covenant Partnership...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-5 h-5" />
-                        <span>Confirm M-Pesa Payment &amp; Activate Partner Access</span>
-                      </>
+                    <div>
+                      <label htmlFor="mpesaPhoneStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        Safaricom M-Pesa Phone Number *
+                      </label>
+                      <div className="flex items-stretch gap-2">
+                        <span className="flex items-center gap-1 px-3 rounded-2xl bg-white/10 border border-white/15 text-white/60 text-sm font-mono shrink-0">
+                          🇰🇪 +254
+                        </span>
+                        <input
+                          id="mpesaPhoneStk"
+                          type="tel"
+                          value={mpesaPhone}
+                          onChange={(e) => setMpesaPhone(e.target.value)}
+                          placeholder="7XX XXX XXX"
+                          required
+                          disabled={stkPending}
+                          className="flex-1 px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono font-bold tracking-wider placeholder:text-white/40 focus:outline-none focus:border-emerald-400 disabled:opacity-50"
+                        />
+                      </div>
+                      <span className="text-[10px] text-white/50 mt-1 block">
+                        e.g. 0722000000 or 254722000000 — must be a Safaricom Mpesa line
+                      </span>
+                    </div>
+
+                    {/* Live pending / status banner */}
+                    {stkPending && (
+                      <div className="p-4 rounded-2xl bg-amber-900/30 border border-amber-500/40 flex items-center gap-3 animate-pulse">
+                        <Loader2 className="w-5 h-5 text-amber-400 animate-spin shrink-0" />
+                        <div>
+                          <p className="text-sm font-bold text-amber-300">
+                            {stkPromptSent ? "Check your phone — enter your M-Pesa PIN" : "Contacting Safaricom…"}
+                          </p>
+                          <p className="text-xs text-amber-300/70 mt-0.5">{stkStatusMessage}</p>
+                        </div>
+                      </div>
                     )}
-                  </button>
-                </form>
+
+                    {!stkPending && (
+                      <button
+                        id="btn-stk-push"
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-green-400 to-emerald-600 text-white font-extrabold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                      >
+                        {submitting ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span>Sending PIN Prompt to Your Phone…</span>
+                          </>
+                        ) : (
+                          <>
+                            <Smartphone className="w-5 h-5" />
+                            <span>Send M-Pesa Prompt to My Phone — KES {activeAmountKes.toLocaleString()}</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    <p className="text-center text-[11px] text-white/40">
+                      Secured by Safaricom STK Push · Paybill 522522 · KCB Bank
+                    </p>
+                  </form>
+                )}
+
+                {/* ── MANUAL CODE MODE ── */}
+                {mpesaMode === "manual" && (
+                  <form onSubmit={handleMpesaSubscription} className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/25 text-xs text-blue-300 leading-relaxed">
+                      First send <strong>KES {activeAmountKes.toLocaleString()}</strong> to Paybill <strong>522522</strong>, Account <strong>1335674365</strong>, then paste the M-Pesa transaction code from your SMS below.
+                    </div>
+
+                    <div>
+                      <label htmlFor="partnerNameMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        Full Name / Ministry Name *
+                      </label>
+                      <input
+                        id="partnerNameMpesa"
+                        type="text"
+                        value={subscriberName}
+                        onChange={(e) => setSubscriberName(e.target.value)}
+                        placeholder="Enter your full name"
+                        required
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="partnerEmailMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        Email Address (For receipt &amp; Partner ID Card) *
+                      </label>
+                      <input
+                        id="partnerEmailMpesa"
+                        type="email"
+                        value={subscriberEmail}
+                        onChange={(e) => setSubscriberEmail(e.target.value)}
+                        placeholder="your.email@example.com"
+                        required
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="mpesaRefInput" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        M-Pesa Transaction Code *
+                      </label>
+                      <input
+                        id="mpesaRefInput"
+                        type="text"
+                        value={mpesaRefCode}
+                        onChange={(e) => setMpesaRefCode(e.target.value.toUpperCase())}
+                        placeholder="e.g. SI84XYZ123"
+                        required
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono font-bold tracking-wider placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                      />
+                      <span className="text-[10px] text-white/50 mt-1 block">
+                        10-character code in the M-Pesa confirmation SMS (e.g. TK78AB12CD)
+                      </span>
+                    </div>
+
+                    <button
+                      id="btn-mpesa-verify"
+                      type="submit"
+                      disabled={submitting}
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Verifying &amp; Activating Covenant Partnership...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-5 h-5" />
+                          <span>Confirm M-Pesa Payment &amp; Activate Partner Access</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )}
               </div>
             )}
 

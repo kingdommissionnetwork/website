@@ -25,6 +25,10 @@ build/
 backend/.env
 backend/.env.*
 !backend/.env.example
+.dev.vars
+.dev.vars.*
+backend/.dev.vars
+
 
 # Cloudflare & Wrangler
 .wrangler/

@@ -272,6 +272,63 @@ export const api = {
         planName?: string;
       }>(`/subscriptions/verify/${reference}`);
     },
+    verifyMpesa: async (data: {
+      reference: string;
+      name: string;
+      email: string;
+      amount: number;
+      planName?: string;
+      planId?: string;
+      interval?: "monthly" | "yearly";
+      phone?: string;
+    }) => {
+      return request<{
+        status: string;
+        message?: string;
+        reference: string;
+        planName: string;
+        amount: number;
+        currency: string;
+        user?: AuthUser | null;
+        token?: string | null;
+        subscription?: Record<string, unknown>;
+      }>("/subscriptions/mpesa/verify", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    initiateMpesaStk: async (data: {
+      phoneNumber: string;
+      name: string;
+      email: string;
+      amount: number;
+      planName?: string;
+      planId?: string;
+      interval?: "monthly" | "yearly";
+    }) => {
+      return request<{
+        status: string;
+        checkoutRequestId: string;
+        merchantRequestId: string;
+        customerMessage: string;
+      }>("/subscriptions/mpesa/stkpush", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    queryMpesaStk: async (checkoutRequestId: string) => {
+      return request<{
+        status: "pending" | "completed" | "failed" | "not_found";
+        message?: string;
+        receiptCode?: string;
+        planName?: string;
+        amount?: number;
+        currency?: string;
+        user?: AuthUser | null;
+        token?: string | null;
+        subscription?: Record<string, unknown>;
+      }>(`/subscriptions/mpesa/query/${checkoutRequestId}`);
+    },
     paypalCreate: async (data: { name?: string; email?: string; amount?: number; planName?: string }) => {
       return request<{ id: string; usdAmount: number; kesAmount: number; exchangeRate: number }>("/subscriptions/paypal/create", {
         method: "POST",
