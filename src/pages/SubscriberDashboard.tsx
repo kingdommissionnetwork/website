@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Crown,
   Heart,
@@ -192,6 +192,16 @@ export default function SubscriberDashboard() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Admin/SuperAdmin accounts must not access the partner portal — redirect them
+  // to their dedicated operations hub. This prevents the confusing render where an
+  // admin verifying an M-Pesa code would land here and see their own name/role.
+  useEffect(() => {
+    if (user && (user.role === "admin" || user.role === "superadmin")) {
+      navigate("/admin", { replace: true });
+    }
+  }, [user, navigate]);
 
   const [activeTab, setActiveTab] = useState<SubscriberTab>("overview");
   const [, setLoading] = useState(true);

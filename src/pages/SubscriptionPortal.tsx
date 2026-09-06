@@ -255,8 +255,12 @@ export default function SubscriptionPortal() {
   const runOnboardingTransition = async (planTitle: string, verifiedUser?: Record<string, unknown> | null, token?: string | null) => {
     setIsSubscribed(true);
     setOnboardingStage(1);
-    if (verifiedUser) {
-      setSession(verifiedUser as any, token || undefined);
+    // Only hydrate the auth session when the backend returns a real authenticated user
+    // (i.e. with a server-issued token AND a valid role). M-Pesa offline reports do NOT
+    // create an auth session — skipping setSession here prevents corrupting the auth
+    // context with a partial object that has no `role`, which would break role-based routing.
+    if (verifiedUser && token && verifiedUser.role) {
+      setSession(verifiedUser as any, token);
     }
     await new Promise((r) => setTimeout(r, 650));
     setOnboardingStage(2);
@@ -352,10 +356,9 @@ export default function SubscriptionPortal() {
       });
 
       showToast("M-Pesa payment submitted! Activating your partner dashboard...", "success");
-      await runOnboardingTransition(activePlan.name, {
-        name: subscriberName.trim(),
-        email: subscriberEmail.trim(),
-      });
+      // Do NOT pass verifiedUser for M-Pesa offline — the backend does not issue an
+      // auth session for these reports, so we navigate without touching auth state.
+      await runOnboardingTransition(activePlan.name, null, null);
     } catch {
       showToast("Could not record payment. Please try again.", "error");
     } finally {
