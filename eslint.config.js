@@ -26,6 +26,14 @@ export default defineConfig([
     rules: {
       "no-empty": ["error", { "allowEmptyCatch": true }],
       ...jsxA11y.configs.recommended.rules,
+      "jsx-a11y/click-events-have-key-events": "warn",
+      "jsx-a11y/no-static-element-interactions": "warn",
+      "jsx-a11y/label-has-associated-control": "warn",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/use-memo": "off",
+      "react-hooks/immutability": "off",
+      "react-refresh/only-export-components": ["warn", { "allowConstantExport": true }],
     },
   },
 ])

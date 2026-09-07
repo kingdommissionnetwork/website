@@ -117,8 +117,18 @@ export default function PastEvents() {
                       <div className="hidden sm:block relative h-24 w-[180px] rounded-xl overflow-hidden">
                         <img
                           src={event.image}
-                          alt=""
+                          alt={event.title}
                           loading="lazy"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (target.src.endsWith(".png")) {
+                              target.src = target.src.replace(/\.png$/, ".webp");
+                            } else if (target.src.endsWith(".webp")) {
+                              target.src = target.src.replace(/\.webp$/, ".png");
+                            } else {
+                              target.src = "/images/event-worship-night.jpg";
+                            }
+                          }}
                           className="w-full h-full object-cover"
                         />
                         <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full bg-[#0c1b33]/85 text-[#fbf5b7] text-[10px] font-bold">

@@ -511,11 +511,21 @@ export default function Events() {
                                 {event.day || format(d, "d")}
                               </p>
                             </div>
-                            <div className="hidden sm:block relative h-24 w-[180px] rounded-xl overflow-hidden">
+                            <div className="hidden sm:block relative h-24 w-[180px] rounded-xl overflow-hidden bg-[#0c1b33]/5">
                               <img
                                 src={event.image}
-                                alt=""
+                                alt={event.title}
                                 loading="lazy"
+                                onError={(e) => {
+                                  const target = e.currentTarget;
+                                  if (target.src.endsWith(".png")) {
+                                    target.src = target.src.replace(/\.png$/, ".webp");
+                                  } else if (target.src.endsWith(".webp")) {
+                                    target.src = target.src.replace(/\.webp$/, ".png");
+                                  } else {
+                                    target.src = "/images/event-worship-night.jpg";
+                                  }
+                                }}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               />
                               {event.isOnline && (
@@ -754,11 +764,21 @@ function CalendarPanel({
                   onClick={() => setSelectedEvent(event)}
                   className="w-full text-left bg-[#f8f6f3] rounded-2xl overflow-hidden hover:shadow-md transition-shadow border border-[#0c1b33]/5 focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
                 >
-                  <div className="relative h-36">
+                  <div className="relative h-36 bg-[#0c1b33]">
                     <img
                       src={event.image}
-                      alt=""
+                      alt={event.title}
                       loading="lazy"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (target.src.endsWith(".png")) {
+                          target.src = target.src.replace(/\.png$/, ".webp");
+                        } else if (target.src.endsWith(".webp")) {
+                          target.src = target.src.replace(/\.webp$/, ".png");
+                        } else {
+                          target.src = "/images/event-worship-night.jpg";
+                        }
+                      }}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
@@ -866,6 +886,16 @@ function EventModal({
           <img
             src={event.image}
             alt={`${event.title} poster`}
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src.endsWith(".png")) {
+                target.src = target.src.replace(/\.png$/, ".webp");
+              } else if (target.src.endsWith(".webp")) {
+                target.src = target.src.replace(/\.webp$/, ".png");
+              } else {
+                target.src = "/images/event-worship-night.jpg";
+              }
+            }}
             className="w-full max-h-[300px] object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />

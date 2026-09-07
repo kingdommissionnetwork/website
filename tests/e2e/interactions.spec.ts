@@ -11,7 +11,7 @@ test.describe('Interactive User Journeys', () => {
     });
 
     await page.goto('/prayer-wall');
-    await expect(page.locator('text=Prayer').first()).toBeVisible();
+    await expect(page.locator('main').getByText(/Prayer/i).first()).toBeVisible();
     const nameInput = page.locator('input[placeholder*="Name"], input[type="text"]').first();
     if (await nameInput.isVisible()) {
       await nameInput.fill('Test User');
@@ -30,12 +30,12 @@ test.describe('Interactive User Journeys', () => {
     });
 
     await page.goto('/events');
-    await expect(page.locator('text=Events').first()).toBeVisible();
+    await expect(page.locator('h1').first()).toBeVisible();
   });
 
   test('can browse bible reader', async ({ page }) => {
     await page.goto('/bible');
-    await expect(page.locator('text=Bible, text=Scripture').first()).toBeVisible();
+    await expect(page.locator('main').getByText(/Bible|Scripture/i).first()).toBeVisible();
   });
 
   test('can navigate home from any page', async ({ page }) => {

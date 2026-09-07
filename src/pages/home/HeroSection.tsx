@@ -231,6 +231,16 @@ export default function HeroSection() {
                   <img
                     src={currentEvent.image}
                     alt={currentEvent.title}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (target.src.endsWith(".png")) {
+                        target.src = target.src.replace(/\.png$/, ".webp");
+                      } else if (target.src.endsWith(".webp")) {
+                        target.src = target.src.replace(/\.webp$/, ".png");
+                      } else {
+                        target.src = "/images/event-worship-night.jpg";
+                      }
+                    }}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
