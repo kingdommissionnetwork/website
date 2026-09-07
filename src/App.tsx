@@ -18,6 +18,7 @@ const PastEvents = lazy(() => import("./pages/PastEvents"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const DonationHistory = lazy(() => import("./pages/DonationHistory"));
 const SubscriptionPortal = lazy(() => import("./pages/SubscriptionPortal"));
+const GivePage = lazy(() => import("./pages/GivePage"));
 const SubscriberDashboard = lazy(() => import("./pages/SubscriberDashboard"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
@@ -73,7 +74,7 @@ export default function App() {
                   <Route path="/events/past" element={<PastEvents />} />
                   <Route path="/events" element={<Events />} />
                   <Route path="/donations" element={<DonationHistory />} />
-                  <Route path="/give" element={<SubscriptionPortal />} />
+                  <Route path="/give" element={<GivePage />} />
                   <Route path="/subscribe" element={<SubscriptionPortal />} />
                   <Route path="/subscriber-dashboard" element={<SubscriberDashboard />} />
                   <Route path="/partner-portal" element={<SubscriberDashboard />} />
