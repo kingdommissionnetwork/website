@@ -74,6 +74,8 @@ interface ReceiptInfo {
   date: string;
 }
 
+const showStkPush = import.meta.env.VITE_ENABLE_STK_PUSH === "true";
+
 export default function GivePage() {
   const { user, setSession } = useAuth();
   const { showToast } = useToast();
@@ -88,7 +90,7 @@ export default function GivePage() {
   const [donorName, setDonorName] = useState(user?.name || "");
   const [donorEmail, setDonorEmail] = useState(user?.email || "");
   const [submitting, setSubmitting] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "card" | "manual" | "paypal">("mpesa");
+  const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "card" | "manual" | "paypal">(showStkPush ? "mpesa" : "manual");
   const [mpesaPhone, setMpesaPhone] = useState("");
   const [stkPending, setStkPending] = useState(false);
   const [stkStatusMessage, setStkStatusMessage] = useState("");
@@ -504,18 +506,20 @@ export default function GivePage() {
                   {/* Payment Method Selector */}
                   <div>
                     <label className="block text-xs font-bold text-[#fbf5b7] uppercase tracking-wider mb-2">Select Payment Method:</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      <button type="button" onClick={() => setPaymentMethod("mpesa")}
-                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center gap-1 ${paymentMethod === "mpesa" ? "bg-emerald-600/20 border-emerald-400 text-white shadow-md font-bold" : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08]"}`}>
-                        <Smartphone className="w-4 h-4 text-emerald-400" /><span className="text-[11px]">M-Pesa STK</span>
+                    <div className={`grid ${showStkPush ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3"} gap-2`}>
+                      {showStkPush && (
+                        <button type="button" onClick={() => setPaymentMethod("mpesa")}
+                          className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center gap-1 ${paymentMethod === "mpesa" ? "bg-emerald-600/20 border-emerald-400 text-white shadow-md font-bold" : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08]"}`}>
+                          <Smartphone className="w-4 h-4 text-emerald-400" /><span className="text-[11px]">M-Pesa STK</span>
+                        </button>
+                      )}
+                      <button type="button" onClick={() => setPaymentMethod("manual")}
+                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center gap-1 ${paymentMethod === "manual" ? "bg-emerald-600/20 border-emerald-400 text-white shadow-md font-bold" : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08]"}`}>
+                        <Smartphone className="w-4 h-4 text-emerald-400" /><span className="text-[11px]">M-Pesa (Paybill 522522)</span>
                       </button>
                       <button type="button" onClick={() => setPaymentMethod("card")}
                         className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center gap-1 ${paymentMethod === "card" ? "bg-[#d4af37]/20 border-[#d4af37] text-white shadow-md font-bold" : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08]"}`}>
                         <CreditCard className="w-4 h-4 text-[#d4af37]" /><span className="text-[11px]">Card / Online</span>
-                      </button>
-                      <button type="button" onClick={() => setPaymentMethod("manual")}
-                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center gap-1 ${paymentMethod === "manual" ? "bg-blue-600/20 border-blue-400 text-white shadow-md font-bold" : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08]"}`}>
-                        <Building2 className="w-4 h-4 text-blue-400" /><span className="text-[11px]">KCB Paybill</span>
                       </button>
                       <button type="button" onClick={() => setPaymentMethod("paypal")}
                         className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center gap-1 ${paymentMethod === "paypal" ? "bg-sky-600/20 border-sky-400 text-white shadow-md font-bold" : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08]"}`}>
@@ -524,8 +528,8 @@ export default function GivePage() {
                     </div>
                   </div>
 
-                  {/* M-PESA STK */}
-                  {paymentMethod === "mpesa" && (
+                  {/* M-PESA STK (Only when enabled in env) */}
+                  {showStkPush && paymentMethod === "mpesa" && (
                     <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-4">
                       <div>
                         <label className="block text-xs font-bold text-emerald-300 mb-1">Safaricom M-Pesa Phone Number:</label>
@@ -599,15 +603,40 @@ export default function GivePage() {
                           </button>
                         </div>
                       </div>
-                      <div className="text-[11px] text-white/70">Account Name: <strong className="text-white">Heavenly God Kingdom Churches</strong> (KCB Bank)</div>
+                      <div className="text-[11px] text-white/70 flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-[#d4af37]" />
+                        <span>Account Name: <strong className="text-white">Heavenly God Kingdom Churches</strong> (KCB Bank)</span>
+                      </div>
+
+                      {/* Quick Steps */}
+                      <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-white/80 space-y-1.5">
+                        <div className="font-bold text-[#fbf5b7] text-[11px] uppercase tracking-wider mb-0.5">Quick Steps:</div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-[#d4af37]/20 text-[#d4af37] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                          <span>Open M-Pesa &gt; <strong>Lipa na M-Pesa</strong> &gt; <strong>Paybill</strong></span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-[#d4af37]/20 text-[#d4af37] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                          <span>Business: <strong className="text-[#fbf5b7]">522522</strong> · Account: <strong className="text-[#fbf5b7]">1335674365</strong></span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-[#d4af37]/20 text-[#d4af37] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                          <span>Enter Amount: <strong className="text-[#fbf5b7]">KES {currentAmountKes.toLocaleString()}</strong> and your PIN</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-[#d4af37]/20 text-[#d4af37] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">4</span>
+                          <span>Enter the M-Pesa confirmation code below to get your digital receipt</span>
+                        </div>
+                      </div>
+
                       <div className="pt-2 border-t border-white/10">
-                        <label className="block text-xs font-bold text-white/80 mb-1">Already sent? Enter your M-Pesa Transaction Code:</label>
+                        <label className="block text-xs font-bold text-white/80 mb-1">Enter your M-Pesa Transaction Code:</label>
                         <div className="flex gap-2">
                           <input type="text" value={manualRefCode} onChange={(e) => setManualRefCode(e.target.value.toUpperCase())}
                             placeholder="e.g. QKJ8921820"
                             className="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white font-mono font-bold text-sm focus:outline-none focus:border-[#d4af37]" />
                           <button type="button" onClick={handleManualVerification} disabled={submitting}
-                            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shrink-0 transition-all">
+                            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs shrink-0 transition-all hover:brightness-110">
                             {submitting ? "Verifying..." : "Confirm & Receipt"}
                           </button>
                         </div>

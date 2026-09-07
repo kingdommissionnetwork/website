@@ -136,6 +136,8 @@ export const PARTNER_PLANS: PartnerPlan[] = [
 ];
 
 
+const showStkPush = import.meta.env.VITE_ENABLE_STK_PUSH === "true";
+
 export default function SubscriptionPortal() {
   const { user, setSession } = useAuth();
   const { showToast } = useToast();
@@ -164,7 +166,7 @@ export default function SubscriptionPortal() {
   const [showIdCardModal, setShowIdCardModal] = useState(false);
   const [onboardingStage, setOnboardingStage] = useState<number | null>(null);
   const [subMethod, setSubMethod] = useState<"mpesa" | "card" | "paypal">("mpesa");
-  const [mpesaMode, setMpesaMode] = useState<"stk" | "manual">("stk");
+  const [mpesaMode, setMpesaMode] = useState<"stk" | "manual">(showStkPush ? "stk" : "manual");
   const [mpesaPhone, setMpesaPhone] = useState("");
   const [stkPending, setStkPending] = useState(false);
   const [stkPromptSent, setStkPromptSent] = useState(false);
@@ -978,41 +980,66 @@ export default function SubscriptionPortal() {
                         </button>
                       </div>
                     </div>
-                  </div>
 
-                  {/* M-Pesa Mode Toggle */}
-                  <div className="flex items-center justify-center">
-                    <div className="inline-flex p-1 rounded-2xl bg-white/[0.08] border border-white/15 w-full">
-                      <button
-                        type="button"
-                        onClick={() => { setMpesaMode("stk"); setStkPending(false); setStkPromptSent(false); setStkStatusMessage(""); }}
-                        className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                          mpesaMode === "stk"
-                            ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md"
-                            : "text-white/60 hover:text-white"
-                        }`}
-                      >
-                        <Smartphone className="w-3.5 h-3.5" />
-                        <span>Express Auto-Prompt</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/20 font-extrabold">✨ NEW</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setMpesaMode("manual"); setStkPending(false); }}
-                        className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                          mpesaMode === "manual"
-                            ? "bg-white/20 text-white shadow-md"
-                            : "text-white/60 hover:text-white"
-                        }`}
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Enter Receipt Code</span>
-                      </button>
+                    {/* Step by Step Instructions */}
+                    <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-white/80 space-y-2">
+                      <div className="font-bold text-[#fbf5b7] text-[11px] uppercase tracking-wider mb-1">
+                        How to Give via M-Pesa Paybill:
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <span className="w-4 h-4 rounded-full bg-[#d4af37]/25 text-[#fbf5b7] text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                        <span>Open M-Pesa on your phone &gt; Select <strong>Lipa na M-Pesa</strong> &gt; <strong>Paybill</strong></span>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <span className="w-4 h-4 rounded-full bg-[#d4af37]/25 text-[#fbf5b7] text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                        <span>Enter Business No: <strong className="text-[#fbf5b7]">522522</strong> · Account No: <strong className="text-[#fbf5b7]">1335674365</strong></span>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <span className="w-4 h-4 rounded-full bg-[#d4af37]/25 text-[#fbf5b7] text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                        <span>Enter Amount: <strong className="text-[#fbf5b7]">KES {Math.round(activeAmountKes).toLocaleString()}</strong> and enter your M-Pesa PIN</span>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <span className="w-4 h-4 rounded-full bg-[#d4af37]/25 text-[#fbf5b7] text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">4</span>
+                        <span>Enter your 10-character M-Pesa transaction confirmation code below to activate your partner profile</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* STK Push Mode */}
-                  {mpesaMode === "stk" && (
+                  {/* M-Pesa Mode Toggle (Only rendered if STK push is enabled in env) */}
+                  {showStkPush && (
+                    <div className="flex items-center justify-center">
+                      <div className="inline-flex p-1 rounded-2xl bg-white/[0.08] border border-white/15 w-full">
+                        <button
+                          type="button"
+                          onClick={() => { setMpesaMode("stk"); setStkPending(false); setStkPromptSent(false); setStkStatusMessage(""); }}
+                          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                            mpesaMode === "stk"
+                              ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md"
+                              : "text-white/60 hover:text-white"
+                          }`}
+                        >
+                          <Smartphone className="w-3.5 h-3.5" />
+                          <span>Express Auto-Prompt</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/20 font-extrabold">✨ NEW</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setMpesaMode("manual"); setStkPending(false); }}
+                          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                            mpesaMode === "manual"
+                              ? "bg-white/20 text-white shadow-md"
+                              : "text-white/60 hover:text-white"
+                          }`}
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Enter Receipt Code</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STK Push Mode (Only if enabled) */}
+                  {showStkPush && mpesaMode === "stk" && (
                     <form onSubmit={handleMpesaStkPush} className="space-y-4">
                       <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-300 leading-relaxed flex items-start gap-3">
                         <Zap className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
@@ -1080,7 +1107,6 @@ export default function SubscriptionPortal() {
 
                       {stkPending && (
                         <div className="p-4 rounded-2xl bg-amber-900/30 border border-amber-500/40 flex items-center gap-4" role="status" aria-live="polite">
-                          {/* Live radar: pulsing rings while awaiting the handset PIN */}
                           <div className="relative w-14 h-14 shrink-0" aria-hidden="true">
                             <span className="absolute inset-0 rounded-full bg-amber-400/25 animate-ping" />
                             <span className="absolute inset-2 rounded-full border border-amber-400/50 animate-ping [animation-delay:300ms]" />
