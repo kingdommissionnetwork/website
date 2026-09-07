@@ -1,20 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Crown,
   Check,
   Sparkles,
   Heart,
-  Globe,
   Loader2,
-  HelpCircle,
-  Zap,
   RefreshCw,
-  Award,
-  Compass,
-  Plane,
-  UserCheck,
-  Flame,
   ShieldCheck,
   Download,
   X,
@@ -23,6 +14,7 @@ import {
   CreditCard,
   Building2,
   ArrowRight,
+  Zap,
 } from "lucide-react";
 import ScrollReveal from "../components/ScrollReveal";
 import AmbientParticles from "../components/AmbientParticles";
@@ -142,69 +134,6 @@ export const PARTNER_PLANS: PartnerPlan[] = [
   },
 ];
 
-const missionPillars = [
-  {
-    icon: Compass,
-    title: "Reach the Unreached",
-    desc: "Deploying evangelists, mobile crusade rigs, and sound equipment to remote villages and unreached population groups across Africa and the nations.",
-  },
-  {
-    icon: Heart,
-    title: "Feed the Nations",
-    desc: "Providing essential food hampers, clean water, and practical compassionate relief to vulnerable families, widows, and orphanages alongside the Gospel message.",
-  },
-  {
-    icon: Flame,
-    title: "Global Revival Outreaches",
-    desc: "Organizing mass gospel crusades, equipping local church leaders, distributing Bibles in 22 translations, and live satellite broadcasts.",
-  },
-];
-
-const ambassadorIncentives = [
-  {
-    icon: UserCheck,
-    title: "Official Partner ID & Credential",
-    desc: "Every verified partner receives an official Kingdom Missions Network membership ID card and certificate recognizing them as a bona fide kingdom partner.",
-  },
-  {
-    icon: Plane,
-    title: "Mission Team Deployment Priority",
-    desc: "When KMN plans mission trips, crusades, and regional outreaches, registered partners are given primary eligibility to travel as part of the official team.",
-  },
-  {
-    icon: Globe,
-    title: "Preaching Abroad Logistics Support",
-    desc: "When partner ministers plan to minister outside their country, KMN provides pastoral endorsement, connects them with local church leadership, and assists with advance meeting mobilization and logistics.",
-  },
-  {
-    icon: Crown,
-    title: "Bishop's Prophetic Impartation",
-    desc: "Receive monthly live spiritual fellowship, prophetic alignment, and dedicated intercession directly from Bishop Dr. George Githinji and the oversight council.",
-  },
-];
-
-const faqs = [
-  {
-    q: "How are the KES and USD amounts calculated?",
-    a: "Our system continuously computes live exchange rates using market financial APIs. You can view and pay in either Kenyan Shillings (KES) or US Dollars (USD).",
-  },
-  {
-    q: "How does the 'Preaching Abroad Logistics Support' work?",
-    a: "If you are a minister or partner traveling abroad for ministry, Kingdom Missions Network leverages its global network to write official letters of endorsement, introduce you to verified local pastoral councils, and assist with meeting preparation and ground mobilization.",
-  },
-  {
-    q: "What payment methods are supported?",
-    a: "In Kenya and East Africa, you can subscribe via M-Pesa, Airtel Money, or Debit/Credit card through Paystack. Globally, you can use PayPal, Visa, Mastercard, or American Express in USD.",
-  },
-  {
-    q: "How do I receive my Official Partner ID Card?",
-    a: "Upon completing your subscription, your verified digital Partner ID is generated instantly in your dashboard. You can download, print, or share your official credential.",
-  },
-  {
-    q: "Can I cancel or change my plan anytime?",
-    a: "Yes, you have full control over your partnership. You can change tiers, update payment methods, or cancel at any time with no penalties.",
-  },
-];
 
 export default function SubscriptionPortal() {
   const { user, setSession } = useAuth();
@@ -222,7 +151,7 @@ export default function SubscriptionPortal() {
   const [subscriberName, setSubscriberName] = useState(user?.name || "");
   const [subscriberEmail, setSubscriberEmail] = useState(user?.email || "");
   const [submitting, setSubmitting] = useState(false);
-  const [activeFaq, setActiveFaq] = useState<number | null>(null);
+
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showIdCardModal, setShowIdCardModal] = useState(false);
   const [onboardingStage, setOnboardingStage] = useState<number | null>(null);
@@ -603,152 +532,108 @@ export default function SubscriptionPortal() {
         description="Join Kingdom Missions Network as a covenant partner. Support reaching the unreached, feeding the nations, and global crusades with exclusive ambassador incentives."
       />
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] py-16 lg:py-24 px-4 sm:px-6">
-        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(249,115,22,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
-        <div className="absolute bottom-0 left-10 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(212,175,55,0.22)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+      {/* Packages Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] pt-12 pb-16 lg:pt-16 lg:pb-20 px-4 sm:px-6 lg:px-8" id="packages">
+        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(249,115,22,0.15)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
         <AmbientParticles />
 
-        <div className="container-main mx-auto relative z-10 max-w-5xl text-center">
-          <ScrollReveal>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-semibold mb-6 backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
-              <span>Kingdom Missions Network Covenant Partnership</span>
-            </div>
-
-            <h1 className="font-brand text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight tracking-tight">
-              Partner With Us In The{" "}
-              <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">
-                Great Commission
-              </span>
-            </h1>
-
-            <p className="font-outfit text-white/80 text-base sm:text-lg max-w-3xl mx-auto leading-relaxed mb-8">
-              Become a faithful covenant partner. Your monthly partnership directly empowers frontline evangelism,
-              equipping missionaries, providing gospel bread relief, and hosting life-changing international revivals.
-            </p>
-
-            {/* Currency & Billing Cycle Switchers */}
-            <div className="flex flex-wrap items-center justify-center gap-4 mb-4">
-              {/* Currency Toggle */}
-              <div className="inline-flex rounded-2xl bg-white/10 p-1 border border-white/15 backdrop-blur-md">
-                <button
-                  type="button"
-                  onClick={() => setCurrencyView("KES")}
-                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                    currencyView === "KES"
-                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  KES (Kenyan Shillings)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrencyView("USD")}
-                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                    currencyView === "USD"
-                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  USD ($ US Dollars)
-                </button>
+        <div className="container-main mx-auto relative z-10 max-w-7xl">
+          <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-14">
+            <ScrollReveal>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
+                <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
+                <span>Kingdom Missions Network Covenant Partnership</span>
               </div>
 
-              {/* Billing Cycle Toggle */}
-              <div className="inline-flex rounded-2xl bg-white/10 p-1 border border-white/15 backdrop-blur-md">
-                <button
-                  type="button"
-                  onClick={() => setBillingCycle("monthly")}
-                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                    billingCycle === "monthly"
-                      ? "bg-white text-[#0c1b33] shadow-md"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  Monthly Seed
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBillingCycle("yearly")}
-                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 ${
-                    billingCycle === "yearly"
-                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  <span>Annual Covenant</span>
-                  <span className="text-[10px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full">
-                    Save 15%
-                  </span>
-                </button>
+              <div className="font-outfit text-xs font-bold uppercase tracking-[0.25em] text-[#d4af37] mb-3">
+                Covenant Tiers &amp; Privileges
               </div>
 
-              {/* Live Rate Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/5 border border-white/10 text-xs text-white/70">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Live Rate: 1 USD ≈ {(1 / exchangeRate).toFixed(2)} KES</span>
-                <button
-                  type="button"
-                  onClick={loadPricing}
-                  disabled={loadingRate}
-                  title="Refresh rates"
-                  className="p-0.5 text-white/50 hover:text-white transition-colors"
-                >
-                  <RefreshCw className={`w-3 h-3 ${loadingRate ? "animate-spin" : ""}`} />
-                </button>
-              </div>
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
+              <h1 className="font-brand text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-4 leading-tight tracking-tight">
+                Choose Your{" "}
+                <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">
+                  Partnership Package
+                </span>
+              </h1>
 
-      {/* 3 Core Mission Impact Pillars */}
-      <section className="py-14 px-4 sm:px-6 bg-[#09182d] border-y border-white/10 relative">
-        <div className="container-main mx-auto max-w-7xl">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <h2 className="font-outfit text-xs font-bold uppercase tracking-[0.25em] text-[#d4af37] mb-2">
-              Every Contribution Counts
-            </h2>
-            <h3 className="font-brand text-2xl sm:text-4xl font-bold text-white">
-              Where Your Partnership Goes
-            </h3>
-          </div>
+              <p className="font-outfit text-white/80 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
+                Select a tier that aligns with your spiritual devotion and kingdom calling.
+              </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {missionPillars.map((pillar) => {
-              const Icon = pillar.icon;
-              return (
-                <div
-                  key={pillar.title}
-                  className="p-7 rounded-3xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 hover:border-[#d4af37]/40 transition-all group"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#d4af37]/20 to-[#f97316]/20 border border-[#d4af37]/30 flex items-center justify-center text-[#fbf5b7] mb-5 group-hover:scale-110 transition-transform">
-                    <Icon className="w-6 h-6 text-[#d4af37]" />
-                  </div>
-                  <h4 className="font-brand text-xl font-bold text-white mb-2">{pillar.title}</h4>
-                  <p className="font-outfit text-white/70 text-sm leading-relaxed">{pillar.desc}</p>
+              {/* Currency & Billing Cycle Switchers */}
+              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+                {/* Currency Toggle */}
+                <div className="inline-flex rounded-2xl bg-white/10 p-1 border border-white/15 backdrop-blur-md">
+                  <button
+                    type="button"
+                    onClick={() => setCurrencyView("KES")}
+                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                      currencyView === "KES"
+                        ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    KES (Kenyan Shillings)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrencyView("USD")}
+                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                      currencyView === "USD"
+                        ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    USD ($ US Dollars)
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
-      {/* Main Partnership Packages Grid */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 relative" id="packages">
-        <div className="container-main mx-auto max-w-7xl">
-          <div className="text-center max-w-3xl mx-auto mb-14">
-            <h2 className="font-outfit text-xs font-bold uppercase tracking-[0.25em] text-[#d4af37] mb-3">
-              Covenant Tiers & Privileges
-            </h2>
-            <h3 className="font-brand text-3xl sm:text-5xl font-bold text-white mb-3">
-              Choose Your Partnership Package
-            </h3>
-            <p className="font-outfit text-white/75 text-base sm:text-lg">
-              Select a tier that aligns with your spiritual devotion and kingdom calling.
-            </p>
+                {/* Billing Cycle Toggle */}
+                <div className="inline-flex rounded-2xl bg-white/10 p-1 border border-white/15 backdrop-blur-md">
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle("monthly")}
+                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                      billingCycle === "monthly"
+                        ? "bg-white text-[#0c1b33] shadow-md"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    Monthly Seed
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle("yearly")}
+                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                      billingCycle === "yearly"
+                        ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    <span>Annual Covenant</span>
+                    <span className="text-[10px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full">
+                      Save 15%
+                    </span>
+                  </button>
+                </div>
+
+                {/* Live Rate Badge */}
+                <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/5 border border-white/10 text-xs text-white/70">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Live Rate: 1 USD ≈ {(1 / exchangeRate).toFixed(2)} KES</span>
+                  <button
+                    type="button"
+                    onClick={loadPricing}
+                    disabled={loadingRate}
+                    title="Refresh rates"
+                    className="p-0.5 text-white/50 hover:text-white transition-colors"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${loadingRate ? "animate-spin" : ""}`} />
+                  </button>
+                </div>
+              </div>
+            </ScrollReveal>
           </div>
 
           {/* 4 Cards Grid */}
@@ -932,103 +817,7 @@ export default function SubscriptionPortal() {
         </div>
       </section>
 
-      {/* Ambassador Incentives & Privileges Deep Dive */}
-      <section className="py-16 px-4 sm:px-6 bg-gradient-to-b from-[#09182d] to-[#071324] border-t border-white/10">
-        <div className="container-main mx-auto max-w-7xl">
-          <div className="text-center max-w-3xl mx-auto mb-14">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#d4af37]/15 text-[#fbf5b7] border border-[#d4af37]/30 text-xs font-semibold mb-3">
-              <Award className="w-4 h-4 text-[#d4af37]" />
-              <span>Partner Recognition & Global Access</span>
-            </div>
-            <h3 className="font-brand text-3xl sm:text-5xl font-bold text-white mb-3">
-              Exclusive Kingdom Ambassador Incentives
-            </h3>
-            <p className="font-outfit text-white/75 text-base sm:text-lg">
-              We honor our covenant partners with practical ministerial support, travel opportunities, and verified credentials.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-14">
-            {ambassadorIncentives.map((incentive) => {
-              const Icon = incentive.icon;
-              return (
-                <div
-                  key={incentive.title}
-                  className="p-7 rounded-3xl bg-white/[0.04] border border-white/10 hover:border-[#d4af37]/30 transition-all flex flex-col sm:flex-row items-start gap-5"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#d4af37]/20 to-[#f97316]/20 border border-[#d4af37]/30 flex items-center justify-center text-[#fbf5b7] shrink-0">
-                    <Icon className="w-6 h-6 text-[#d4af37]" />
-                  </div>
-                  <div>
-                    <h4 className="font-brand text-xl font-bold text-white mb-2">{incentive.title}</h4>
-                    <p className="font-outfit text-white/70 text-sm leading-relaxed">{incentive.desc}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Interactive Digital Partner ID Card Mockup Preview */}
-          <div className="max-w-xl mx-auto p-7 rounded-3xl bg-gradient-to-br from-[#0c1b33] via-[#112440] to-[#1a1208] border-2 border-[#d4af37]/50 shadow-[0_0_40px_rgba(212,175,55,0.2)] text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-[radial-gradient(circle,rgba(212,175,55,0.15)_0%,transparent_70%)] pointer-events-none blur-2xl" />
-
-            <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
-              <img src={brandLogo} alt="" className="w-56 h-56 object-contain" />
-            </div>
-
-            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5 relative z-10">
-              <div className="flex items-center gap-3">
-                <img
-                  src={brandLogo}
-                  alt="Kingdom Missions Network"
-                  className="w-12 h-12 rounded-xl object-contain border border-[#d4af37]/40 p-1 bg-white/5 drop-shadow-[0_0_10px_rgba(212,175,55,0.4)]"
-                  width="48"
-                  height="48"
-                />
-                <div>
-                  <span className="font-brand text-base font-bold text-white tracking-wider block">
-                    KINGDOM MISSIONS NETWORK
-                  </span>
-                  <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#d4af37]">
-                    Official Global Partner Credential
-                  </span>
-                </div>
-              </div>
-              <ShieldCheck className="w-7 h-7 text-[#d4af37]" />
-            </div>
-
-            <div className="space-y-4 mb-5">
-              <div>
-                <span className="text-[10px] uppercase text-white/50 block font-semibold">Covenant Partner</span>
-                <span className="font-outfit text-lg font-bold text-white">
-                  {subscriberName || user?.name || "Dr. / Pastor / Partner"}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Partnership Level</span>
-                  <span className="font-outfit text-sm font-bold text-[#fbf5b7]">
-                    {isCustomAmount ? "Custom Covenant Partner" : activePlan.name}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Deployment Status</span>
-                  <span className="font-outfit text-sm font-bold text-emerald-400 flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    Verified Active
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-white/50">
-              <span>Spiritual Oversight: Bishop Dr. George Githinji</span>
-              <span className="font-mono">ID: KMN-{Date.now().toString().slice(-6)}</span>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Checkout Section */}
       <section className="py-16 sm:py-20 px-4 sm:px-6 bg-[#071324] border-t border-white/10" id="checkout">
@@ -1450,40 +1239,7 @@ export default function SubscriptionPortal() {
         </div>
       </section>
 
-      {/* FAQs */}
-      <section className="py-16 px-4 sm:px-6 bg-[#09182d] border-t border-white/10">
-        <div className="container-main mx-auto max-w-4xl">
-          <div className="text-center mb-10">
-            <h3 className="font-brand text-2xl sm:text-4xl font-bold text-white mb-2">
-              Frequently Asked Questions
-            </h3>
-            <p className="text-white/70 text-xs sm:text-sm">Everything you need to know about partnering with KMN.</p>
-          </div>
 
-          <div className="space-y-4">
-            {faqs.map((faq, index) => (
-              <div
-                key={index}
-                className="rounded-2xl bg-white/[0.04] border border-white/10 overflow-hidden"
-              >
-                <button
-                  type="button"
-                  onClick={() => setActiveFaq(activeFaq === index ? null : index)}
-                  className="w-full p-6 text-left font-bold text-sm sm:text-base text-white flex items-center justify-between gap-4"
-                >
-                  <span>{faq.q}</span>
-                  <HelpCircle className="w-4 h-4 text-[#d4af37] shrink-0" />
-                </button>
-                {activeFaq === index && (
-                  <div className="px-6 pb-6 text-xs sm:text-sm text-white/75 leading-relaxed border-t border-white/10 pt-4">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Verified Partner ID Card Modal */}
       {showIdCardModal && (
