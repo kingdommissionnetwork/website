@@ -726,22 +726,22 @@ export default function SubscriptionPortal() {
                       </div>
 
                       {/* ═══════════════════════════════════════════════════════════
-                          SELECT BUTTON PLACED ABOVE — RESEMBLING CHATGPT PRICING CARD
-                          Clicking immediately advances to Step 2 (Checkout)
+                          SELECT BUTTON PLACED ABOVE — CHATGPT PILL BUTTON STYLE
+                          High-contrast, pill-shaped (rounded-full), stands out boldly
                           ═══════════════════════════════════════════════════════════ */}
-                      <div className="mb-4">
+                      <div className="my-3 sm:my-4">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSelectPlanAndProceed(plan.id);
                           }}
-                          className={`w-full py-3 px-3 rounded-2xl font-extrabold text-xs sm:text-sm tracking-wide transition-all duration-200 flex items-center justify-center gap-2 shadow-md ${
+                          className={`w-full py-3 px-4 rounded-full font-extrabold text-xs sm:text-sm tracking-wide transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
                             isSelected
-                              ? "bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] ring-2 ring-[#d4af37] ring-offset-2 ring-offset-[#071324] scale-[1.01]"
+                              ? "bg-gradient-to-r from-[#d4af37] via-[#faea9f] to-[#c5961d] text-[#081220] shadow-[0_0_24px_rgba(212,175,55,0.7)] ring-2 ring-[#d4af37] ring-offset-2 ring-offset-[#0d1d36] scale-[1.02]"
                               : plan.isPopular
-                              ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] hover:brightness-110"
-                              : "bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                              ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#081220] hover:brightness-110 shadow-[0_4px_18px_rgba(212,175,55,0.45)] hover:scale-[1.02] active:scale-[0.98]"
+                              : "bg-white text-[#0a1526] hover:bg-[#faea9f] hover:text-[#081220] shadow-[0_4px_16px_rgba(255,255,255,0.2)] hover:shadow-[0_6px_22px_rgba(255,255,255,0.35)] hover:scale-[1.02] active:scale-[0.98]"
                           }`}
                         >
                           {isSelected ? (
@@ -752,13 +752,10 @@ export default function SubscriptionPortal() {
                           ) : (
                             <>
                               <span>Choose {plan.name}</span>
-                              <ArrowRight className="w-3.5 h-3.5" />
+                              <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
                             </>
                           )}
                         </button>
-                        <p className="text-[10px] text-center text-white/40 mt-1">
-                          Click to select tier
-                        </p>
                       </div>
 
                       {/* Impact Note */}
