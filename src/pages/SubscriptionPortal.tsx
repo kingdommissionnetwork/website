@@ -14,6 +14,7 @@ import {
   CreditCard,
   Building2,
   ArrowRight,
+  ArrowLeft,
   Zap,
 } from "lucide-react";
 import ScrollReveal from "../components/ScrollReveal";
@@ -141,7 +142,14 @@ export default function SubscriptionPortal() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [selectedPlanId, setSelectedPlanId] = useState<string>("ambassador");
+  const [currentStep, setCurrentStep] = useState<"plans" | "checkout">(() => {
+    return searchParams.get("step") === "checkout" ? "checkout" : "plans";
+  });
+  const [selectedPlanId, setSelectedPlanId] = useState<string>(() => {
+    const planParam = searchParams.get("plan");
+    if (planParam && PARTNER_PLANS.some((p) => p.id === planParam)) return planParam;
+    return "ambassador";
+  });
   const [isCustomAmount, setIsCustomAmount] = useState<boolean>(false);
   const [customAmountKes, setCustomAmountKes] = useState<number>(5000);
   const [currencyView, setCurrencyView] = useState<"KES" | "USD">("KES");
@@ -187,14 +195,12 @@ export default function SubscriptionPortal() {
     : activePlan.kesMonthly * (billingCycle === "yearly" ? 12 * 0.85 : 1);
   const activeAmountUsd = Number((activeAmountKes * exchangeRate).toFixed(2));
 
-  // Handler to select a plan and smoothly scroll to the checkout payment section
-  const handleSelectPlanAndScroll = (planId: string) => {
+  // Handler to select a plan and advance directly to Step 2 (Checkout)
+  const handleSelectPlanAndProceed = (planId: string) => {
     setSelectedPlanId(planId);
     setIsCustomAmount(false);
-    const checkoutEl = document.getElementById("checkout");
-    if (checkoutEl) {
-      checkoutEl.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    setCurrentStep("checkout");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Seamless Onboarding Handshake Sequence (Stripe/Patreon Benchmark)
@@ -532,712 +538,736 @@ export default function SubscriptionPortal() {
         description="Join Kingdom Missions Network as a covenant partner. Support reaching the unreached, feeding the nations, and global crusades with exclusive ambassador incentives."
       />
 
-      {/* Packages Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] pt-12 pb-16 lg:pt-16 lg:pb-20 px-4 sm:px-6 lg:px-8" id="packages">
-        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(249,115,22,0.15)_0%,transparent_65%)] pointer-events-none blur-3xl" />
-        <div className="absolute bottom-0 left-10 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
-        <AmbientParticles />
+      {/* STEP 1: CHOOSE PACKAGE (ULTRA COMPACT HEADER + 4 TIERS GRID) */}
+      {currentStep === "plans" && (
+        <section className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] pt-3 pb-8 sm:pt-4 sm:pb-12 px-3 sm:px-6 lg:px-8 min-h-[calc(100vh-92px)] flex flex-col justify-between" id="packages">
+          <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.12)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+          <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.15)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+          <AmbientParticles />
 
-        <div className="container-main mx-auto relative z-10 max-w-7xl">
-          <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-14">
-            <ScrollReveal>
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
-                <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
-                <span>Kingdom Missions Network Covenant Partnership</span>
-              </div>
-
-              <div className="font-outfit text-xs font-bold uppercase tracking-[0.25em] text-[#d4af37] mb-3">
-                Covenant Tiers &amp; Privileges
-              </div>
-
-              <h1 className="font-brand text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-4 leading-tight tracking-tight">
-                Choose Your{" "}
-                <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">
-                  Partnership Package
-                </span>
-              </h1>
-
-              <p className="font-outfit text-white/80 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
-                Select a tier that aligns with your spiritual devotion and kingdom calling.
-              </p>
-
-              {/* Currency & Billing Cycle Switchers */}
-              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-                {/* Currency Toggle */}
-                <div className="inline-flex rounded-2xl bg-white/10 p-1 border border-white/15 backdrop-blur-md">
-                  <button
-                    type="button"
-                    onClick={() => setCurrencyView("KES")}
-                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                      currencyView === "KES"
-                        ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
-                        : "text-white/70 hover:text-white"
-                    }`}
-                  >
-                    KES (Kenyan Shillings)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCurrencyView("USD")}
-                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                      currencyView === "USD"
-                        ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
-                        : "text-white/70 hover:text-white"
-                    }`}
-                  >
-                    USD ($ US Dollars)
-                  </button>
+          <div className="container-main mx-auto relative z-10 max-w-7xl w-full">
+            {/* Ultra-compact Header to maximize space for cards */}
+            <div className="text-center max-w-4xl mx-auto mb-4 sm:mb-6">
+              <ScrollReveal>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-[11px] font-semibold mb-2 backdrop-blur-md">
+                  <Sparkles className="w-3 h-3 text-[#d4af37]" />
+                  <span>Kingdom Missions Network Covenant Partnership</span>
                 </div>
 
-                {/* Billing Cycle Toggle */}
-                <div className="inline-flex rounded-2xl bg-white/10 p-1 border border-white/15 backdrop-blur-md">
-                  <button
-                    type="button"
-                    onClick={() => setBillingCycle("monthly")}
-                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                      billingCycle === "monthly"
-                        ? "bg-white text-[#0c1b33] shadow-md"
-                        : "text-white/70 hover:text-white"
-                    }`}
-                  >
-                    Monthly Seed
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBillingCycle("yearly")}
-                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 ${
-                      billingCycle === "yearly"
-                        ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
-                        : "text-white/70 hover:text-white"
-                    }`}
-                  >
-                    <span>Annual Covenant</span>
-                    <span className="text-[10px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full">
-                      Save 15%
-                    </span>
-                  </button>
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d4af37] mb-1">
+                  Covenant Tiers &amp; Privileges
                 </div>
 
-                {/* Live Rate Badge */}
-                <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/5 border border-white/10 text-xs text-white/70">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Live Rate: 1 USD ≈ {(1 / exchangeRate).toFixed(2)} KES</span>
-                  <button
-                    type="button"
-                    onClick={loadPricing}
-                    disabled={loadingRate}
-                    title="Refresh rates"
-                    className="p-0.5 text-white/50 hover:text-white transition-colors"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${loadingRate ? "animate-spin" : ""}`} />
-                  </button>
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
-
-          {/* 4 Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-            {PARTNER_PLANS.map((plan) => {
-              const isSelected = selectedPlanId === plan.id && !isCustomAmount;
-              const billedKes = billingCycle === "yearly" ? Math.round(plan.kesMonthly * 12 * 0.85) : plan.kesMonthly;
-              const kesDisplay = billedKes.toLocaleString();
-              const usdDisplay = (billedKes * exchangeRate).toFixed(2);
-
-              return (
-                <div
-                  key={plan.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleSelectPlanAndScroll(plan.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleSelectPlanAndScroll(plan.id);
-                    }
-                  }}
-                  className={`relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between cursor-pointer transition-all duration-300 ${
-                    isSelected
-                      ? "bg-gradient-to-b from-[#132c52] to-[#0d1d36] border-2 border-[#d4af37] shadow-[0_0_30px_rgba(212,175,55,0.3)] scale-[1.02]"
-                      : "bg-white/[0.04] border border-white/10 hover:border-white/25 hover:bg-white/[0.06]"
-                  }`}
-                >
-                  {/* Popular Tag */}
-                  {plan.isPopular && (
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] text-[10px] font-extrabold uppercase tracking-wider shadow-lg whitespace-nowrap">
-                      Most Popular Tier
-                    </div>
-                  )}
-
-                  <div>
-                    {/* Header */}
-                    <div className="mb-4">
-                      <span className="inline-block px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-[#fbf5b7] mb-2.5">
-                        {plan.badge}
-                      </span>
-                      <h4 className="font-brand text-2xl font-bold text-white mb-1">{plan.name}</h4>
-                      <p className="font-outfit text-xs text-[#d4af37] font-semibold mb-2">{plan.tagline}</p>
-                      <p className="font-outfit text-xs text-white/70 leading-relaxed min-h-[36px]">{plan.description}</p>
-                    </div>
-
-                    {/* Price */}
-                    <div className="mb-5 pb-5 border-b border-white/10">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-brand text-3xl sm:text-4xl font-extrabold text-white">
-                          {currencyView === "KES" ? `KES ${kesDisplay}` : `$${usdDisplay}`}
-                        </span>
-                        <span className="text-white/60 text-xs sm:text-sm">
-                          / {billingCycle === "yearly" ? "year" : "month"}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-white/50 mt-1">
-                        {currencyView === "KES" ? `≈ $${usdDisplay} USD / mo` : `≈ ${kesDisplay} KES / mo`}
-                        {billingCycle === "yearly" && " · 15% discount included"}
-                      </p>
-                    </div>
-
-                    {/* ═══════════════════════════════════════════════════════════
-                        SELECT BUTTON PLACED ABOVE — RESEMBLING CHATGPT PRICING CARD
-                        ═══════════════════════════════════════════════════════════ */}
-                    <div className="mb-5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelectPlanAndScroll(plan.id);
-                        }}
-                        className={`w-full py-3.5 px-4 rounded-2xl font-extrabold text-xs sm:text-sm tracking-wide transition-all duration-200 flex items-center justify-center gap-2 shadow-lg ${
-                          isSelected
-                            ? "bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] ring-2 ring-[#d4af37] ring-offset-2 ring-offset-[#071324] scale-[1.02]"
-                            : plan.isPopular
-                            ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] hover:brightness-110"
-                            : "bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                        }`}
-                      >
-                        {isSelected ? (
-                          <>
-                            <Check className="w-4 h-4 stroke-[3]" />
-                            <span>Selected Tier ✓</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Choose {plan.name}</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </>
-                        )}
-                      </button>
-                      <p className="text-[10px] text-center text-white/40 mt-1.5">
-                        {isSelected ? "Active selection — see payment options below" : "Click to select & proceed"}
-                      </p>
-                    </div>
-
-                    {/* Impact Note */}
-                    <div className="p-3.5 rounded-2xl bg-white/[0.05] border border-white/10 text-xs text-[#fbf5b7] mb-5 leading-relaxed flex items-start gap-2">
-                      <Sparkles className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
-                      <span>{plan.impactHighlight}</span>
-                    </div>
-
-                    {/* Perks Section Heading */}
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-white/60 mb-3">
-                      Everything in this tier:
-                    </div>
-
-                    {/* Perks List */}
-                    <ul className="space-y-3">
-                      {plan.perks.map((perk, i) => (
-                        <li key={i} className="flex items-start gap-2.5 text-xs text-white/80 leading-snug">
-                          <Check className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
-                          <span>{perk}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Quick Proceed to Payment Link */}
-          <div className="text-center mt-8">
-            <button
-              type="button"
-              onClick={() => {
-                const checkoutEl = document.getElementById("checkout");
-                if (checkoutEl) checkoutEl.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-sm shadow-xl hover:brightness-110 transition-all"
-            >
-              <span>Proceed to Payment</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Custom Giving Option */}
-          <div className="mt-12 max-w-2xl mx-auto p-6 sm:p-8 rounded-3xl bg-white/[0.04] border border-white/10 text-center">
-            <h4 className="font-brand text-xl font-bold text-white mb-2">Desire to Sow a Custom Covenant Amount?</h4>
-            <p className="text-white/70 text-xs sm:text-sm mb-6">
-              Enter any amount you are led in your heart to support the global harvest.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <div className="relative w-full max-w-xs">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-sm font-semibold">
-                  {currencyView}
-                </span>
-                <input
-                  type="number"
-                  min="100"
-                  value={isCustomAmount ? customAmountKes : ""}
-                  onChange={(e) => {
-                    setIsCustomAmount(true);
-                    setCustomAmountKes(Math.max(100, Number(e.target.value)));
-                  }}
-                  placeholder="e.g. 15,000"
-                  className="w-full pl-16 pr-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm focus:outline-none focus:border-[#d4af37]"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsCustomAmount(true);
-                  const checkoutEl = document.getElementById("checkout");
-                  if (checkoutEl) checkoutEl.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-                className={`px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all ${
-                  isCustomAmount
-                    ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
-                    : "bg-white/10 text-white hover:bg-white/15"
-                }`}
-              >
-                Set Custom Amount
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-
-      {/* Checkout Section */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 bg-[#071324] border-t border-white/10" id="checkout">
-        <div className="container-main mx-auto max-w-3xl">
-          <div className="p-7 sm:p-10 rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/15 shadow-2xl">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-semibold mb-3">
-                <Check className="w-3.5 h-3.5" />
-                <span>Selected: {isCustomAmount ? "Custom Covenant" : activePlan.name}</span>
-              </div>
-              <h3 className="font-brand text-2xl sm:text-4xl font-bold text-white mb-2">
-                Activate Your Monthly Partnership
-              </h3>
-              <p className="text-white/70 text-xs sm:text-sm">
-                Total Seed:{" "}
-                <span className="text-white font-bold">
-                  {currencyView === "KES" ? `KES ${Math.round(activeAmountKes).toLocaleString()}` : `$${activeAmountUsd.toFixed(2)} USD`}
-                </span>{" "}
-                per {billingCycle === "yearly" ? "year" : "month"}
-              </p>
-            </div>
-
-            {/* Payment Method Selector */}
-            <div className="flex justify-center mb-6">
-              <div className="inline-flex p-1.5 rounded-2xl bg-white/[0.08] border border-white/15 w-full max-w-md shadow-inner">
-                <button
-                  type="button"
-                  onClick={() => setSubMethod("mpesa")}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    subMethod === "mpesa"
-                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-extrabold"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  <Smartphone className="w-4 h-4" />
-                  <span>M-Pesa</span>
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 text-[10px] font-bold">
-                    Active
+                <h1 className="font-brand text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white mb-1.5 leading-tight tracking-tight">
+                  Choose Your{" "}
+                  <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">
+                    Partnership Package
                   </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSubMethod("card")}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    subMethod === "card"
-                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-extrabold"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>Card</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSubMethod("paypal")}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    subMethod === "paypal"
-                      ? "bg-[#0070ba] text-white shadow-md font-extrabold"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  <span>PayPal</span>
-                </button>
-              </div>
+                </h1>
+
+                <p className="font-outfit text-white/75 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed mb-3">
+                  Select a tier that aligns with your spiritual devotion and kingdom calling.
+                </p>
+
+                {/* Single Compact Row for Currency, Billing & Live Rate */}
+                <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+                  {/* Currency Toggle */}
+                  <div className="inline-flex rounded-xl bg-white/10 p-0.5 border border-white/15 backdrop-blur-md shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setCurrencyView("KES")}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        currencyView === "KES"
+                          ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-sm"
+                          : "text-white/70 hover:text-white"
+                      }`}
+                    >
+                      KES (Kenyan Shillings)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrencyView("USD")}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        currencyView === "USD"
+                          ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-sm"
+                          : "text-white/70 hover:text-white"
+                      }`}
+                    >
+                      USD ($ US Dollars)
+                    </button>
+                  </div>
+
+                  {/* Billing Cycle Toggle */}
+                  <div className="inline-flex rounded-xl bg-white/10 p-0.5 border border-white/15 backdrop-blur-md shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle("monthly")}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        billingCycle === "monthly"
+                          ? "bg-white text-[#0c1b33] shadow-sm"
+                          : "text-white/70 hover:text-white"
+                      }`}
+                    >
+                      Monthly Seed
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle("yearly")}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        billingCycle === "yearly"
+                          ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-sm"
+                          : "text-white/70 hover:text-white"
+                      }`}
+                    >
+                      <span>Annual Covenant</span>
+                      <span className="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.2 rounded-full">
+                        Save 15%
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Live Rate Badge */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-[11px] text-white/70">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Live Rate: 1 USD ≈ {(1 / exchangeRate).toFixed(2)} KES</span>
+                    <button
+                      type="button"
+                      onClick={loadPricing}
+                      disabled={loadingRate}
+                      title="Refresh rates"
+                      className="p-0.5 text-white/50 hover:text-white transition-colors"
+                    >
+                      <RefreshCw className={`w-2.5 h-2.5 ${loadingRate ? "animate-spin" : ""}`} />
+                    </button>
+                  </div>
+                </div>
+              </ScrollReveal>
             </div>
 
-            {/* METHOD 1: M-PESA */}
-            {subMethod === "mpesa" && (
-              <div className="space-y-6">
-                {/* Official Paybill Details Tile */}
-                <div className="p-6 rounded-2xl bg-white/[0.06] border border-[#d4af37]/40 shadow-inner">
-                  <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-[#d4af37]" />
-                      <span className="text-xs font-extrabold uppercase tracking-wider text-[#d4af37]">
-                        Heavenly God Kingdom Churches · KCB Bank
-                      </span>
-                    </div>
-                    <span className="text-xs text-white/60">
-                      Amount: <strong className="text-[#fbf5b7]">KES {Math.round(activeAmountKes).toLocaleString()}</strong>
-                    </span>
-                  </div>
+            {/* 4 Cards Grid — Occupies full space cleanly */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 items-stretch mb-6">
+              {PARTNER_PLANS.map((plan) => {
+                const isSelected = selectedPlanId === plan.id && !isCustomAmount;
+                const billedKes = billingCycle === "yearly" ? Math.round(plan.kesMonthly * 12 * 0.85) : plan.kesMonthly;
+                const kesDisplay = billedKes.toLocaleString();
+                const usdDisplay = (billedKes * exchangeRate).toFixed(2);
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
-                      <div>
-                        <span className="text-[10px] text-white/60 uppercase font-semibold block">M-Pesa Paybill No</span>
-                        <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">522522</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard("522522", "Paybill 522522")}
-                        className="py-1 px-2.5 rounded-lg bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-[11px] font-bold transition-all flex items-center gap-1"
-                      >
-                        {copiedKey === "Paybill 522522" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                        <span>Copy</span>
-                      </button>
-                    </div>
-                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
-                      <div>
-                        <span className="text-[10px] text-white/60 uppercase font-semibold block">Account Number</span>
-                        <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">1335674365</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard("1335674365", "Account 1335674365")}
-                        className="py-1 px-2.5 rounded-lg bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-[11px] font-bold transition-all flex items-center gap-1"
-                      >
-                        {copiedKey === "Account 1335674365" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                        <span>Copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* M-Pesa Mode Toggle */}
-                <div className="flex items-center justify-center">
-                  <div className="inline-flex p-1 rounded-2xl bg-white/[0.08] border border-white/15 w-full">
-                    <button
-                      type="button"
-                      onClick={() => { setMpesaMode("stk"); setStkPending(false); setStkPromptSent(false); setStkStatusMessage(""); }}
-                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                        mpesaMode === "stk"
-                          ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md"
-                          : "text-white/60 hover:text-white"
-                      }`}
-                    >
-                      <Smartphone className="w-3.5 h-3.5" />
-                      <span>Express Auto-Prompt</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/20 font-extrabold">✨ NEW</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setMpesaMode("manual"); setStkPending(false); }}
-                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                        mpesaMode === "manual"
-                          ? "bg-white/20 text-white shadow-md"
-                          : "text-white/60 hover:text-white"
-                      }`}
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Enter Receipt Code</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* STK Push Mode */}
-                {mpesaMode === "stk" && (
-                  <form onSubmit={handleMpesaStkPush} className="space-y-4">
-                    <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-300 leading-relaxed flex items-start gap-3">
-                      <Zap className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
-                      <span>
-                        <strong className="text-emerald-200 block mb-0.5">Zero code entry — fully automatic</strong>
-                        Enter your Safaricom number and tap the button. Your phone will instantly receive an M-Pesa PIN prompt. Just enter your PIN and your partner dashboard unlocks automatically.
-                      </span>
-                    </div>
-
-                    <div>
-                      <label htmlFor="partnerNameStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
-                        Full Name / Ministry Name *
-                      </label>
-                      <input
-                        id="partnerNameStk"
-                        type="text"
-                        value={subscriberName}
-                        onChange={(e) => setSubscriberName(e.target.value)}
-                        placeholder="Enter your full name"
-                        required
-                        disabled={stkPending}
-                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37] disabled:opacity-50"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="partnerEmailStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
-                        Email Address (For receipt &amp; Partner ID) *
-                      </label>
-                      <input
-                        id="partnerEmailStk"
-                        type="email"
-                        value={subscriberEmail}
-                        onChange={(e) => setSubscriberEmail(e.target.value)}
-                        placeholder="your.email@example.com"
-                        required
-                        disabled={stkPending}
-                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37] disabled:opacity-50"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="mpesaPhoneStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
-                        Safaricom M-Pesa Phone Number *
-                      </label>
-                      <div className="flex items-stretch gap-2">
-                        <span className="flex items-center gap-1 px-3 rounded-2xl bg-white/10 border border-white/15 text-white/60 text-sm font-mono shrink-0">
-                          🇰🇪 +254
-                        </span>
-                        <input
-                          id="mpesaPhoneStk"
-                          type="tel"
-                          value={mpesaPhone}
-                          onChange={(e) => setMpesaPhone(e.target.value)}
-                          placeholder="7XX XXX XXX"
-                          required
-                          disabled={stkPending}
-                          className="flex-1 px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono font-bold tracking-wider placeholder:text-white/40 focus:outline-none focus:border-emerald-400 disabled:opacity-50"
-                        />
-                      </div>
-                      <span className="text-[10px] text-white/50 mt-1 block">
-                        e.g. 0722000000 or 254722000000 — must be a Safaricom M-Pesa line
-                      </span>
-                    </div>
-
-                    {stkPending && (
-                      <div className="p-4 rounded-2xl bg-amber-900/30 border border-amber-500/40 flex items-center gap-3 animate-pulse">
-                        <Loader2 className="w-5 h-5 text-amber-400 animate-spin shrink-0" />
-                        <div>
-                          <p className="text-sm font-bold text-amber-300">
-                            {stkPromptSent ? "Check your phone — enter your M-Pesa PIN" : "Contacting Safaricom…"}
-                          </p>
-                          <p className="text-xs text-amber-300/70 mt-0.5">{stkStatusMessage}</p>
-                        </div>
+                return (
+                  <div
+                    key={plan.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSelectPlanAndProceed(plan.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleSelectPlanAndProceed(plan.id);
+                      }
+                    }}
+                    className={`relative rounded-3xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer transition-all duration-300 ${
+                      isSelected
+                        ? "bg-gradient-to-b from-[#132c52] to-[#0d1d36] border-2 border-[#d4af37] shadow-[0_0_30px_rgba(212,175,55,0.3)] scale-[1.02]"
+                        : "bg-white/[0.04] border border-white/10 hover:border-white/25 hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    {/* Popular Tag */}
+                    {plan.isPopular && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-0.5 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] text-[9px] font-extrabold uppercase tracking-wider shadow-md whitespace-nowrap">
+                        Most Popular Tier
                       </div>
                     )}
 
-                    {!stkPending && (
+                    <div>
+                      {/* Header */}
+                      <div className="mb-3">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-white/10 text-[11px] font-semibold text-[#fbf5b7] mb-1.5">
+                          {plan.badge}
+                        </span>
+                        <h4 className="font-brand text-xl font-bold text-white mb-0.5">{plan.name}</h4>
+                        <p className="font-outfit text-[11px] text-[#d4af37] font-semibold mb-1.5">{plan.tagline}</p>
+                        <p className="font-outfit text-xs text-white/70 leading-relaxed min-h-[32px]">{plan.description}</p>
+                      </div>
+
+                      {/* Price */}
+                      <div className="mb-4 pb-3 border-b border-white/10">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-brand text-2xl sm:text-3xl font-extrabold text-white">
+                            {currencyView === "KES" ? `KES ${kesDisplay}` : `$${usdDisplay}`}
+                          </span>
+                          <span className="text-white/60 text-xs">
+                            / {billingCycle === "yearly" ? "year" : "month"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-white/50 mt-0.5">
+                          {currencyView === "KES" ? `≈ $${usdDisplay} USD / mo` : `≈ ${kesDisplay} KES / mo`}
+                          {billingCycle === "yearly" && " · 15% discount included"}
+                        </p>
+                      </div>
+
+                      {/* ═══════════════════════════════════════════════════════════
+                          SELECT BUTTON PLACED ABOVE — RESEMBLING CHATGPT PRICING CARD
+                          Clicking immediately advances to Step 2 (Checkout)
+                          ═══════════════════════════════════════════════════════════ */}
+                      <div className="mb-4">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectPlanAndProceed(plan.id);
+                          }}
+                          className={`w-full py-3 px-3 rounded-2xl font-extrabold text-xs sm:text-sm tracking-wide transition-all duration-200 flex items-center justify-center gap-2 shadow-md ${
+                            isSelected
+                              ? "bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] ring-2 ring-[#d4af37] ring-offset-2 ring-offset-[#071324] scale-[1.01]"
+                              : plan.isPopular
+                              ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] hover:brightness-110"
+                              : "bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                          }`}
+                        >
+                          {isSelected ? (
+                            <>
+                              <Check className="w-4 h-4 stroke-[3]" />
+                              <span>Selected Tier ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Choose {plan.name}</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </>
+                          )}
+                        </button>
+                        <p className="text-[10px] text-center text-white/40 mt-1">
+                          Click to select tier
+                        </p>
+                      </div>
+
+                      {/* Impact Note */}
+                      <div className="p-3 rounded-xl bg-white/[0.05] border border-white/10 text-[11px] text-[#fbf5b7] mb-4 leading-relaxed flex items-start gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-[#d4af37] shrink-0 mt-0.5" />
+                        <span>{plan.impactHighlight}</span>
+                      </div>
+
+                      {/* Perks Section Heading */}
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-2">
+                        Everything in this tier:
+                      </div>
+
+                      {/* Perks List */}
+                      <ul className="space-y-2">
+                        {plan.perks.map((perk, i) => (
+                          <li key={i} className="flex items-start gap-2 text-xs text-white/80 leading-snug">
+                            <Check className="w-3.5 h-3.5 text-[#d4af37] shrink-0 mt-0.5" />
+                            <span>{perk}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom Action Bar — Direct Proceed + Custom Giving */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-white/[0.04] border border-white/10 max-w-4xl mx-auto w-full">
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-white/60">Selected Plan:</span>
+                <span className="text-xs sm:text-sm font-bold text-[#fbf5b7] bg-white/10 px-3 py-1 rounded-xl">
+                  {activePlan.name} · {currencyView === "KES" ? `KES ${Math.round(activeAmountKes).toLocaleString()}` : `$${activeAmountUsd.toFixed(2)} USD`} / {billingCycle === "yearly" ? "yr" : "mo"}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomAmount(true);
+                    setCurrentStep("checkout");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all"
+                >
+                  Sow Custom Amount
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentStep("checkout");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm shadow-lg hover:brightness-110 transition-all"
+                >
+                  <span>Proceed to Payment</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* STEP 2: CHECKOUT SECTION (OCCUPIES ENTIRE SCREEN, NO ENDLESS SCROLLING) */}
+      {currentStep === "checkout" && (
+        <section className="py-8 sm:py-12 px-4 sm:px-6 min-h-[calc(100vh-92px)] flex flex-col justify-start" id="checkout">
+          <div className="container-main mx-auto max-w-3xl w-full">
+            {/* Step Navigation & Breadcrumbs */}
+            <div className="flex items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentStep("plans");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Packages</span>
+              </button>
+
+              <div className="inline-flex items-center gap-2 text-xs">
+                <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#fbf5b7] font-bold">
+                  Step 2 of 2
+                </span>
+                <span className="text-white/60">Payment &amp; Activation</span>
+              </div>
+            </div>
+
+            <div className="p-6 sm:p-9 rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/15 shadow-2xl">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-semibold mb-3">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Selected: {isCustomAmount ? "Custom Covenant" : activePlan.name}</span>
+                </div>
+                <h3 className="font-brand text-2xl sm:text-3xl font-bold text-white mb-2">
+                  Activate Your Monthly Partnership
+                </h3>
+                {isCustomAmount ? (
+                  <div className="max-w-xs mx-auto mb-4 p-3 rounded-2xl bg-white/5 border border-[#d4af37]/30 text-center">
+                    <label htmlFor="customAmountInput" className="block text-[11px] uppercase font-bold text-[#d4af37] mb-1.5">
+                      Adjust Custom Covenant Amount ({currencyView})
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-xs font-bold">
+                        {currencyView}
+                      </span>
+                      <input
+                        id="customAmountInput"
+                        type="number"
+                        min="100"
+                        value={customAmountKes}
+                        onChange={(e) => setCustomAmountKes(Math.max(100, Number(e.target.value)))}
+                        className="w-full pl-14 pr-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white font-bold text-sm text-center focus:outline-none focus:border-[#d4af37]"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-white/70 text-xs sm:text-sm">
+                    Total Seed:{" "}
+                    <span className="text-white font-bold">
+                      {currencyView === "KES" ? `KES ${Math.round(activeAmountKes).toLocaleString()}` : `$${activeAmountUsd.toFixed(2)} USD`}
+                    </span>{" "}
+                    per {billingCycle === "yearly" ? "year" : "month"}
+                  </p>
+                )}
+              </div>
+
+              {/* Payment Method Selector */}
+              <div className="flex justify-center mb-6">
+                <div className="inline-flex p-1.5 rounded-2xl bg-white/[0.08] border border-white/15 w-full max-w-md shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setSubMethod("mpesa")}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      subMethod === "mpesa"
+                        ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-extrabold"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    <span>M-Pesa</span>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 text-[10px] font-bold">
+                      Active
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubMethod("card")}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      subMethod === "card"
+                        ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-extrabold"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>Card</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubMethod("paypal")}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      subMethod === "paypal"
+                        ? "bg-[#0070ba] text-white shadow-md font-extrabold"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    <span>PayPal</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* METHOD 1: M-PESA */}
+              {subMethod === "mpesa" && (
+                <div className="space-y-6">
+                  {/* Official Paybill Details Tile */}
+                  <div className="p-5 rounded-2xl bg-white/[0.06] border border-[#d4af37]/40 shadow-inner">
+                    <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-5 h-5 text-[#d4af37]" />
+                        <span className="text-xs font-extrabold uppercase tracking-wider text-[#d4af37]">
+                          Heavenly God Kingdom Churches · KCB Bank
+                        </span>
+                      </div>
+                      <span className="text-xs text-white/60">
+                        Amount: <strong className="text-[#fbf5b7]">KES {Math.round(activeAmountKes).toLocaleString()}</strong>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                      <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-white/60 uppercase font-semibold block">M-Pesa Paybill No</span>
+                          <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">522522</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard("522522", "Paybill 522522")}
+                          className="py-1 px-2.5 rounded-lg bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-[11px] font-bold transition-all flex items-center gap-1"
+                        >
+                          {copiedKey === "Paybill 522522" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          <span>Copy</span>
+                        </button>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-white/60 uppercase font-semibold block">Account Number</span>
+                          <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">1335674365</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard("1335674365", "Account 1335674365")}
+                          className="py-1 px-2.5 rounded-lg bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-[11px] font-bold transition-all flex items-center gap-1"
+                        >
+                          {copiedKey === "Account 1335674365" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          <span>Copy</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* M-Pesa Mode Toggle */}
+                  <div className="flex items-center justify-center">
+                    <div className="inline-flex p-1 rounded-2xl bg-white/[0.08] border border-white/15 w-full">
                       <button
-                        id="btn-stk-push"
+                        type="button"
+                        onClick={() => { setMpesaMode("stk"); setStkPending(false); setStkPromptSent(false); setStkStatusMessage(""); }}
+                        className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          mpesaMode === "stk"
+                            ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md"
+                            : "text-white/60 hover:text-white"
+                        }`}
+                      >
+                        <Smartphone className="w-3.5 h-3.5" />
+                        <span>Express Auto-Prompt</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/20 font-extrabold">✨ NEW</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setMpesaMode("manual"); setStkPending(false); }}
+                        className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          mpesaMode === "manual"
+                            ? "bg-white/20 text-white shadow-md"
+                            : "text-white/60 hover:text-white"
+                        }`}
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Enter Receipt Code</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* STK Push Mode */}
+                  {mpesaMode === "stk" && (
+                    <form onSubmit={handleMpesaStkPush} className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-300 leading-relaxed flex items-start gap-3">
+                        <Zap className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
+                        <span>
+                          <strong className="text-emerald-200 block mb-0.5">Zero code entry — fully automatic</strong>
+                          Enter your Safaricom number and tap the button. Your phone will instantly receive an M-Pesa PIN prompt. Just enter your PIN and your partner dashboard unlocks automatically.
+                        </span>
+                      </div>
+
+                      <div>
+                        <label htmlFor="partnerNameStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                          Full Name / Ministry Name *
+                        </label>
+                        <input
+                          id="partnerNameStk"
+                          type="text"
+                          value={subscriberName}
+                          onChange={(e) => setSubscriberName(e.target.value)}
+                          placeholder="Enter your full name"
+                          required
+                          disabled={stkPending}
+                          className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37] disabled:opacity-50"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="partnerEmailStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                          Email Address (For receipt &amp; Partner ID) *
+                        </label>
+                        <input
+                          id="partnerEmailStk"
+                          type="email"
+                          value={subscriberEmail}
+                          onChange={(e) => setSubscriberEmail(e.target.value)}
+                          placeholder="your.email@example.com"
+                          required
+                          disabled={stkPending}
+                          className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37] disabled:opacity-50"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="mpesaPhoneStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                          Safaricom M-Pesa Phone Number *
+                        </label>
+                        <div className="flex items-stretch gap-2">
+                          <span className="flex items-center gap-1 px-3 rounded-2xl bg-white/10 border border-white/15 text-white/60 text-sm font-mono shrink-0">
+                            🇰🇪 +254
+                          </span>
+                          <input
+                            id="mpesaPhoneStk"
+                            type="tel"
+                            value={mpesaPhone}
+                            onChange={(e) => setMpesaPhone(e.target.value)}
+                            placeholder="7XX XXX XXX"
+                            required
+                            disabled={stkPending}
+                            className="flex-1 px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono font-bold tracking-wider placeholder:text-white/40 focus:outline-none focus:border-emerald-400 disabled:opacity-50"
+                          />
+                        </div>
+                        <span className="text-[10px] text-white/50 mt-1 block">
+                          e.g. 0722000000 or 254722000000 — must be a Safaricom M-Pesa line
+                        </span>
+                      </div>
+
+                      {stkPending && (
+                        <div className="p-4 rounded-2xl bg-amber-900/30 border border-amber-500/40 flex items-center gap-3 animate-pulse">
+                          <Loader2 className="w-5 h-5 text-amber-400 animate-spin shrink-0" />
+                          <div>
+                            <p className="text-sm font-bold text-amber-300">
+                              {stkPromptSent ? "Check your phone — enter your M-Pesa PIN" : "Contacting Safaricom…"}
+                            </p>
+                            <p className="text-xs text-amber-300/70 mt-0.5">{stkStatusMessage}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {!stkPending && (
+                        <button
+                          id="btn-stk-push"
+                          type="submit"
+                          disabled={submitting}
+                          className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-green-400 to-emerald-600 text-white font-extrabold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                        >
+                          {submitting ? (
+                            <>
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              <span>Sending PIN Prompt to Your Phone…</span>
+                            </>
+                          ) : (
+                            <>
+                              <Smartphone className="w-5 h-5" />
+                              <span>Send M-Pesa Prompt to My Phone — KES {Math.round(activeAmountKes).toLocaleString()}</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+
+                      <p className="text-center text-[11px] text-white/40">
+                        Secured by Safaricom STK Push · Paybill 522522 · KCB Bank
+                      </p>
+                    </form>
+                  )}
+
+                  {/* Manual Code Mode */}
+                  {mpesaMode === "manual" && (
+                    <form onSubmit={handleMpesaSubscription} className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/25 text-xs text-blue-300 leading-relaxed">
+                        First send <strong>KES {Math.round(activeAmountKes).toLocaleString()}</strong> to Paybill <strong>522522</strong>, Account <strong>1335674365</strong>, then paste the M-Pesa transaction code from your SMS below.
+                      </div>
+
+                      <div>
+                        <label htmlFor="partnerNameMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                          Full Name / Ministry Name *
+                        </label>
+                        <input
+                          id="partnerNameMpesa"
+                          type="text"
+                          value={subscriberName}
+                          onChange={(e) => setSubscriberName(e.target.value)}
+                          placeholder="Enter your full name"
+                          required
+                          className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="partnerEmailMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                          Email Address (For receipt &amp; Partner ID Card) *
+                        </label>
+                        <input
+                          id="partnerEmailMpesa"
+                          type="email"
+                          value={subscriberEmail}
+                          onChange={(e) => setSubscriberEmail(e.target.value)}
+                          placeholder="your.email@example.com"
+                          required
+                          className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="mpesaRefInput" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                          M-Pesa Transaction Code *
+                        </label>
+                        <input
+                          id="mpesaRefInput"
+                          type="text"
+                          value={mpesaRefCode}
+                          onChange={(e) => setMpesaRefCode(e.target.value.toUpperCase())}
+                          placeholder="e.g. SI84XYZ123"
+                          required
+                          className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono font-bold tracking-wider placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                        />
+                        <span className="text-[10px] text-white/50 mt-1 block">
+                          10-character code in the M-Pesa confirmation SMS (e.g. TK78AB12CD)
+                        </span>
+                      </div>
+
+                      <button
+                        id="btn-mpesa-verify"
                         type="submit"
                         disabled={submitting}
-                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-green-400 to-emerald-600 text-white font-extrabold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
                       >
                         {submitting ? (
                           <>
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            <span>Sending PIN Prompt to Your Phone…</span>
+                            <span>Verifying M-Pesa Payment…</span>
                           </>
                         ) : (
                           <>
-                            <Smartphone className="w-5 h-5" />
-                            <span>Send M-Pesa Prompt to My Phone — KES {Math.round(activeAmountKes).toLocaleString()}</span>
+                            <Check className="w-5 h-5" />
+                            <span>Verify &amp; Activate Partner Dashboard</span>
                           </>
                         )}
                       </button>
-                    )}
-
-                    <p className="text-center text-[11px] text-white/40">
-                      Secured by Safaricom STK Push · Paybill 522522 · KCB Bank
-                    </p>
-                  </form>
-                )}
-
-                {/* Manual Code Mode */}
-                {mpesaMode === "manual" && (
-                  <form onSubmit={handleMpesaSubscription} className="space-y-4">
-                    <div className="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/25 text-xs text-blue-300 leading-relaxed">
-                      First send <strong>KES {Math.round(activeAmountKes).toLocaleString()}</strong> to Paybill <strong>522522</strong>, Account <strong>1335674365</strong>, then paste the M-Pesa transaction code from your SMS below.
-                    </div>
-
-                    <div>
-                      <label htmlFor="partnerNameMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
-                        Full Name / Ministry Name *
-                      </label>
-                      <input
-                        id="partnerNameMpesa"
-                        type="text"
-                        value={subscriberName}
-                        onChange={(e) => setSubscriberName(e.target.value)}
-                        placeholder="Enter your full name"
-                        required
-                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="partnerEmailMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
-                        Email Address (For receipt &amp; Partner ID Card) *
-                      </label>
-                      <input
-                        id="partnerEmailMpesa"
-                        type="email"
-                        value={subscriberEmail}
-                        onChange={(e) => setSubscriberEmail(e.target.value)}
-                        placeholder="your.email@example.com"
-                        required
-                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="mpesaRefInput" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
-                        M-Pesa Transaction Code *
-                      </label>
-                      <input
-                        id="mpesaRefInput"
-                        type="text"
-                        value={mpesaRefCode}
-                        onChange={(e) => setMpesaRefCode(e.target.value.toUpperCase())}
-                        placeholder="e.g. SI84XYZ123"
-                        required
-                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono font-bold tracking-wider placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
-                      />
-                      <span className="text-[10px] text-white/50 mt-1 block">
-                        10-character code in the M-Pesa confirmation SMS (e.g. TK78AB12CD)
-                      </span>
-                    </div>
-
-                    <button
-                      id="btn-mpesa-verify"
-                      type="submit"
-                      disabled={submitting}
-                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                    >
-                      {submitting ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>Verifying M-Pesa Payment…</span>
-                        </>
-                      ) : (
-                        <>
-                          <Check className="w-5 h-5" />
-                          <span>Verify &amp; Activate Partner Dashboard</span>
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )}
-              </div>
-            )}
-
-            {/* METHOD 2: CARD (PAYSTACK) */}
-            {subMethod === "card" && (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handlePaystack();
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label htmlFor="cardSubscriberName" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
-                    Full Name *
-                  </label>
-                  <input
-                    id="cardSubscriberName"
-                    type="text"
-                    value={subscriberName}
-                    onChange={(e) => setSubscriberName(e.target.value)}
-                    placeholder="Enter your full name"
-                    required
-                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="cardSubscriberEmail" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
-                    Email Address *
-                  </label>
-                  <input
-                    id="cardSubscriberEmail"
-                    type="email"
-                    value={subscriberEmail}
-                    onChange={(e) => setSubscriberEmail(e.target.value)}
-                    placeholder="your.email@example.com"
-                    required
-                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Initializing Secure Checkout...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="w-5 h-5" />
-                      <span>
-                        Subscribe via Card ({currencyView === "KES" ? `KES ${Math.round(activeAmountKes).toLocaleString()}` : `$${activeAmountUsd} USD`})
-                      </span>
-                    </>
+                    </form>
                   )}
-                </button>
-              </form>
-            )}
-
-            {/* METHOD 3: PAYPAL */}
-            {subMethod === "paypal" && (
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-400/20 text-xs text-blue-200">
-                  International covenant partners can subscribe securely in USD (${activeAmountUsd.toFixed(2)}/month) via PayPal.
                 </div>
-                <button
-                  type="button"
-                  onClick={handlePayPal}
-                  disabled={submitting}
-                  className="w-full py-3.5 rounded-2xl bg-[#0070ba] hover:bg-[#005ea6] text-white font-bold text-xs sm:text-sm tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
-                >
-                  <span>Launch PayPal Checkout (${activeAmountUsd.toFixed(2)} USD)</span>
-                </button>
-                <div id="paypal-subscription-container" className="pt-2" />
-              </div>
-            )}
+              )}
 
-            <div className="flex items-center justify-center gap-6 pt-6 text-xs text-white/50 border-t border-white/10 mt-6">
-              <span className="flex items-center gap-1">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                256-Bit SSL Encryption
-              </span>
-              <span className="flex items-center gap-1">
-                <Heart className="w-4 h-4 text-[#d4af37]" />
-                Cancel Anytime
-              </span>
+              {/* METHOD 2: CARD (PAYSTACK) */}
+              {subMethod === "card" && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handlePaystack();
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label htmlFor="cardSubscriberName" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                      Full Name *
+                    </label>
+                    <input
+                      id="cardSubscriberName"
+                      type="text"
+                      value={subscriberName}
+                      onChange={(e) => setSubscriberName(e.target.value)}
+                      placeholder="Enter your full name"
+                      required
+                      className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="cardSubscriberEmail" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                      Email Address *
+                    </label>
+                    <input
+                      id="cardSubscriberEmail"
+                      type="email"
+                      value={subscriberEmail}
+                      onChange={(e) => setSubscriberEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      required
+                      className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Initializing Secure Checkout...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-5 h-5" />
+                        <span>
+                          Subscribe via Card ({currencyView === "KES" ? `KES ${Math.round(activeAmountKes).toLocaleString()}` : `$${activeAmountUsd} USD`})
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {/* METHOD 3: PAYPAL */}
+              {subMethod === "paypal" && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-400/20 text-xs text-blue-200">
+                    International covenant partners can subscribe securely in USD (${activeAmountUsd.toFixed(2)}/month) via PayPal.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePayPal}
+                    disabled={submitting}
+                    className="w-full py-3.5 rounded-2xl bg-[#0070ba] hover:bg-[#005ea6] text-white font-bold text-xs sm:text-sm tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>Launch PayPal Checkout (${activeAmountUsd.toFixed(2)} USD)</span>
+                  </button>
+                  <div id="paypal-subscription-container" className="pt-2" />
+                </div>
+              )}
+
+              <div className="flex items-center justify-center gap-6 pt-6 text-xs text-white/50 border-t border-white/10 mt-6">
+                <span className="flex items-center gap-1">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  256-Bit SSL Encryption
+                </span>
+                <span className="flex items-center gap-1">
+                  <Heart className="w-4 h-4 text-[#d4af37]" />
+                  Cancel Anytime
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
 
 
