@@ -6,6 +6,8 @@ import {
   adminInvitationEmail,
   partnerWelcomeEmail,
   pastoralBroadcastEmail,
+  claimOtpEmail,
+  dunningReminderEmail,
 } from "./emailTemplates";
 
 function getSecret(c: { env?: unknown }, key: string): string {
@@ -140,8 +142,7 @@ export async function sendPartnerWelcomeEmail(
   }
 }
 
-export async function sendPastoralBroadcastEmail(
-  c: { env?: unknown },
+export async function sendPastoralBroadcastEmail(  c: { env?: unknown },
   email: string,
   recipientName: string,
   subject: string,
@@ -166,6 +167,51 @@ export async function sendPastoralBroadcastEmail(
       subject: template.subject,
       html: template.html,
     });
+  }
+}
+
+export async function sendClaimOtpEmail(
+  c: { env?: unknown },
+  email: string,
+  name: string,
+  code: string
+) {
+  if (!email || !code) return;
+  const resend = getResendClient(c);
+  if (resend) {
+    const fromAddress =
+      getSecret(c, "RESEND_FROM_EMAIL") ||
+      "Kingdom Missions Network <partners@kingdommissionsnetwork.org>";
+    const { subject, html } = claimOtpEmail({ name, code });
+    await resend.emails.send({ from: fromAddress, to: email, subject, html });
+  } else {
+    console.log(`[CLAIM-OTP] ${email} code: ${code} (no RESEND_API_KEY configured)`);
+  }
+}
+
+export async function sendDunningReminderEmail(
+  c: { env?: unknown },
+  email: string,
+  params: {
+    name: string;
+    planName: string;
+    amount: number;
+    currency: string;
+    renewLink: string;
+    attemptNo: number;
+    nextRetryDate?: string;
+  }
+) {
+  if (!email) return;
+  const resend = getResendClient(c);
+  if (resend) {
+    const fromAddress =
+      getSecret(c, "RESEND_FROM_EMAIL") ||
+      "Kingdom Missions Network <partners@kingdommissionsnetwork.org>";
+    const { subject, html } = dunningReminderEmail(params);
+    await resend.emails.send({ from: fromAddress, to: email, subject, html });
+  } else {
+    console.log(`[DUNNING] reminder for ${email} attempt ${params.attemptNo} (no RESEND_API_KEY configured)`);
   }
 }
 

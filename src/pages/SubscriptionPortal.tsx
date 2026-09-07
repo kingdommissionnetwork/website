@@ -169,6 +169,7 @@ export default function SubscriptionPortal() {
   const [stkPending, setStkPending] = useState(false);
   const [stkPromptSent, setStkPromptSent] = useState(false);
   const [stkStatusMessage, setStkStatusMessage] = useState("");
+  const [stkSecondsLeft, setStkSecondsLeft] = useState(60);
   const [mpesaRefCode, setMpesaRefCode] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -204,18 +205,24 @@ export default function SubscriptionPortal() {
   };
 
   // Seamless Onboarding Handshake Sequence (Stripe/Patreon Benchmark)
+  // claimRequired: payment succeeded for a KNOWN email — the hub session is
+  // minted only after the emailed ownership code is verified (anti-takeover).
   const runOnboardingTransition = async (
     planTitle: string,
     verifiedUser?: Record<string, unknown> | null,
     token?: string | null,
     subscription?: Record<string, unknown> | null,
-    refCode?: string | null
+    refCode?: string | null,
+    claimRequired?: boolean
   ) => {
     setIsSubscribed(true);
     setOnboardingStage(1);
     if (verifiedUser && token) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setSession(verifiedUser as any, token);
+    }
+    if (claimRequired) {
+      showToast("Payment confirmed! A verification code was sent to your email to secure your Partner Hub.", "info");
     }
     await new Promise((r) => setTimeout(r, 650));
     setOnboardingStage(2);
@@ -235,6 +242,7 @@ export default function SubscriptionPortal() {
         amount: activeAmountKes,
         currency: "KES",
         subscription: subscription || null,
+        claimRequired: Boolean(claimRequired),
       },
     });
   };
@@ -247,7 +255,7 @@ export default function SubscriptionPortal() {
       api.subscriptions
         .verify(ref)
         .then((res) => {
-          runOnboardingTransition(res.planName || activePlan.name, res.user, res.token);
+          runOnboardingTransition(res.planName || activePlan.name, res.user, res.token, null, ref, res.claimRequired);
         })
         .catch(() => {
           showToast("Payment verified. Redirecting to your dashboard...", "success");
@@ -309,6 +317,7 @@ export default function SubscriptionPortal() {
 
     setSubmitting(true);
     setStkPending(true);
+    setStkSecondsLeft(60);
     setStkStatusMessage("Contacting Safaricom to prompt your phone...");
 
     try {
@@ -317,8 +326,8 @@ export default function SubscriptionPortal() {
         name,
         email,
         amount: Math.round(activeAmountKes),
-        planName: activePlan.name,
-        planId: activePlan.id,
+        planName: isCustomAmount ? "Custom Covenant Partner" : activePlan.name,
+        planId: isCustomAmount ? "custom" : activePlan.id,
         interval: billingCycle,
       });
 
@@ -330,12 +339,22 @@ export default function SubscriptionPortal() {
       let attempts = 0;
       const maxAttempts = 30;
 
+      // Live countdown for the PIN window (matches the 60s poll budget)
+      const countdownTimer = setInterval(() => {
+        setStkSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+
+      const stopPolling = () => {
+        clearInterval(pollTimer);
+        clearInterval(countdownTimer);
+      };
+
       const pollTimer = setInterval(async () => {
         attempts++;
         try {
           const qRes = await api.subscriptions.queryMpesaStk(checkoutId);
           if (qRes.status === "completed") {
-            clearInterval(pollTimer);
+            stopPolling();
             setStkPending(false);
             setStkStatusMessage("Payment confirmed! Opening your partner dashboard...");
             showToast("Payment verified! Opening your partner covenant dashboard...", "success");
@@ -344,15 +363,16 @@ export default function SubscriptionPortal() {
               qRes.user,
               qRes.token,
               qRes.subscription,
-              qRes.receiptCode
+              qRes.receiptCode,
+              qRes.claimRequired
             );
           } else if (qRes.status === "failed") {
-            clearInterval(pollTimer);
+            stopPolling();
             setStkPending(false);
             setStkPromptSent(false);
             showToast("M-Pesa transaction was cancelled or declined on phone.", "error");
           } else if (attempts >= maxAttempts) {
-            clearInterval(pollTimer);
+            stopPolling();
             setStkPending(false);
             setStkPromptSent(false);
             showToast("Transaction timeout. If you completed payment, you can enter the SMS receipt code below.", "info");
@@ -414,8 +434,8 @@ export default function SubscriptionPortal() {
         name,
         email,
         amount: Math.round(activeAmountKes),
-        planName: activePlan.name,
-        planId: activePlan.id,
+        planName: isCustomAmount ? "Custom Covenant Partner" : activePlan.name,
+        planId: isCustomAmount ? "custom" : activePlan.id,
         interval: billingCycle,
       });
 
@@ -425,7 +445,8 @@ export default function SubscriptionPortal() {
         res.user,
         res.token,
         res.subscription,
-        cleanRef
+        cleanRef,
+        res.claimRequired
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "M-Pesa verification failed. Please try again.";
@@ -471,7 +492,7 @@ export default function SubscriptionPortal() {
           callback: async (response: { reference: string }) => {
             try {
               const res = await api.subscriptions.verify(response.reference);
-              await runOnboardingTransition(res.planName || activePlan.name, res.user, res.token);
+              await runOnboardingTransition(res.planName || activePlan.name, res.user, res.token, null, response.reference, res.claimRequired);
             } catch {
               await runOnboardingTransition(activePlan.name, null, null);
             }
@@ -514,7 +535,7 @@ export default function SubscriptionPortal() {
               subscriberName: subscriberName || "Kingdom Partner",
             });
             if (capture.status === "COMPLETED") {
-              await runOnboardingTransition(activePlan.name, capture.user, capture.token);
+              await runOnboardingTransition(activePlan.name, capture.user, capture.token, null, data.orderID, capture.claimRequired);
             }
           } catch {
             await runOnboardingTransition(activePlan.name, null, null);
@@ -1061,13 +1082,27 @@ export default function SubscriptionPortal() {
                       </div>
 
                       {stkPending && (
-                        <div className="p-4 rounded-2xl bg-amber-900/30 border border-amber-500/40 flex items-center gap-3 animate-pulse">
-                          <Loader2 className="w-5 h-5 text-amber-400 animate-spin shrink-0" />
-                          <div>
+                        <div className="p-4 rounded-2xl bg-amber-900/30 border border-amber-500/40 flex items-center gap-4" role="status" aria-live="polite">
+                          {/* Live radar: pulsing rings while awaiting the handset PIN */}
+                          <div className="relative w-14 h-14 shrink-0" aria-hidden="true">
+                            <span className="absolute inset-0 rounded-full bg-amber-400/25 animate-ping" />
+                            <span className="absolute inset-2 rounded-full border border-amber-400/50 animate-ping [animation-delay:300ms]" />
+                            <span className="absolute inset-4 rounded-full border border-amber-400/70 animate-ping [animation-delay:600ms]" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Smartphone className="w-5 h-5 text-amber-300" />
+                            </div>
+                          </div>
+                          <div className="flex-1">
                             <p className="text-sm font-bold text-amber-300">
                               {stkPromptSent ? "Check your phone — enter your M-Pesa PIN" : "Contacting Safaricom…"}
                             </p>
                             <p className="text-xs text-amber-300/70 mt-0.5">{stkStatusMessage}</p>
+                          </div>
+                          <div className="text-center shrink-0" aria-label={`${stkSecondsLeft} seconds remaining`}>
+                            <div className="font-mono text-lg font-extrabold text-amber-200">
+                              00:{stkSecondsLeft < 10 ? `0${stkSecondsLeft}` : stkSecondsLeft}
+                            </div>
+                            <div className="text-[10px] text-amber-300/60 uppercase font-bold">waiting</div>
                           </div>
                         </div>
                       )}

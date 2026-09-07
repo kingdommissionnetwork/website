@@ -267,6 +267,7 @@ export const api = {
         amount: number;
         currency: string;
         reference: string;
+        claimRequired?: boolean;
         user?: AuthUser | null;
         token?: string | null;
         planName?: string;
@@ -289,6 +290,7 @@ export const api = {
         planName: string;
         amount: number;
         currency: string;
+        claimRequired?: boolean;
         user?: AuthUser | null;
         token?: string | null;
         subscription?: Record<string, unknown>;
@@ -324,6 +326,7 @@ export const api = {
         planName?: string;
         amount?: number;
         currency?: string;
+        claimRequired?: boolean;
         user?: AuthUser | null;
         token?: string | null;
         subscription?: Record<string, unknown>;
@@ -339,6 +342,7 @@ export const api = {
       return request<{
         status: string;
         id: string;
+        claimRequired?: boolean;
         user?: AuthUser | null;
         token?: string | null;
         planName?: string;
@@ -348,7 +352,48 @@ export const api = {
       });
     },
     getStatus: async (email: string) => {
-      return request<{ hasActiveSubscription: boolean; subscription?: Record<string, unknown> }>(`/subscriptions/status/${encodeURIComponent(email)}`);
+      return request<{
+        hasActiveSubscription: boolean;
+        subscription?: Record<string, unknown>;
+        lifecycle?: { status: string; renewable: boolean; renewLink: string };
+      }>(`/subscriptions/status/${encodeURIComponent(email)}`);
+    },
+    // Progressive-identity account claiming (verify inbox ownership, then mint hub session)
+    requestClaim: async (email: string) => {
+      return request<{ ok: boolean; message?: string }>("/subscriptions/claim/request", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+    },
+    verifyClaim: async (email: string, code: string) => {
+      return request<{ status: string; user: AuthUser | null; token: string | null }>("/subscriptions/claim/verify", {
+        method: "POST",
+        body: JSON.stringify({ email, code }),
+      });
+    },
+    // Self-serve lifecycle: cancel / pause / resume. Ownership = email + payment reference.
+    manageSubscription: async (action: "cancel" | "pause" | "resume", data: { email: string; paymentReference?: string; reason?: string }) => {
+      return request<{ status: string; subscription?: Record<string, unknown> }>(`/subscriptions/manage/${action}`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    previewPlanChange: async (data: { email: string; paymentReference?: string; newPlanId: string; interval?: "monthly" | "yearly"; apply?: boolean }) => {
+      return request<{
+        preview: {
+          from: { planName: string; amount: number; interval: string };
+          to: { planId: string; planName: string; amount: number; interval: string };
+          remainingDays: number;
+          unusedCredit: number;
+          immediateBalance: number;
+          effective: string;
+          payLink: string;
+        };
+        subscription?: Record<string, unknown>;
+      }>("/subscriptions/manage/change-plan", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
     },
   },
 

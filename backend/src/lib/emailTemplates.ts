@@ -176,6 +176,7 @@ export function partnerWelcomeEmail(params: { name: string; planName: string; am
 }
 
 export function pastoralBroadcastEmail(params: { recipientName: string; subject: string; body: string; audience?: string }): { subject: string; html: string } {
+
   const { recipientName, subject, body, audience } = params;
   const htmlBody = `
     <h2 style="margin:0 0 8px;font-size:24px;color:${BRAND_DARK};">📖 Pastoral Message</h2>
@@ -189,4 +190,44 @@ export function pastoralBroadcastEmail(params: { recipientName: string; subject:
       </td></tr>
     </table>`;
   return { subject: `${subject} | ${BRAND_NAME}`, html: brandedWrapper(htmlBody, subject) };
+}
+
+export function claimOtpEmail(params: { name: string; code: string }): { subject: string; html: string } {
+  const { name, code } = params;
+  const spaced = code.split("").join(" ");
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:24px;color:${BRAND_DARK};">Secure Your Partner Hub 🔐</h2>
+    <p style="margin:0 0 24px;font-size:14px;color:#555;font-family:Arial,sans-serif;">Hi <strong>${name || "Beloved Partner"}</strong>, use this one-time code to claim your Covenant Partner Hub. It expires in <strong>10 minutes</strong>.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND_DARK};border-radius:12px;margin-bottom:24px;border:2px solid ${BRAND_COLOR};">
+      <tr><td style="padding:28px;text-align:center;">
+        <p style="margin:0 0 8px;font-size:11px;text-transform:uppercase;color:${BRAND_COLOR};font-family:Arial,sans-serif;letter-spacing:0.2em;">VERIFICATION CODE</p>
+        <p style="margin:0;font-size:36px;font-weight:bold;color:#ffffff;font-family:monospace;letter-spacing:0.3em;">${spaced}</p>
+      </td></tr>
+    </table>
+    <p style="font-family:Arial,sans-serif;font-size:12px;color:#888;line-height:1.6;">If you did not make a gift or partnership payment, please ignore this email or contact <a href="mailto:${SUPPORT_EMAIL}" style="color:${BRAND_COLOR};">${SUPPORT_EMAIL}</a>.</p>`;
+  return { subject: `Your Partner Hub verification code — ${BRAND_NAME}`, html: brandedWrapper(body, `Your verification code is ${code}.`) };
+}
+
+export function dunningReminderEmail(params: {
+  name: string;
+  planName: string;
+  amount: number;
+  currency: string;
+  renewLink: string;
+  attemptNo: number;
+  nextRetryDate?: string;
+}): { subject: string; html: string } {
+  const { name, planName, amount, currency, renewLink, attemptNo, nextRetryDate } = params;
+  const formattedAmount = `${currency} ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 2 })}`;
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:24px;color:${BRAND_DARK};">Your Covenant Seed Needs Attention 🌱</h2>
+    <p style="margin:0 0 24px;font-size:14px;color:#555;font-family:Arial,sans-serif;">Hi <strong>${name || "Beloved Partner"}</strong>, we could not collect your <strong>${planName}</strong> seed of <strong>${formattedAmount}</strong> (attempt ${attemptNo} of 3). Your partnership stays in grace — no action on your giving history is needed beyond renewing.</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+      <tr><td style="background:${BRAND_COLOR};border-radius:8px;padding:14px 28px;">
+        <a href="${renewLink}" style="color:${BRAND_DARK};font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-decoration:none;">Renew My Partnership →</a>
+      </td></tr>
+    </table>
+    ${nextRetryDate ? `<p style="font-family:Arial,sans-serif;font-size:12px;color:#888;">We will gently retry on <strong>${nextRetryDate}</strong>. You can also renew anytime with M-Pesa STK, card, or Paybill.</p>` : `<p style="font-family:Arial,sans-serif;font-size:12px;color:#888;">This was our final automatic retry — renew anytime to restore full Partner Hub access.</p>`}
+    <p style="font-family:monospace;font-size:11px;color:#ccc;word-break:break-all;">${renewLink}</p>`;
+  return { subject: `Action needed: renew your ${planName} seed — ${BRAND_NAME}`, html: brandedWrapper(body, `Renew your ${planName} seed of ${formattedAmount}.`) };
 }

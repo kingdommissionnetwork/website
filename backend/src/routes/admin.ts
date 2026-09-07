@@ -57,9 +57,10 @@ adminRoutes.get("/stats", async (c) => {
   const arrKes = mrrKes * 12;
   const arrUsd = Number((arrKes * 0.00772).toFixed(2));
 
-  // Churn = cancelled subscriptions as a share of all subscriptions on record.
+  // Churn = canceled subscriptions as a share of all subscriptions on record.
+  // (Matches both "canceled" canonical and legacy "cancelled" spellings.)
   const totalSubs = (activeSubs || []).length;
-  const cancelledSubs = (activeSubs || []).filter((s: { status?: string }) => s.status === "cancelled").length;
+  const cancelledSubs = (activeSubs || []).filter((s: { status?: string }) => s.status === "canceled" || s.status === "cancelled").length;
   const churnRate = totalSubs > 0 ? `${((cancelledSubs / totalSubs) * 100).toFixed(1)}%` : "0.0%";
 
   // Failed payment attempts recorded in the donations ledger.

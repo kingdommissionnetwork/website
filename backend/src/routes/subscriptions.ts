@@ -3,9 +3,19 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { computeKesToUsd } from "../lib/exchangeRate";
-import { sendDonationEmail, sendPartnerWelcomeEmail } from "../lib/email";
+import { sendDonationEmail, sendPartnerWelcomeEmail, sendClaimOtpEmail, sendDunningReminderEmail } from "../lib/email";
 import { signToken } from "../lib/jwt";
 import { setCookie } from "hono/cookie";
+import { rateLimit, strictRateLimit } from "../lib/rateLimiter";
+import {
+  ONETIME_PLAN_ID,
+  PARTNER_PLAN_CATALOG,
+  MAX_DUNNING_ATTEMPTS,
+  nextRetryDate,
+  validatePaymentAmount,
+  yearlyPriceFromMonthly,
+} from "../lib/plans";
+import { OTP_TTL_MS, OTP_MAX_ATTEMPTS, generateOtpCode, hashOtpCode, verifyOtpCode } from "../lib/otp";
 import { triggerKcbStkPush, normalizeKenyanPhone } from "../lib/kcbMpesa";
 
 function getSecret(c: { env?: unknown }, key: string): string {
@@ -60,60 +70,217 @@ async function getPayPalAccessToken(clientId: string, clientSecret: string): Pro
   return data.access_token as string;
 }
 
-// Seamless auto-provisioning & authenticated session minting for new/returning subscribers
+// Structured billing audit log (audit_logs table with console fallback)
+async function logBillingEvent(
+  actor: string,
+  action: string,
+  targetType: string,
+  targetId: string | number,
+  details: Record<string, unknown> = {}
+) {
+  try {
+    const supabase = getSupabase();
+    await supabase.from("audit_logs").insert({
+      actor,
+      action,
+      target_type: targetType,
+      target_id: String(targetId),
+      details,
+      created_at: new Date().toISOString(),
+    });
+  } catch {
+    console.log(`[BILLING-AUDIT] ${new Date().toISOString()} | ${actor} | ${action} | ${targetType}:${targetId}`, details);
+  }
+}
+
+interface ProvisionedSession {
+  user: { id: string | number; name: string; email: string; role: string };
+  token: string | null;
+  claimRequired: boolean;
+}
+
+// Mint an authenticated subscriber session (JWT + httpOnly cookie)
+async function mintSubscriberSession(
+  c: import("hono").Context,
+  user: { id: string | number; name: string; email: string; role: string }
+): Promise<{ user: ProvisionedSession["user"]; token: string }> {
+  const token = await signToken({
+    userId: String(user.id),
+    role: user.role || "member",
+    name: user.name,
+    email: user.email,
+  });
+
+  setCookie(c, "token", token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    maxAge: 60 * 60 * 24 * 7,
+    path: "/",
+  });
+
+  return {
+    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    token,
+  };
+}
+
+// Issue a single-use email-ownership code (stores only the hash, never the code)
+async function issueClaimOtp(email: string): Promise<string | null> {
+  try {
+    const supabase = getSupabase();
+    const code = generateOtpCode();
+    const codeHash = await hashOtpCode(code);
+    const { error } = await supabase.from("subscriber_otps").insert({
+      email: email.trim().toLowerCase(),
+      code_hash: codeHash,
+      expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
+      attempts: 0,
+      consumed: false,
+    });
+    if (error) return null;
+    return code;
+  } catch {
+    return null;
+  }
+}
+
+async function checkClaimOtp(email: string, code: string): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const supabase = getSupabase();
+    const norm = email.trim().toLowerCase();
+    const { data } = await supabase
+      .from("subscriber_otps")
+      .select("*")
+      .eq("email", norm)
+      .eq("consumed", false)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const row = (data as Record<string, unknown>[] | null)?.[0] as
+      | { id: number; code_hash: string; expires_at: string; attempts: number }
+      | undefined;
+    if (!row) return { ok: false, reason: "No verification code found. Please request a new one." };
+    if (new Date(row.expires_at).getTime() < Date.now()) {
+      return { ok: false, reason: "This code has expired. Please request a new one." };
+    }
+    if ((row.attempts || 0) >= OTP_MAX_ATTEMPTS) {
+      return { ok: false, reason: "Too many incorrect attempts. Please request a new code." };
+    }
+    const match = await verifyOtpCode(code.trim(), row.code_hash);
+    if (!match) {
+      await supabase.from("subscriber_otps").update({ attempts: (row.attempts || 0) + 1 }).eq("id", row.id);
+      return { ok: false, reason: "Incorrect code. Please check your email and try again." };
+    }
+    await supabase.from("subscriber_otps").update({ consumed: true }).eq("id", row.id);
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: "Verification is temporarily unavailable. Please try again." };
+  }
+}
+
+// Seamless auto-provisioning with OTP-gated merge for existing identities.
+// New emails get an instant session (conversion). Known emails must prove
+// inbox ownership via code before any session is minted (anti-takeover).
 async function provisionSubscriberUser(
   c: import("hono").Context,
   name: string,
   email: string
-) {
+): Promise<ProvisionedSession | null> {
   if (!email) return null;
   const supabase = getSupabase();
+  const normEmail = email.trim().toLowerCase();
+  const displayName = name.trim() || "Kingdom Partner";
   let user: { id: string | number; name: string; email: string; role: string } | null = null;
+  let isNew = false;
 
   try {
     const { data: existingUser } = await supabase
       .from("users")
       .select("*")
-      .eq("email", email)
+      .eq("email", normEmail)
       .maybeSingle();
 
     if (existingUser) {
       user = existingUser;
     } else {
+      isNew = true;
       const newId = crypto.randomUUID();
       const { data: insertedUser, error } = await supabase
         .from("users")
-        .insert({ id: newId, name: name || "Kingdom Partner", email, role: "member" })
+        .insert({ id: newId, name: displayName, email: normEmail, role: "member" })
         .select("*")
         .single();
-      user = !error && insertedUser ? insertedUser : { id: newId, name: name || "Kingdom Partner", email, role: "member" };
+      user = !error && insertedUser ? insertedUser : { id: newId, name: displayName, email: normEmail, role: "member" };
     }
 
     if (user) {
-      const token = await signToken({
-        userId: user.id,
-        role: user.role || "member",
-        name: user.name,
-        email: user.email,
-      });
+      if (!isNew) {
+        // Existing identity: gate the merge behind email-ownership proof.
+        const code = await issueClaimOtp(normEmail);
+        if (code) {
+          try {
+            await sendClaimOtpEmail(c, normEmail, user.name || displayName, code);
+          } catch (err) {
+            console.error("[CLAIM-OTP] email dispatch error:", err);
+          }
+        }
+        await logBillingEvent(normEmail, "partner_claim_required", "user", user.id, { source: "payment" });
+        return {
+          user: { id: user.id, name: user.name, email: user.email, role: user.role },
+          token: null,
+          claimRequired: true,
+        };
+      }
 
-      setCookie(c, "token", token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "Lax",
-        maxAge: 60 * 60 * 24 * 7,
-        path: "/",
-      });
-
-      return {
-        user: { id: user.id, name: user.name, email: user.email, role: user.role },
-        token,
-      };
+      const session = await mintSubscriberSession(c, user);
+      return { ...session, claimRequired: false };
     }
   } catch (err) {
     console.error("[AUTO-PROVISION] User session error:", err);
   }
   return null;
+}
+
+// Verify an ownership code and mint the claimed session (creates the user
+// row from the latest subscription record when none exists yet).
+async function provisionClaimSession(
+  c: import("hono").Context,
+  email: string
+): Promise<ProvisionedSession | null> {
+  try {
+    const supabase = getSupabase();
+    const normEmail = email.trim().toLowerCase();
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", normEmail)
+      .maybeSingle();
+
+    let user = existingUser as { id: string | number; name: string; email: string; role: string } | null;
+    if (!user) {
+      const { data: latestSub } = await supabase
+        .from("subscriptions")
+        .select("subscriber_name")
+        .eq("subscriber_email", normEmail)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const subRow = latestSub as { subscriber_name?: string } | null;
+      const newId = crypto.randomUUID();
+      const { data: insertedUser } = await supabase
+        .from("users")
+        .insert({ id: newId, name: subRow?.subscriber_name || "Kingdom Partner", email: normEmail, role: "member" })
+        .select("*")
+        .single();
+      user = (insertedUser as typeof user) || { id: newId, name: "Kingdom Partner", email: normEmail, role: "member" };
+    }
+    if (!user) return null;
+    const session = await mintSubscriberSession(c, user);
+    return { ...session, claimRequired: false };
+  } catch (err) {
+    console.error("[CLAIM] session provisioning error:", err);
+    return null;
+  }
 }
 
 // Strict Safaricom M-Pesa Transaction Code Validator
@@ -144,6 +311,7 @@ export const subscriptionRoutes = new Hono();
 // M-Pesa Paybill Subscription Verification & Instant Activation
 subscriptionRoutes.post(
   "/mpesa/verify",
+  strictRateLimit,
   zValidator(
     "json",
     z.object({
@@ -166,6 +334,14 @@ subscriptionRoutes.post(
     if (!validation.valid) {
       return c.json({ error: validation.reason }, 400);
     }
+
+    // 1b. Server-side price truth: the client never sets the price.
+    const priceCheck = validatePaymentAmount({ planId, planName, interval, amount });
+    if (!priceCheck.ok) {
+      return c.json({ error: priceCheck.error, code: priceCheck.code, expectedKes: priceCheck.expectedKes }, 400);
+    }
+    const canonicalAmount = priceCheck.expectedKes;
+    const canonicalPlanName = priceCheck.isRecurring ? priceCheck.planName : planName;
 
     const supabase = getSupabase();
 
@@ -205,7 +381,7 @@ subscriptionRoutes.post(
     // 3. Calculate period end
     const periodEnd = new Date();
     periodEnd.setMonth(periodEnd.getMonth() + (interval === "yearly" ? 12 : 1));
-    const usdAmount = Number((amount * 0.00772).toFixed(2));
+    const usdAmount = Number((canonicalAmount * 0.00772).toFixed(2));
 
     // 4. Instant atomic insert into `subscriptions` table
     const { data: subData, error: subError } = await supabase
@@ -213,13 +389,16 @@ subscriptionRoutes.post(
       .insert({
         subscriber_name: name.trim(),
         subscriber_email: email.trim().toLowerCase(),
-        plan_name: planName,
-        amount: amount,
+        plan_name: canonicalPlanName,
+        plan_id: priceCheck.isRecurring ? planId : ONETIME_PLAN_ID,
+        amount: canonicalAmount,
         currency: "KES",
         usd_amount: usdAmount,
         exchange_rate: 0.00772,
         interval: interval,
         status: "active",
+        retry_count: 0,
+        next_retry_at: null,
         payment_provider: "mpesa_paybill",
         payment_reference: cleanRef,
         current_period_start: new Date().toISOString(),
@@ -245,7 +424,7 @@ subscriptionRoutes.post(
     // 5. Instant insert into `donations` ledger
     await supabase.from("donations").upsert(
       {
-        amount: amount,
+        amount: canonicalAmount,
         currency: "KES",
         donor_email: email.trim().toLowerCase(),
         donor_name: name.trim(),
@@ -258,20 +437,26 @@ subscriptionRoutes.post(
     );
 
     // 6. Automatically provision Partner User Profile & clean session token
+    //    (existing identities are OTP-gated: token is null + claimRequired true)
     const authSession = await provisionSubscriberUser(c, name.trim(), email.trim().toLowerCase());
+    await logBillingEvent(email.trim().toLowerCase(), "mpesa_paybill_verified", "subscription", cleanRef, {
+      planName: canonicalPlanName,
+      amount: canonicalAmount,
+      claimRequired: authSession?.claimRequired || false,
+    });
 
     // 7. Dispatch Confirmation and Welcome Emails
     try {
-      await sendDonationEmail(c, email.trim().toLowerCase(), name.trim(), amount, "KES", {
+      await sendDonationEmail(c, email.trim().toLowerCase(), name.trim(), canonicalAmount, "KES", {
         reference: cleanRef,
-        planName,
+        planName: canonicalPlanName,
       });
     } catch (e) {
       console.error("[EMAIL] Donation receipt error:", e);
     }
 
     try {
-      await sendPartnerWelcomeEmail(c, email.trim().toLowerCase(), name.trim(), planName, amount, "KES");
+      await sendPartnerWelcomeEmail(c, email.trim().toLowerCase(), name.trim(), canonicalPlanName, canonicalAmount, "KES");
     } catch (e) {
       console.error("[EMAIL] Partner welcome error:", e);
     }
@@ -281,9 +466,10 @@ subscriptionRoutes.post(
         status: "success",
         message: "M-Pesa payment verified. Covenant partnership activated!",
         reference: cleanRef,
-        planName,
-        amount,
+        planName: canonicalPlanName,
+        amount: canonicalAmount,
         currency: "KES",
+        claimRequired: authSession?.claimRequired || false,
         user: authSession?.user || {
           id: "p-" + Date.now(),
           name: name.trim(),
@@ -294,8 +480,8 @@ subscriptionRoutes.post(
         subscription: subData || {
           subscriber_name: name.trim(),
           subscriber_email: email.trim().toLowerCase(),
-          plan_name: planName,
-          amount,
+          plan_name: canonicalPlanName,
+          amount: canonicalAmount,
           currency: "KES",
           payment_provider: "mpesa_paybill",
           payment_reference: cleanRef,
@@ -357,13 +543,22 @@ interface MpesaCheckoutSession {
   status: "pending" | "completed" | "failed";
   receiptCode?: string;
   createdAt: number;
+  fulfilled?: boolean;
+  fulfilledResult?: Record<string, unknown>;
 }
 
 const activeMpesaCheckouts = new Map<string, MpesaCheckoutSession>();
 
+/**
+ * STK session lifetime. The KCB/Daraja PIN prompt lives ~60-120s on handsets.
+ * After this TTL an unconfirmed session expires (never auto-completes).
+ */
+const STK_SESSION_TTL_MS = 180_000;
+
 // KCB Buni M-Pesa STK Push Trigger
 subscriptionRoutes.post(
   "/mpesa/stkpush",
+  strictRateLimit,
   zValidator(
     "json",
     z.object({
@@ -378,10 +573,19 @@ subscriptionRoutes.post(
   ),
   async (c) => {
     const { phoneNumber, name, email, amount, planName, planId, interval } = c.req.valid("json");
+
+    // Server-side price truth BEFORE touching the provider.
+    const priceCheck = validatePaymentAmount({ planId, planName, interval, amount });
+    if (!priceCheck.ok) {
+      return c.json({ error: priceCheck.error, code: priceCheck.code, expectedKes: priceCheck.expectedKes }, 400);
+    }
+    const canonicalAmount = priceCheck.expectedKes;
+    const canonicalPlanName = priceCheck.isRecurring ? priceCheck.planName : planName;
+
     try {
       const result = await triggerKcbStkPush(c, {
         phoneNumber,
-        amount,
+        amount: canonicalAmount,
         invoiceNumber: "1335674365",
         transactionDescription: "CovenantSeed",
       });
@@ -392,12 +596,16 @@ subscriptionRoutes.post(
         name: name.trim(),
         email: email.trim().toLowerCase(),
         phoneNumber: normalizeKenyanPhone(phoneNumber),
-        amount,
-        planName,
-        planId,
+        amount: canonicalAmount,
+        planName: canonicalPlanName,
+        planId: priceCheck.isRecurring ? (planId as string) : ONETIME_PLAN_ID,
         interval,
         status: "pending",
         createdAt: Date.now(),
+      });
+      await logBillingEvent(email.trim().toLowerCase(), "stk_push_initiated", "mpesa_checkout", result.checkoutRequestId, {
+        planName: canonicalPlanName,
+        amount: canonicalAmount,
       });
 
       return c.json({
@@ -413,8 +621,109 @@ subscriptionRoutes.post(
   }
 );
 
-// Query STK Push Checkout Status (Real-time polling for instant dashboard unlock)
-subscriptionRoutes.get("/mpesa/query/:checkoutRequestId", async (c) => {
+// Fulfill a provider-confirmed STK session into the ledger (idempotent).
+// ONLY called after the KCB callback marks the session completed.
+async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCheckoutSession) {
+  if (checkout.fulfilled && checkout.fulfilledResult) {
+    return checkout.fulfilledResult;
+  }
+  const receiptCode = checkout.receiptCode || `KCB${Date.now().toString().slice(-7)}`;
+  const supabase = getSupabase();
+
+  const periodEnd = new Date();
+  periodEnd.setMonth(periodEnd.getMonth() + (checkout.interval === "yearly" ? 12 : 1));
+
+  // Register into subscriptions
+  const { data: subData } = await supabase
+    .from("subscriptions")
+    .upsert(
+      {
+        subscriber_name: checkout.name,
+        subscriber_email: checkout.email,
+        plan_name: checkout.planName,
+        plan_id: checkout.planId,
+        amount: checkout.amount,
+        currency: "KES",
+        usd_amount: Number((checkout.amount * 0.00772).toFixed(2)),
+        exchange_rate: 0.00772,
+        interval: checkout.interval,
+        status: "active",
+        retry_count: 0,
+        next_retry_at: null,
+        payment_provider: "mpesa_paybill",
+        payment_reference: receiptCode,
+        current_period_start: new Date().toISOString(),
+        current_period_end: periodEnd.toISOString(),
+        metadata: {
+          paybill: "522522",
+          account: "1335674365",
+          checkoutRequestId: checkout.checkoutRequestId,
+          phone: checkout.phoneNumber,
+        },
+      },
+      { onConflict: "payment_reference", ignoreDuplicates: true }
+    )
+    .select()
+    .maybeSingle();
+
+  // Register into donations
+  await supabase.from("donations").upsert(
+    {
+      amount: checkout.amount,
+      currency: "KES",
+      donor_email: checkout.email,
+      donor_name: checkout.name,
+      recurring: checkout.interval === "monthly",
+      payment_provider: "mpesa_paybill",
+      payment_reference: receiptCode,
+      status: "completed",
+    },
+    { onConflict: "payment_reference", ignoreDuplicates: true }
+  );
+
+  // Provision Partner profile (existing identities are OTP-gated)
+  const authSession = await provisionSubscriberUser(c, checkout.name, checkout.email);
+  await logBillingEvent(checkout.email, "stk_push_completed", "subscription", receiptCode, {
+    planName: checkout.planName,
+    amount: checkout.amount,
+    claimRequired: authSession?.claimRequired || false,
+  });
+
+  const result = {
+    status: "completed",
+    receiptCode,
+    planName: checkout.planName,
+    amount: checkout.amount,
+    currency: "KES",
+    claimRequired: authSession?.claimRequired || false,
+    user: authSession?.user || {
+      id: "p-" + Date.now(),
+      name: checkout.name,
+      email: checkout.email,
+      role: "member",
+    },
+    token: authSession?.token || null,
+    subscription: subData || {
+      subscriber_name: checkout.name,
+      subscriber_email: checkout.email,
+      plan_name: checkout.planName,
+      amount: checkout.amount,
+      currency: "KES",
+      payment_provider: "mpesa_paybill",
+      payment_reference: receiptCode,
+      status: "active",
+      current_period_end: periodEnd.toISOString(),
+    },
+  };
+  checkout.fulfilled = true;
+  checkout.fulfilledResult = result;
+  return result;
+}
+
+// Query STK Push Checkout Status (real-time polling for dashboard unlock).
+// SECURITY: a session completes ONLY via the provider callback below.
+// Pending sessions expire after STK_SESSION_TTL_MS — never auto-complete.
+subscriptionRoutes.get("/mpesa/query/:checkoutRequestId", rateLimit, async (c) => {
   const checkoutRequestId = c.req.param("checkoutRequestId");
   const checkout = activeMpesaCheckouts.get(checkoutRequestId);
 
@@ -422,90 +731,23 @@ subscriptionRoutes.get("/mpesa/query/:checkoutRequestId", async (c) => {
     return c.json({ status: "not_found", message: "Checkout session not found." }, 404);
   }
 
+  if (checkout.status === "failed") {
+    return c.json({ status: "failed", message: "M-Pesa payment was cancelled or declined on the phone." });
+  }
+
+  if (checkout.status === "completed") {
+    return c.json(await fulfillMpesaCheckout(c, checkout));
+  }
+
   const elapsed = Date.now() - checkout.createdAt;
-  // If completed via callback or simulated UAT grace threshold
-  const isReady = checkout.status === "completed" || (elapsed >= 5000 && checkout.status === "pending");
-
-  if (isReady) {
-    checkout.status = "completed";
-    const receiptCode = checkout.receiptCode || `KCB${Date.now().toString().slice(-7)}`;
-    const supabase = getSupabase();
-
-    const periodEnd = new Date();
-    periodEnd.setMonth(periodEnd.getMonth() + (checkout.interval === "yearly" ? 12 : 1));
-
-    // Register into subscriptions
-    const { data: subData } = await supabase
-      .from("subscriptions")
-      .upsert(
-        {
-          subscriber_name: checkout.name,
-          subscriber_email: checkout.email,
-          plan_name: checkout.planName,
-          amount: checkout.amount,
-          currency: "KES",
-          usd_amount: Number((checkout.amount * 0.00772).toFixed(2)),
-          exchange_rate: 0.00772,
-          interval: checkout.interval,
-          status: "active",
-          payment_provider: "mpesa_paybill",
-          payment_reference: receiptCode,
-          current_period_start: new Date().toISOString(),
-          current_period_end: periodEnd.toISOString(),
-          metadata: {
-            paybill: "522522",
-            account: "1335674365",
-            checkoutRequestId,
-            phone: checkout.phoneNumber,
-          },
-        },
-        { onConflict: "payment_reference", ignoreDuplicates: true }
-      )
-      .select()
-      .maybeSingle();
-
-    // Register into donations
-    await supabase.from("donations").upsert(
-      {
-        amount: checkout.amount,
-        currency: "KES",
-        donor_email: checkout.email,
-        donor_name: checkout.name,
-        recurring: checkout.interval === "monthly",
-        payment_provider: "mpesa_paybill",
-        payment_reference: receiptCode,
-        status: "completed",
-      },
-      { onConflict: "payment_reference", ignoreDuplicates: true }
-    );
-
-    // Automatically provision Partner User Profile & clean session token
-    const authSession = await provisionSubscriberUser(c, checkout.name, checkout.email);
-
-    return c.json({
-      status: "completed",
-      receiptCode,
-      planName: checkout.planName,
+  if (elapsed > STK_SESSION_TTL_MS) {
+    checkout.status = "failed";
+    await logBillingEvent(checkout.email, "stk_push_expired", "mpesa_checkout", checkoutRequestId, {
       amount: checkout.amount,
-      currency: "KES",
-      user: authSession?.user || {
-        id: "p-" + Date.now(),
-        name: checkout.name,
-        email: checkout.email,
-        role: "member",
-      },
-      token: authSession?.token || null,
-      subscription: subData || {
-        subscriber_name: checkout.name,
-        subscriber_email: checkout.email,
-        plan_name: checkout.planName,
-        amount: checkout.amount,
-        currency: "KES",
-        payment_provider: "mpesa_paybill",
-        payment_reference: receiptCode,
-        status: "active",
-        current_period_end: periodEnd.toISOString(),
-      },
+    });
+    return c.json({
+      status: "failed",
+      message: "The M-Pesa prompt expired. If you entered your PIN, verify using the SMS receipt code instead.",
     });
   }
 
@@ -515,22 +757,44 @@ subscriptionRoutes.get("/mpesa/query/:checkoutRequestId", async (c) => {
   });
 });
 
-// KCB Buni Webhook Callback
+// KCB Buni Webhook Callback — the ONLY signal that marks a session completed.
 subscriptionRoutes.post("/mpesa/kcb-callback", async (c) => {
   try {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
     const response = (body.response || body) as Record<string, unknown>;
-    const checkoutId = String(response.CheckoutRequestID || "").trim();
-    const resultCode = String(response.ResultCode || "0");
+    const checkoutId = String(response.CheckoutRequestID || response.checkoutRequestId || "").trim();
+    const resultCode = String(response.ResultCode ?? response.resultCode ?? "0");
 
-    if (checkoutId && activeMpesaCheckouts.has(checkoutId)) {
-      const checkout = activeMpesaCheckouts.get(checkoutId)!;
-      if (resultCode === "0") {
-        checkout.status = "completed";
-        checkout.receiptCode = String(response.MpesaReceiptNumber || `KCB${Date.now().toString().slice(-7)}`);
-      } else {
-        checkout.status = "failed";
-      }
+    if (!checkoutId || !activeMpesaCheckouts.has(checkoutId)) {
+      console.warn("[KCB CALLBACK] unknown CheckoutRequestID:", checkoutId || "(missing)");
+      await logBillingEvent("kcb-callback", "stk_callback_unknown", "mpesa_checkout", checkoutId || "missing", {});
+      return c.json({ statusCode: "0", statusDescription: "Callback received successfully" });
+    }
+
+    const checkout = activeMpesaCheckouts.get(checkoutId)!;
+    // Cross-check the callback amount when the provider includes one.
+    const callbackAmount = Number(response.Amount ?? response.amount ?? checkout.amount);
+    if (Number.isFinite(callbackAmount) && Math.round(callbackAmount) !== Math.round(checkout.amount)) {
+      console.error("[KCB CALLBACK] amount mismatch:", { checkoutId, expected: checkout.amount, got: callbackAmount });
+      await logBillingEvent(checkout.email, "stk_callback_amount_mismatch", "mpesa_checkout", checkoutId, {
+        expected: checkout.amount,
+        received: callbackAmount,
+      });
+      checkout.status = "failed";
+      return c.json({ statusCode: "0", statusDescription: "Callback received successfully" });
+    }
+
+    if (resultCode === "0") {
+      checkout.status = "completed";
+      checkout.receiptCode = String(
+        response.MpesaReceiptNumber || response.receipt || `KCB${Date.now().toString().slice(-7)}`
+      );
+      await logBillingEvent(checkout.email, "stk_callback_completed", "mpesa_checkout", checkoutId, {
+        receiptCode: checkout.receiptCode,
+      });
+    } else {
+      checkout.status = "failed";
+      await logBillingEvent(checkout.email, "stk_callback_failed", "mpesa_checkout", checkoutId, { resultCode });
     }
   } catch (err) {
     console.error("[KCB CALLBACK ERROR]", err);
@@ -559,6 +823,7 @@ subscriptionRoutes.get("/pricing", async (c) => {
 // Paystack Subscription Initialize
 subscriptionRoutes.post(
   "/initialize",
+  strictRateLimit,
   zValidator(
     "json",
     z.object({
@@ -575,8 +840,14 @@ subscriptionRoutes.post(
     const secret = getSecret(c, "PAYSTACK_SECRET_KEY");
     if (!secret) return c.json({ error: "Payment gateway not configured" }, 503);
 
-    const { email, name, interval, currency, planName, amount } = c.req.valid("json");
-    const targetKes = amount || 1000;
+    const { email, name, interval, currency, planId, planName, amount } = c.req.valid("json");
+
+    // Server-side price truth BEFORE initializing with the provider.
+    const priceCheck = validatePaymentAmount({ planId, planName, interval, amount: amount || 1000 });
+    if (!priceCheck.ok) {
+      return c.json({ error: priceCheck.error, code: priceCheck.code, expectedKes: priceCheck.expectedKes }, 400);
+    }
+    const targetKes = priceCheck.expectedKes;
     const wiseToken = getSecret(c, "WISE_API_TOKEN");
     const conversion = await computeKesToUsd(targetKes, wiseToken);
 
@@ -642,6 +913,21 @@ subscriptionRoutes.get("/verify/:reference", async (c) => {
     const usdAmount = Number(metadata.usdAmount) || 7.72;
     const exchangeRate = Number(metadata.exchangeRate) || 0.00772;
 
+    // Cross-check the provider-confirmed charge against the initialized amount.
+    // Paystack reports the charged total in minor units of the charge currency.
+    const chargedMajor = Number(data.amount) / 100;
+    const chargeCurrency = String(data.currency || "KES").toUpperCase();
+    const expectedMajor = chargeCurrency === "KES" ? kesAmount : usdAmount;
+    if (Number.isFinite(chargedMajor) && Number.isFinite(expectedMajor) && Math.abs(chargedMajor - expectedMajor) > 0.009) {
+      console.error("[PAYSTACK] charged-amount mismatch:", { reference, chargedMajor, chargeCurrency, expectedMajor });
+      await logBillingEvent(subscriberEmail, "paystack_amount_mismatch", "subscription", reference, {
+        chargedMajor,
+        chargeCurrency,
+        expectedMajor,
+      });
+      return c.json({ error: "Charged amount does not match the initialized subscription amount.", code: "AMOUNT_MISMATCH" }, 409);
+    }
+
     const periodEnd = new Date();
     periodEnd.setMonth(periodEnd.getMonth() + 1);
 
@@ -650,12 +936,15 @@ subscriptionRoutes.get("/verify/:reference", async (c) => {
         subscriber_name: subscriberName,
         subscriber_email: subscriberEmail,
         plan_name: planName,
+        plan_id: (metadata.planId as string) || null,
         amount: kesAmount,
         currency: "KES",
         usd_amount: usdAmount,
         exchange_rate: exchangeRate,
         interval: (metadata.interval as string) || "monthly",
         status: "active",
+        retry_count: 0,
+        next_retry_at: null,
         payment_provider: "paystack",
         payment_reference: reference,
         customer_code: (customer.customer_code as string) || null,
@@ -692,12 +981,18 @@ subscriptionRoutes.get("/verify/:reference", async (c) => {
     }
 
     const authSession = await provisionSubscriberUser(c, subscriberName, subscriberEmail);
+    await logBillingEvent(subscriberEmail, "paystack_verified", "subscription", reference, {
+      planName,
+      amount: kesAmount,
+      claimRequired: authSession?.claimRequired || false,
+    });
 
     return c.json({
       status: data.status,
       amount: (data.amount as number) / 100,
       currency: data.currency,
       reference,
+      claimRequired: authSession?.claimRequired || false,
       user: authSession?.user || null,
       token: authSession?.token || null,
       planName,
@@ -717,6 +1012,7 @@ subscriptionRoutes.get("/verify/:reference", async (c) => {
 // PayPal Order Create with Live KES->USD computation
 subscriptionRoutes.post(
   "/paypal/create",
+  strictRateLimit,
   zValidator(
     "json",
     z.object({
@@ -724,6 +1020,8 @@ subscriptionRoutes.post(
       email: z.string().email().optional(),
       amount: z.number().min(50).optional().default(1000),
       planName: z.string().optional().default("Kingdom Partner"),
+      planId: z.string().optional(),
+      interval: z.enum(["monthly", "yearly"]).default("monthly"),
     })
   ),
   async (c) => {
@@ -731,8 +1029,12 @@ subscriptionRoutes.post(
     const clientSecret = getSecret(c, "PAYPAL_CLIENT_SECRET");
     if (!clientId || !clientSecret) return c.json({ error: "PayPal not configured" }, 503);
 
-    const { amount, planName } = c.req.valid("json");
-    const targetKes = amount || 1000;
+    const { amount, planName, planId, interval } = c.req.valid("json");
+    const priceCheck = validatePaymentAmount({ planId, planName, interval, amount: amount || 1000 });
+    if (!priceCheck.ok) {
+      return c.json({ error: priceCheck.error, code: priceCheck.code, expectedKes: priceCheck.expectedKes }, 400);
+    }
+    const targetKes = priceCheck.expectedKes;
     const wiseToken = getSecret(c, "WISE_API_TOKEN");
     const conversion = await computeKesToUsd(targetKes, wiseToken);
     const accessToken = await getPayPalAccessToken(clientId, clientSecret);
@@ -852,10 +1154,15 @@ subscriptionRoutes.post(
       }
 
       const authSession = await provisionSubscriberUser(c, fullName, email);
+      await logBillingEvent(email, "paypal_captured", "subscription", orderId, {
+        amount: usdAmount,
+        claimRequired: authSession?.claimRequired || false,
+      });
 
       return c.json({
         status: data.status,
         id: data.id,
+        claimRequired: authSession?.claimRequired || false,
         user: authSession?.user || null,
         token: authSession?.token || null,
         planName: "Kingdom Partner",
@@ -917,15 +1224,30 @@ subscriptionRoutes.post("/webhook", async (c) => {
     if (subCode) {
       await supabase
         .from("subscriptions")
-        .update({ status: "canceled", updated_at: new Date().toISOString() })
+        .update({ status: "canceled", canceled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq("subscription_code", subCode);
+      await logBillingEvent((data.customer as Record<string, unknown>)?.email as string || "paystack-webhook", "subscription_canceled", "subscription", subCode, { via: "paystack_webhook" });
+    }
+  } else if (event === "invoice.payment_failed" || event === "charge.failed") {
+    // Dunning entry: mark past_due and schedule the Day-1 retry.
+    const customer = (data.customer as Record<string, unknown>) || {};
+    const email = (customer.email as string) || "";
+    const ref = (data.reference as string) || "";
+    if (email) {
+      const retryAt = nextRetryDate(0);
+      await supabase
+        .from("subscriptions")
+        .update({ status: "past_due", retry_count: 1, next_retry_at: retryAt ? retryAt.toISOString() : null, updated_at: new Date().toISOString() })
+        .eq("subscriber_email", email)
+        .eq("status", "active");
+      await logBillingEvent(email, "renewal_payment_failed", "subscription", ref || email, { event });
     }
   }
 
   return c.json({ received: true });
 });
 
-// Check Subscription Status
+// Check Subscription Status (includes lifecycle + renewal pay-link)
 subscriptionRoutes.get("/status/:email", async (c) => {
   const email = c.req.param("email");
   try {
@@ -941,13 +1263,404 @@ subscriptionRoutes.get("/status/:email", async (c) => {
       return c.json({ hasActiveSubscription: false, subscription: null });
     }
 
-    const sub = data[0];
-    const isActive = sub.status === "active";
+    const sub = data[0] as Record<string, unknown>;
+    const status = String(sub.status || "active");
+    const isActive = status === "active" || status === "grace";
+    const planId = String(sub.plan_id || "");
+    const interval = String(sub.interval || "monthly");
     return c.json({
       hasActiveSubscription: isActive,
       subscription: sub,
+      lifecycle: {
+        status,
+        renewable: ["past_due", "grace", "suspended", "paused"].includes(status),
+        renewLink: planId && planId !== ONETIME_PLAN_ID
+          ? `/subscribe?step=checkout&plan=${encodeURIComponent(planId)}&type=${encodeURIComponent(interval)}`
+          : "/subscribe?step=checkout",
+      },
     });
   } catch {
     return c.json({ hasActiveSubscription: false, subscription: null });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Progressive-identity account claiming (P0): prove inbox ownership, then mint.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Request a one-time claim code. Always returns ok (no email enumeration).
+subscriptionRoutes.post(
+  "/claim/request",
+  strictRateLimit,
+  zValidator("json", z.object({ email: z.string().email().max(100) })),
+  async (c) => {
+    const { email } = c.req.valid("json");
+    const norm = email.trim().toLowerCase();
+    try {
+      const supabase = getSupabase();
+      const [{ data: user }, { data: subs }] = await Promise.all([
+        supabase.from("users").select("id,name").eq("email", norm).maybeSingle(),
+        supabase.from("subscriptions").select("id,subscriber_name").eq("subscriber_email", norm).limit(1),
+      ]);
+      const hasRecord = Boolean(user) || (Array.isArray(subs) && subs.length > 0);
+      if (hasRecord) {
+        const code = await issueClaimOtp(norm);
+        if (code) {
+          const displayName =
+            (user as { name?: string } | null)?.name ||
+            (subs as { subscriber_name?: string }[] | null)?.[0]?.subscriber_name ||
+            "Kingdom Partner";
+          try {
+            await sendClaimOtpEmail(c, norm, displayName, code);
+          } catch (err) {
+            console.error("[CLAIM-OTP] email dispatch error:", err);
+          }
+        }
+        await logBillingEvent(norm, "partner_claim_requested", "user", norm, {});
+      }
+    } catch (err) {
+      console.error("[CLAIM] request error:", err);
+    }
+    return c.json({ ok: true, message: "If this email has a partnership record, a verification code has been sent." });
+  }
+);
+
+// Verify a claim code and mint the Partner Hub session.
+subscriptionRoutes.post(
+  "/claim/verify",
+  strictRateLimit,
+  zValidator("json", z.object({ email: z.string().email().max(100), code: z.string().min(4).max(12) })),
+  async (c) => {
+    const { email, code } = c.req.valid("json");
+    const norm = email.trim().toLowerCase();
+    const check = await checkClaimOtp(norm, code);
+    if (!check.ok) {
+      return c.json({ error: check.reason || "Verification failed.", code: "INVALID_OTP" }, 400);
+    }
+    const session = await provisionClaimSession(c, norm);
+    if (!session) {
+      return c.json({ error: "No partnership record found for this email.", code: "NO_RECORD" }, 404);
+    }
+    await logBillingEvent(norm, "partner_claim_verified", "user", String(session.user.id), {});
+    return c.json({ status: "verified", user: session.user, token: session.token });
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Self-serve subscription lifecycle (P2): cancel / pause / resume / change-plan.
+// Ownership proof = email + the subscription's own payment_reference.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function findOwnedSubscription(email: string, paymentReference?: string) {
+  const supabase = getSupabase();
+  const norm = email.trim().toLowerCase();
+  if (paymentReference) {
+    const { data } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("subscriber_email", norm)
+      .eq("payment_reference", paymentReference.trim())
+      .maybeSingle();
+    return data as Record<string, unknown> | null;
+  }
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("subscriber_email", norm)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as Record<string, unknown> | null;
+}
+
+const manageSchema = z.object({
+  email: z.string().email().max(100),
+  paymentReference: z.string().min(1).max(64).optional(),
+  reason: z.string().max(255).optional(),
+});
+
+subscriptionRoutes.post("/manage/cancel", rateLimit, zValidator("json", manageSchema), async (c) => {
+  const { email, paymentReference, reason } = c.req.valid("json");
+  const sub = await findOwnedSubscription(email, paymentReference);
+  if (!sub) return c.json({ error: "No partnership record found for this email.", code: "NO_RECORD" }, 404);
+  if (String(sub.status) === "canceled") {
+    return c.json({ status: "canceled", subscription: sub });
+  }
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("subscriptions")
+    .update({
+      status: "canceled",
+      canceled_at: new Date().toISOString(),
+      cancel_reason: reason || null,
+      next_retry_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", sub.id as number)
+    .select()
+    .maybeSingle();
+  await logBillingEvent(email.trim().toLowerCase(), "subscription_canceled", "subscription", String(sub.payment_reference || sub.id), { reason: reason || null });
+  return c.json({ status: "canceled", subscription: data || { ...sub, status: "canceled" } });
+});
+
+subscriptionRoutes.post("/manage/pause", rateLimit, zValidator("json", manageSchema), async (c) => {
+  const { email, paymentReference } = c.req.valid("json");
+  const sub = await findOwnedSubscription(email, paymentReference);
+  if (!sub) return c.json({ error: "No partnership record found for this email.", code: "NO_RECORD" }, 404);
+  const status = String(sub.status);
+  if (!["active", "past_due", "grace"].includes(status)) {
+    return c.json({ error: `Only active partnerships can be paused (current: ${status}).`, code: "INVALID_STATE" }, 409);
+  }
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("subscriptions")
+    .update({ status: "paused", paused_at: new Date().toISOString(), next_retry_at: null, updated_at: new Date().toISOString() })
+    .eq("id", sub.id as number)
+    .select()
+    .maybeSingle();
+  await logBillingEvent(email.trim().toLowerCase(), "subscription_paused", "subscription", String(sub.payment_reference || sub.id), {});
+  return c.json({ status: "paused", subscription: data || { ...sub, status: "paused" } });
+});
+
+subscriptionRoutes.post("/manage/resume", rateLimit, zValidator("json", manageSchema), async (c) => {
+  const { email, paymentReference } = c.req.valid("json");
+  const sub = await findOwnedSubscription(email, paymentReference);
+  if (!sub) return c.json({ error: "No partnership record found for this email.", code: "NO_RECORD" }, 404);
+  const status = String(sub.status);
+  if (!["paused", "past_due", "grace", "suspended"].includes(status)) {
+    return c.json({ error: `Only paused or overdue partnerships can be resumed (current: ${status}).`, code: "INVALID_STATE" }, 409);
+  }
+  const supabase = getSupabase();
+  const periodEnd = new Date();
+  periodEnd.setMonth(periodEnd.getMonth() + (String(sub.interval) === "yearly" ? 12 : 1));
+  const { data } = await supabase
+    .from("subscriptions")
+    .update({
+      status: "active",
+      retry_count: 0,
+      next_retry_at: null,
+      paused_at: null,
+      grace_ends_at: null,
+      current_period_end: periodEnd.toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", sub.id as number)
+    .select()
+    .maybeSingle();
+  await logBillingEvent(email.trim().toLowerCase(), "subscription_resumed", "subscription", String(sub.payment_reference || sub.id), { from: status });
+  return c.json({ status: "active", subscription: data || { ...sub, status: "active" } });
+});
+
+// Plan change with proration preview. M-Pesa cannot silent-charge, so upgrades
+// take effect immediately for Hub access while the balance is collected via a
+// checkout pay-link; downgrades take effect at the next renewal.
+subscriptionRoutes.post(
+  "/manage/change-plan",
+  rateLimit,
+  zValidator(
+    "json",
+    z.object({
+      email: z.string().email().max(100),
+      paymentReference: z.string().min(1).max(64).optional(),
+      newPlanId: z.string().min(1).max(32),
+      interval: z.enum(["monthly", "yearly"]).default("monthly"),
+      apply: z.boolean().default(false),
+    })
+  ),
+  async (c) => {
+    const { email, paymentReference, newPlanId, interval, apply } = c.req.valid("json");
+    const sub = await findOwnedSubscription(email, paymentReference);
+    if (!sub) return c.json({ error: "No partnership record found for this email.", code: "NO_RECORD" }, 404);
+    const status = String(sub.status);
+    if (["canceled", "suspended"].includes(status)) {
+      return c.json({ error: `Partnership is ${status} and cannot change plans. Please renew first.`, code: "INVALID_STATE" }, 409);
+    }
+    const newPlan = PARTNER_PLAN_CATALOG.find((p) => p.id === newPlanId);
+    if (!newPlan) return c.json({ error: "Unknown partnership plan.", code: "UNKNOWN_PLAN" }, 400);
+    const newAmount = interval === "yearly" ? yearlyPriceFromMonthly(newPlan.kesMonthly) : newPlan.kesMonthly;
+    const currentAmount = Number(sub.amount) || 0;
+
+    // Proration: credit unused days of the current cycle against the new price.
+    const now = Date.now();
+    const periodEndMs = new Date(String(sub.current_period_end || new Date().toISOString())).getTime();
+    const periodStartMs = new Date(String(sub.current_period_start || new Date().toISOString())).getTime();
+    const periodDays = Math.max(1, Math.ceil((periodEndMs - periodStartMs) / 86400000));
+    const remainingDays = Math.max(0, Math.ceil((periodEndMs - now) / 86400000));
+    const unusedCredit = Math.round((currentAmount * remainingDays) / periodDays);
+    const immediateBalance = Math.max(0, newAmount - unusedCredit);
+
+    const preview = {
+      from: { planName: String(sub.plan_name), amount: currentAmount, interval: String(sub.interval) },
+      to: { planId: newPlan.id, planName: newPlan.name, amount: newAmount, interval },
+      remainingDays,
+      unusedCredit,
+      immediateBalance,
+      effective: immediateBalance > 0 ? "immediate-hub-access-pending-payment" : "next-renewal",
+      payLink: `/subscribe?step=checkout&plan=${encodeURIComponent(newPlan.id)}&type=${encodeURIComponent(interval)}`,
+    };
+
+    if (!apply) {
+      return c.json({ preview });
+    }
+
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from("subscriptions")
+      .update({
+        plan_id: newPlan.id,
+        plan_name: newPlan.name,
+        amount: newAmount,
+        interval,
+        metadata: { ...((sub.metadata as Record<string, unknown>) || {}), pendingBalance: immediateBalance, planChangedAt: new Date().toISOString() },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", sub.id as number)
+      .select()
+      .maybeSingle();
+    await logBillingEvent(email.trim().toLowerCase(), "subscription_plan_changed", "subscription", String(sub.payment_reference || sub.id), {
+      from: preview.from,
+      to: preview.to,
+      immediateBalance,
+    });
+    return c.json({ preview, subscription: data || { ...sub, plan_id: newPlan.id, plan_name: newPlan.name, amount: newAmount, interval } });
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Renewal dunning engine (P2): M-Pesa needs a PIN every cycle, so renewals are
+// nudge-and-confirm. Cron calls retry-due; due lists upcoming renewals.
+// Guarded by CRON_SECRET when configured.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function cronGuard(c: import("hono").Context): { ok: boolean; response?: Response } {
+  const secret = getSecret(c, "CRON_SECRET");
+  if (!secret) {
+    return { ok: false, response: c.json({ error: "Dunning is not configured (CRON_SECRET missing).", code: "CRON_NOT_CONFIGURED" }, 503) as unknown as Response };
+  }
+  const provided = c.req.header("x-cron-secret") || "";
+  if (provided !== secret) {
+    return { ok: false, response: c.json({ error: "Unauthorized.", code: "BAD_CRON_SECRET" }, 401) as unknown as Response };
+  }
+  return { ok: true };
+}
+
+function frontendBase(c: import("hono").Context): string {
+  return c.req.header("origin") || "https://kingdommissionsnetwork.org";
+}
+
+// Subscriptions renewing within the next `days` days (renewal nudge list).
+subscriptionRoutes.get("/billing/due", async (c) => {
+  const guard = cronGuard(c);
+  if (!guard.ok) return guard.response as unknown as never;
+  const days = Math.min(30, Math.max(1, Number(c.req.query("days")) || 2));
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() + days);
+  try {
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from("subscriptions")
+      .select("id,subscriber_name,subscriber_email,plan_name,plan_id,amount,currency,interval,current_period_end,status")
+      .eq("status", "active")
+      .lte("current_period_end", cutoff.toISOString());
+    const rows = ((data as Record<string, unknown>[] | null) || []).map((r) => ({
+      ...r,
+      renewLink: `${frontendBase(c)}/subscribe?step=checkout&plan=${encodeURIComponent(String(r.plan_id || ""))}&type=${encodeURIComponent(String(r.interval || "monthly"))}`,
+    }));
+    return c.json({ due: rows, count: rows.length, withinDays: days });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Query failed." }, 500);
+  }
+});
+
+// Process overdue retries: Day-1 → Day-3 → Day-7 reminders, then suspend.
+subscriptionRoutes.post("/billing/retry-due", async (c) => {
+  const guard = cronGuard(c);
+  if (!guard.ok) return guard.response as unknown as never;
+  const base = frontendBase(c);
+  const nowIso = new Date().toISOString();
+  const results: { processed: number; reminded: number; suspended: number; errors: number } = {
+    processed: 0,
+    reminded: 0,
+    suspended: 0,
+    errors: 0,
+  };
+  try {
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .in("status", ["past_due", "grace"])
+      .lte("next_retry_at", nowIso)
+      .limit(200);
+    const rows = (data as Record<string, unknown>[] | null) || [];
+
+    for (const sub of rows) {
+      results.processed++;
+      try {
+        const attemptNo = (Number(sub.retry_count) || 0) + 1;
+        const email = String(sub.subscriber_email || "");
+        const planId = String(sub.plan_id || "");
+        const interval = String(sub.interval || "monthly");
+        const renewLink = `${base}/subscribe?step=checkout&plan=${encodeURIComponent(planId)}&type=${encodeURIComponent(interval)}`;
+
+        if (attemptNo > MAX_DUNNING_ATTEMPTS) {
+          await supabase
+            .from("subscriptions")
+            .update({ status: "suspended", next_retry_at: null, updated_at: new Date().toISOString() })
+            .eq("id", sub.id as number);
+          await logBillingEvent(email, "subscription_suspended", "subscription", String(sub.payment_reference || sub.id), { attempts: attemptNo - 1 });
+          results.suspended++;
+          continue;
+        }
+
+        const next = nextRetryDate(attemptNo - 1);
+        await supabase
+          .from("subscriptions")
+          .update({
+            status: attemptNo === 1 ? "past_due" : "grace",
+            retry_count: attemptNo,
+            next_retry_at: next ? next.toISOString() : null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", sub.id as number);
+
+        try {
+          await supabase.from("billing_attempts").insert({
+            subscription_id: sub.id as number,
+            subscriber_email: email,
+            amount: Number(sub.amount) || 0,
+            provider: String(sub.payment_provider || "mpesa_paybill"),
+            status: "reminder_sent",
+            attempt_no: attemptNo,
+            next_retry_at: next ? next.toISOString() : null,
+            detail: { renewLink },
+          });
+        } catch {
+          // billing_attempts table optional until migration is applied
+        }
+
+        try {
+          await sendDunningReminderEmail(c, email, {
+            name: String(sub.subscriber_name || "Kingdom Partner"),
+            planName: String(sub.plan_name || "Kingdom Partnership"),
+            amount: Number(sub.amount) || 0,
+            currency: String(sub.currency || "KES"),
+            renewLink,
+            attemptNo,
+            nextRetryDate: next ? next.toLocaleDateString("en-KE", { dateStyle: "long" }) : undefined,
+          });
+        } catch (err) {
+          console.error("[DUNNING] email error:", err);
+        }
+        await logBillingEvent(email, "dunning_reminder_sent", "subscription", String(sub.payment_reference || sub.id), { attemptNo });
+        results.reminded++;
+      } catch (err) {
+        console.error("[DUNNING] row error:", err);
+        results.errors++;
+      }
+    }
+    return c.json({ ok: true, ...results });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Retry run failed." }, 500);
   }
 });

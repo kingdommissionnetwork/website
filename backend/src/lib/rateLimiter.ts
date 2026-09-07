@@ -14,6 +14,9 @@ function cleanup() {
 }
 
 export const rateLimit = createMiddleware(async (c, next) => {
+  if (process.env.DISABLE_RATE_LIMIT === "1") {
+    return next();
+  }
   cleanup();
   const ip = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || "unknown";
   const key = `${ip}:${c.req.path}`;
@@ -37,6 +40,9 @@ export const rateLimit = createMiddleware(async (c, next) => {
 });
 
 export const strictRateLimit = createMiddleware(async (c, next) => {
+  if (process.env.DISABLE_RATE_LIMIT === "1") {
+    return next();
+  }
   cleanup();
   const ip = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || "unknown";
   const key = `strict:${ip}`;

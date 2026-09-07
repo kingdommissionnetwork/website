@@ -25,6 +25,10 @@ import {
   Check,
   Copy,
   X,
+  KeyRound,
+  Pause,
+  Play,
+  AlertTriangle,
 } from "lucide-react";
 import SEO from "../components/SEO";
 import AmbientParticles from "../components/AmbientParticles";
@@ -189,7 +193,7 @@ const UPCOMING_DELEGATIONS = [
 ];
 
 export default function SubscriberDashboard() {
-  const { user, logout } = useAuth();
+  const { user, setSession, logout } = useAuth();
   const { showToast } = useToast();
   const location = useLocation();
 
@@ -204,6 +208,7 @@ export default function SubscriberDashboard() {
     amount?: number;
     currency?: string;
     subscription?: Record<string, unknown>;
+    claimRequired?: boolean;
   } | null;
 
   const [activeTab, setActiveTab] = useState<SubscriberTab>("overview");
@@ -238,6 +243,10 @@ export default function SubscriberDashboard() {
     current_period_end?: string;
     payment_provider?: string;
     payment_reference?: string;
+    plan_id?: string;
+    interval?: string;
+    retry_count?: number;
+    next_retry_at?: string;
   } | null>(() => {
     if (navState?.subscription) {
       const s = navState.subscription;
@@ -264,6 +273,136 @@ export default function SubscriberDashboard() {
     }
     return null;
   });
+
+  // Lifecycle + progressive-identity claim + self-serve management state
+  const [lifecycle, setLifecycle] = useState<{ status: string; renewable: boolean; renewLink: string } | null>(null);
+  const [claimCode, setClaimCode] = useState("");
+  const [claimSending, setClaimSending] = useState(false);
+  const [claimVerifying, setClaimVerifying] = useState(false);
+  const [claimDone, setClaimDone] = useState(false);
+  const [manageBusy, setManageBusy] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"cancel" | "pause" | null>(null);
+  const [planPreview, setPlanPreview] = useState<{
+    from: { planName: string; amount: number; interval: string };
+    to: { planId: string; planName: string; amount: number; interval: string };
+    remainingDays: number;
+    unusedCredit: number;
+    immediateBalance: number;
+    effective: string;
+    payLink: string;
+  } | null>(null);
+  const [planPreviewBusy, setPlanPreviewBusy] = useState(false);
+
+  const needsClaim = Boolean(navState?.claimRequired) && !claimDone && !user;
+  const claimEmail = navState?.partnerEmail || targetEmail;
+
+  // Auto-send the ownership code right after a gated checkout lands here
+  useEffect(() => {
+    if (navState?.claimRequired && claimEmail && !claimDone) {
+      setClaimSending(true);
+      api.subscriptions
+        .requestClaim(claimEmail)
+        .catch(() => undefined)
+        .finally(() => setClaimSending(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleVerifyClaim = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!claimEmail || claimCode.trim().length < 4) {
+      showToast("Please enter the 6-digit code from your email", "error");
+      return;
+    }
+    setClaimVerifying(true);
+    try {
+      const res = await api.subscriptions.verifyClaim(claimEmail, claimCode.trim());
+      if (res.user && res.token) {
+        setSession(
+          {
+            ...res.user,
+            role: (res.user.role === "admin" || res.user.role === "superadmin" ? res.user.role : "member") as
+              | "member"
+              | "admin"
+              | "superadmin",
+          },
+          res.token
+        );
+        setClaimDone(true);
+        showToast("Partner Hub secured! Welcome back.", "success");
+      }
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Verification failed. Please try again.", "error");
+    } finally {
+      setClaimVerifying(false);
+    }
+  };
+
+  const handleManageAction = async (action: "cancel" | "pause" | "resume", reason?: string) => {
+    if (!targetEmail) {
+      showToast("No partner email on record for this hub.", "error");
+      return;
+    }
+    setManageBusy(action);
+    try {
+      const res = await api.subscriptions.manageSubscription(action, {
+        email: targetEmail,
+        paymentReference: subscriptionData?.payment_reference,
+        reason,
+      });
+      const sub = (res.subscription || {}) as Record<string, unknown>;
+      setSubscriptionData((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: String(sub.status || res.status || prev.status),
+              current_period_end: String(sub.current_period_end || prev.current_period_end || ""),
+            }
+          : prev
+      );
+      setConfirmAction(null);
+      showToast(
+        action === "cancel"
+          ? "Partnership canceled. You can renew anytime — thank you for sowing."
+          : action === "pause"
+            ? "Partnership paused. Resume anytime to continue."
+            : "Partnership restored. Welcome back!",
+        "success"
+      );
+      loadSubscriberData();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Could not update partnership.", "error");
+    } finally {
+      setManageBusy(null);
+    }
+  };
+
+  const handlePreviewPlanChange = async (newPlanId: string, apply: boolean) => {
+    if (!targetEmail) {
+      showToast("No partner email on record for this hub.", "error");
+      return;
+    }
+    setPlanPreviewBusy(true);
+    try {
+      const res = await api.subscriptions.previewPlanChange({
+        email: targetEmail,
+        paymentReference: subscriptionData?.payment_reference,
+        newPlanId,
+        interval: "monthly",
+        apply,
+      });
+      setPlanPreview(res.preview);
+      if (apply) {
+        setPartnerTierKey(newPlanId);
+        showToast("Covenant tier updated.", "success");
+        loadSubscriberData();
+      }
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Could not change plan.", "error");
+    } finally {
+      setPlanPreviewBusy(false);
+    }
+  };
 
   // Giving records state
   const [donations, setDonations] = useState<
@@ -340,7 +479,14 @@ export default function SubscriberDashboard() {
             current_period_end: String(sub.current_period_end || ""),
             payment_provider: String(sub.payment_provider || "mpesa_paybill"),
             payment_reference: String(sub.payment_reference || navState?.paymentReference || "KMN-SUB-84920"),
+            plan_id: String(sub.plan_id || ""),
+            interval: String(sub.interval || "monthly"),
+            retry_count: Number(sub.retry_count) || 0,
+            next_retry_at: String(sub.next_retry_at || ""),
           });
+          if (subRes.lifecycle) {
+            setLifecycle(subRes.lifecycle as { status: string; renewable: boolean; renewLink: string });
+          }
 
           const planStr = String(sub.plan_name || "").toLowerCase();
           if (planStr.includes("pillar")) setPartnerTierKey("pillar");
@@ -571,6 +717,81 @@ export default function SubscriberDashboard() {
             {/* TAB 1: OVERVIEW & KINGDOM IMPACT */}
             {activeTab === "overview" && (
               <div className="space-y-8">
+                {/* Email-ownership claim (progressive identity): payment succeeded for a
+                    known email — verify the inbox code to mint the hub session. */}
+                {needsClaim && claimEmail && (
+                  <div className="p-6 rounded-3xl bg-amber-500/10 border border-amber-400/40 space-y-4" role="status" aria-live="polite">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+                        <KeyRound className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white text-sm">Secure your Partner Hub — one quick step</h3>
+                        <p className="text-xs text-white/65">
+                          Your payment is confirmed. We sent a 6-digit code to <strong className="text-white">{claimEmail}</strong> to
+                          prove this hub belongs to you. {claimSending ? "Sending…" : "It expires in 10 minutes."}
+                        </p>
+                      </div>
+                    </div>
+                    <form onSubmit={handleVerifyClaim} className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={claimCode}
+                        onChange={(e) => setClaimCode(e.target.value.replace(/\D/g, ""))}
+                        placeholder="Enter 6-digit code"
+                        aria-label="Verification code"
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-black/40 border border-amber-400/40 text-white font-mono font-bold tracking-[0.3em] text-center focus:outline-none focus:border-amber-300 placeholder:text-white/30 placeholder:font-sans placeholder:tracking-normal"
+                      />
+                      <button
+                        type="submit"
+                        disabled={claimVerifying}
+                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs disabled:opacity-60 flex items-center justify-center gap-1.5"
+                      >
+                        {claimVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                        <span>{claimVerifying ? "Verifying…" : "Verify & Unlock"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={claimSending}
+                        onClick={() => {
+                          setClaimSending(true);
+                          api.subscriptions
+                            .requestClaim(claimEmail)
+                            .then(() => showToast("A fresh code is on its way.", "success"))
+                            .catch(() => showToast("Could not resend code. Try again.", "error"))
+                            .finally(() => setClaimSending(false));
+                        }}
+                        className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs disabled:opacity-60"
+                      >
+                        Resend code
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {/* Overdue / grace renewal nudge */}
+                {lifecycle?.renewable && subscriptionData && (
+                  <div className="p-5 rounded-3xl bg-blue-500/10 border border-blue-400/40 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <AlertTriangle className="w-5 h-5 text-blue-300 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-white">
+                        Your partnership is {lifecycle.status.replace("_", " ")} — renew to restore full access.
+                      </p>
+                      <p className="text-xs text-white/65">
+                        M-Pesa needs your PIN each cycle, so renewals are one tap. No back-charges are ever made silently.
+                      </p>
+                    </div>
+                    <a
+                      href={lifecycle.renewLink}
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs shrink-0"
+                    >
+                      Renew now →
+                    </a>
+                  </div>
+                )}
+
                 {/* Kingdom Impact Banner */}
                 <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#0e213d] via-[#102444] to-[#1f170b] border border-[#d4af37]/30 shadow-xl relative overflow-hidden">
                   <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
@@ -1192,7 +1413,24 @@ export default function SubscriberDashboard() {
 
                 {/* Plan Switcher */}
                 <div className="p-6 rounded-3xl bg-white/[0.04] border border-white/10 space-y-6">
-                  <h3 className="font-brand text-lg font-bold text-white">Adjust Your Covenant Tier</h3>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <h3 className="font-brand text-lg font-bold text-white">Adjust Your Covenant Tier</h3>
+                    {subscriptionData && (
+                      <span
+                        className={`px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider ${
+                          subscriptionData.status === "active"
+                            ? "bg-emerald-500/20 text-emerald-300"
+                            : subscriptionData.status === "past_due" || subscriptionData.status === "grace"
+                              ? "bg-amber-500/20 text-amber-300"
+                              : subscriptionData.status === "paused"
+                                ? "bg-blue-500/20 text-blue-300"
+                                : "bg-white/10 text-white/60"
+                        }`}
+                      >
+                        {subscriptionData.status.replace("_", " ")}
+                      </span>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {Object.values(PARTNER_TIERS).map((plan) => {
@@ -1202,7 +1440,8 @@ export default function SubscriberDashboard() {
                           key={plan.id}
                           onClick={() => {
                             setPartnerTierKey(plan.id);
-                            showToast(`Updated tier selection to ${plan.name}`, "info");
+                            setPlanPreview(null);
+                            handlePreviewPlanChange(plan.id, false);
                           }}
                           className={`p-5 rounded-2xl border cursor-pointer transition-all ${
                             isSelected
@@ -1228,6 +1467,115 @@ export default function SubscriberDashboard() {
                         </div>
                       );
                     })}
+                  </div>
+
+                  {/* Proration preview (server-computed, honest before/after) */}
+                  {planPreviewBusy && (
+                    <p className="text-xs text-white/60 flex items-center gap-2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Computing fair proration…
+                    </p>
+                  )}
+                  {planPreview && !planPreviewBusy && (
+                    <div className="p-4 rounded-2xl bg-black/30 border border-[#d4af37]/30 text-xs space-y-2" aria-live="polite">
+                      <p className="text-white/80">
+                        <strong className="text-white">{planPreview.from.planName}</strong> (KES {planPreview.from.amount.toLocaleString()})
+                        {" → "}
+                        <strong className="text-[#fbf5b7]">{planPreview.to.planName}</strong> (KES {planPreview.to.amount.toLocaleString()}/{planPreview.to.interval === "yearly" ? "yr" : "mo"})
+                      </p>
+                      <p className="text-white/65">
+                        {planPreview.remainingDays} days left this cycle · unused credit KES {planPreview.unusedCredit.toLocaleString()}
+                        {planPreview.immediateBalance > 0 ? (
+                          <> · balance due <strong className="text-white">KES {planPreview.immediateBalance.toLocaleString()}</strong> via checkout (M-Pesa needs your PIN — never silent)</>
+                        ) : (
+                          <> · no balance due, takes effect at next renewal</>
+                        )}
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={planPreviewBusy}
+                          onClick={() => handlePreviewPlanChange(planPreview.to.planId, true)}
+                          className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs disabled:opacity-60"
+                        >
+                          Confirm tier change
+                        </button>
+                        {planPreview.immediateBalance > 0 && (
+                          <a href={planPreview.payLink} className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs">
+                            Pay balance via checkout →
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Partnership lifecycle: pause / resume / cancel (self-serve, FTC-friendly) */}
+                <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/10 space-y-4">
+                  <div>
+                    <h3 className="font-brand text-lg font-bold text-white">Partnership Lifecycle</h3>
+                    <p className="text-xs text-white/60">
+                      Pause, resume, or cancel anytime — no calls, no retention traps. Canceling stops future renewals; your giving history stays intact.
+                    </p>
+                  </div>
+                  {subscriptionData?.next_retry_at && ["past_due", "grace"].includes(subscriptionData.status) && (
+                    <p className="text-xs text-amber-300 flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>
+                        Next gentle retry: {new Date(subscriptionData.next_retry_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        {lifecycle?.renewLink ? (
+                          <> · <a href={lifecycle.renewLink} className="underline font-bold">renew now</a> to skip the wait</>
+                        ) : null}
+                      </span>
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {subscriptionData && ["active", "past_due", "grace"].includes(subscriptionData.status) && (
+                      confirmAction === "pause" ? (
+                        <>
+                          <button type="button" disabled={manageBusy === "pause"} onClick={() => handleManageAction("pause")}
+                            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs disabled:opacity-60 flex items-center gap-1.5">
+                            {manageBusy === "pause" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Pause className="w-3.5 h-3.5" />}
+                            <span>Confirm pause</span>
+                          </button>
+                          <button type="button" onClick={() => setConfirmAction(null)}
+                            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs">
+                            Keep partnership
+                          </button>
+                        </>
+                      ) : (
+                        <button type="button" onClick={() => setConfirmAction("pause")}
+                          className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center gap-1.5">
+                          <Pause className="w-3.5 h-3.5" />
+                          <span>Pause partnership</span>
+                        </button>
+                      )
+                    )}
+                    {subscriptionData && ["paused", "past_due", "grace", "suspended"].includes(subscriptionData.status) && (
+                      <button type="button" disabled={manageBusy === "resume"} onClick={() => handleManageAction("resume")}
+                        className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs disabled:opacity-60 flex items-center gap-1.5">
+                        {manageBusy === "resume" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                        <span>Resume partnership</span>
+                      </button>
+                    )}
+                    {subscriptionData && !["canceled"].includes(subscriptionData.status) && (
+                      confirmAction === "cancel" ? (
+                        <>
+                          <button type="button" disabled={manageBusy === "cancel"} onClick={() => handleManageAction("cancel", "self-serve hub cancellation")}
+                            className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs disabled:opacity-60">
+                            {manageBusy === "cancel" ? "Canceling…" : "Yes, cancel renewals"}
+                          </button>
+                          <button type="button" onClick={() => setConfirmAction(null)}
+                            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs">
+                            Keep partnership
+                          </button>
+                        </>
+                      ) : (
+                        <button type="button" onClick={() => setConfirmAction("cancel")}
+                          className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-red-500/20 border border-white/10 hover:border-red-400/50 text-white/70 hover:text-red-300 font-bold text-xs">
+                          Cancel renewals
+                        </button>
+                      )
+                    )}
                   </div>
                 </div>
 

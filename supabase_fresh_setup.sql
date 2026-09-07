@@ -110,17 +110,25 @@ CREATE TABLE IF NOT EXISTS public.donations (
 );
 
 -- 9. SUBSCRIPTIONS TABLE (Kingdom Partner Tier)
+-- Lifecycle statuses: active, past_due, grace, suspended, paused, canceled
 CREATE TABLE IF NOT EXISTS public.subscriptions (
     id BIGSERIAL PRIMARY KEY,
     subscriber_name TEXT NOT NULL DEFAULT 'Kingdom Partner',
     subscriber_email TEXT NOT NULL,
     plan_name TEXT NOT NULL DEFAULT 'Kingdom Partner',
+    plan_id TEXT,
     amount NUMERIC NOT NULL DEFAULT 1000,
     currency TEXT NOT NULL DEFAULT 'KES',
     usd_amount NUMERIC,
     exchange_rate NUMERIC,
     interval TEXT DEFAULT 'monthly',
     status TEXT DEFAULT 'active',
+    retry_count INTEGER DEFAULT 0,
+    next_retry_at TIMESTAMP WITH TIME ZONE,
+    grace_ends_at TIMESTAMP WITH TIME ZONE,
+    paused_at TIMESTAMP WITH TIME ZONE,
+    canceled_at TIMESTAMP WITH TIME ZONE,
+    cancel_reason TEXT,
     payment_provider TEXT NOT NULL,
     payment_reference TEXT UNIQUE NOT NULL,
     subscription_code TEXT,
@@ -130,6 +138,43 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- 10. SUBSCRIBER OTPS TABLE (one-time account-claim codes, hashes only)
+CREATE TABLE IF NOT EXISTS public.subscriber_otps (
+    id BIGSERIAL PRIMARY KEY,
+    email TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    attempts INTEGER DEFAULT 0,
+    consumed BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- 11. BILLING ATTEMPTS TABLE (dunning / renewal attempt ledger)
+CREATE TABLE IF NOT EXISTS public.billing_attempts (
+    id BIGSERIAL PRIMARY KEY,
+    subscription_id BIGINT REFERENCES public.subscriptions(id) ON DELETE SET NULL,
+    subscriber_email TEXT,
+    amount NUMERIC,
+    provider TEXT,
+    reference TEXT,
+    status TEXT DEFAULT 'reminder_sent',
+    attempt_no INTEGER DEFAULT 1,
+    next_retry_at TIMESTAMP WITH TIME ZONE,
+    detail JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- 12. AUDIT LOGS TABLE (billing + admin operations trail)
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    actor TEXT NOT NULL,
+    action TEXT NOT NULL,
+    target_type TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    details JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
 -- =============================================================================
@@ -143,6 +188,13 @@ CREATE INDEX IF NOT EXISTS idx_events_date ON public.events(date);
 CREATE INDEX IF NOT EXISTS idx_donations_ref ON public.donations(payment_reference);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_email ON public.subscriptions(subscriber_email);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_ref ON public.subscriptions(payment_reference);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON public.subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_period_end ON public.subscriptions(current_period_end);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_next_retry ON public.subscriptions(next_retry_at);
+CREATE INDEX IF NOT EXISTS idx_subscriber_otps_email ON public.subscriber_otps(email);
+CREATE INDEX IF NOT EXISTS idx_billing_attempts_email ON public.billing_attempts(subscriber_email);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON public.audit_logs(actor);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON public.audit_logs(created_at DESC);
 
 -- =============================================================================
 -- STORED RPC FUNCTIONS
@@ -173,6 +225,9 @@ ALTER TABLE public.event_rsvps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bible_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.donations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscriber_otps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.billing_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- Public read policies
 CREATE POLICY "Public read approved prayers" ON public.prayers FOR SELECT USING (status = 'approved');
@@ -193,6 +248,9 @@ CREATE POLICY "Service role full access event_rsvps" ON public.event_rsvps FOR A
 CREATE POLICY "Service role full access bible_notes" ON public.bible_notes FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Service role full access donations" ON public.donations FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Service role full access subscriptions" ON public.subscriptions FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role full access subscriber_otps" ON public.subscriber_otps FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role full access billing_attempts" ON public.billing_attempts FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role full access audit_logs" ON public.audit_logs FOR ALL USING (auth.role() = 'service_role');
 
 -- =============================================================================
 -- SEED INITIAL CONTENT
