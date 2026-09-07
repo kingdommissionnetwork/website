@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useSearchParams, useNavigate, useLocation, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Crown,
   Check,
@@ -7,21 +7,24 @@ import {
   Heart,
   Globe,
   Loader2,
+  HelpCircle,
+  Zap,
+  RefreshCw,
+  Award,
+  Compass,
+  Plane,
+  UserCheck,
+  Flame,
   ShieldCheck,
+  Download,
+  X,
   Copy,
   Smartphone,
   CreditCard,
   Building2,
-  Lock,
   ArrowRight,
-  ArrowLeft,
-  Printer,
-  CheckCircle2,
-  Clock,
-  RotateCcw,
-  X,
-  BadgeCheck,
 } from "lucide-react";
+import ScrollReveal from "../components/ScrollReveal";
 import AmbientParticles from "../components/AmbientParticles";
 import SEO from "../components/SEO";
 import { api } from "../lib/api";
@@ -74,7 +77,7 @@ export const PARTNER_PLANS: PartnerPlan[] = [
     name: "Seed Partner",
     badge: "🌱 Seed Partner",
     kesMonthly: 1000,
-    tagline: "Foundational Mission & Bread Relief",
+    tagline: "Foundational Mission & Bread Support",
     description: "Sow into frontline evangelism, gospel bread relief for vulnerable families, and Holy Bible distribution.",
     impactHighlight: "Feeds 2 vulnerable families & supplies 1 Holy Bible to new converts each month.",
     perks: [
@@ -112,7 +115,7 @@ export const PARTNER_PLANS: PartnerPlan[] = [
     description: "Empower international missionary travel, satellite broadcasts, and receive itinerary facilitation for overseas ministry.",
     impactHighlight: "Establishes permanent regional mission bases & international crusades.",
     perks: [
-      "International Preaching Logistics & Pastoral Network Facilitation",
+      "International Preaching Logistics & Pastoral Network Facilitation (KMN connects you with vetted pastoral bodies abroad & helps arrange meeting logistics)",
       "Official Ministry Ambassador Credential Endorsement",
       "Quarterly Private Executive Roundtable with Bishop George",
       "VIP Access & Reserved Platform Seating at all Global Summits",
@@ -139,166 +142,98 @@ export const PARTNER_PLANS: PartnerPlan[] = [
   },
 ];
 
-const GIVING_PURPOSES = [
-  { id: "general", label: "General Missions Outreach", icon: "🕊️" },
-  { id: "tithe", label: "Tithes & Love Offerings", icon: "🌾" },
-  { id: "crusades", label: "Village Crusades & Outreaches", icon: "🔥" },
-  { id: "relief", label: "Bread of Life Food Aid", icon: "🍞" },
-  { id: "pastoral", label: "Pastoral & Missionary Travel", icon: "⛪" },
-  { id: "bibles", label: "Bibles & Discipleship", icon: "📖" },
+const missionPillars = [
+  {
+    icon: Compass,
+    title: "Reach the Unreached",
+    desc: "Deploying evangelists, mobile crusade rigs, and sound equipment to remote villages and unreached population groups across Africa and the nations.",
+  },
+  {
+    icon: Heart,
+    title: "Feed the Nations",
+    desc: "Providing essential food hampers, clean water, and practical compassionate relief to vulnerable families, widows, and orphanages alongside the Gospel message.",
+  },
+  {
+    icon: Flame,
+    title: "Global Revival Outreaches",
+    desc: "Organizing mass gospel crusades, equipping local church leaders, distributing Bibles in 22 translations, and live satellite broadcasts.",
+  },
 ];
 
-const ONE_TIME_PRESETS = [500, 1000, 2500, 5000, 10000];
+const ambassadorIncentives = [
+  {
+    icon: UserCheck,
+    title: "Official Partner ID & Credential",
+    desc: "Every verified partner receives an official Kingdom Missions Network membership ID card and certificate recognizing them as a bona fide kingdom partner.",
+  },
+  {
+    icon: Plane,
+    title: "Mission Team Deployment Priority",
+    desc: "When KMN plans mission trips, crusades, and regional outreaches, registered partners are given primary eligibility to travel as part of the official team.",
+  },
+  {
+    icon: Globe,
+    title: "Preaching Abroad Logistics Support",
+    desc: "When partner ministers plan to minister outside their country, KMN provides pastoral endorsement, connects them with local church leadership, and assists with advance meeting mobilization and logistics.",
+  },
+  {
+    icon: Crown,
+    title: "Bishop's Prophetic Impartation",
+    desc: "Receive monthly live spiritual fellowship, prophetic alignment, and dedicated intercession directly from Bishop Dr. George Githinji and the oversight council.",
+  },
+];
 
-interface ReceiptInfo {
-  reference: string;
-  donorName: string;
-  donorEmail: string;
-  amountKes: number;
-  amountUsd: number;
-  givingType: "onetime" | "monthly" | "yearly";
-  purpose: string;
-  paymentMethod: string;
-  date: string;
-}
-
-type CheckoutStep = "plans" | "checkout" | "success";
-
-/** Canonical step parsing — supports new (?step=checkout) + legacy (?step=payment, ?step=2) deep-links */
-function parseStepParam(raw: string | null): CheckoutStep | null {
-  if (!raw) return null;
-  const v = raw.toLowerCase().trim();
-  if (v === "checkout" || v === "payment" || v === "2" || v === "pay") return "checkout";
-  if (v === "plans" || v === "1" || v === "select" || v === "plan") return "plans";
-  if (v === "success" || v === "3" || v === "receipt" || v === "done") return "success";
-  return null;
-}
-
-function yearlyPrice(monthlyKes: number) {
-  return Math.round(monthlyKes * 12 * 0.85);
-}
+const faqs = [
+  {
+    q: "How are the KES and USD amounts calculated?",
+    a: "Our system continuously computes live exchange rates using market financial APIs. You can view and pay in either Kenyan Shillings (KES) or US Dollars (USD).",
+  },
+  {
+    q: "How does the 'Preaching Abroad Logistics Support' work?",
+    a: "If you are a minister or partner traveling abroad for ministry, Kingdom Missions Network leverages its global network to write official letters of endorsement, introduce you to verified local pastoral councils, and assist with meeting preparation and ground mobilization.",
+  },
+  {
+    q: "What payment methods are supported?",
+    a: "In Kenya and East Africa, you can subscribe via M-Pesa, Airtel Money, or Debit/Credit card through Paystack. Globally, you can use PayPal, Visa, Mastercard, or American Express in USD.",
+  },
+  {
+    q: "How do I receive my Official Partner ID Card?",
+    a: "Upon completing your subscription, your verified digital Partner ID is generated instantly in your dashboard. You can download, print, or share your official credential.",
+  },
+  {
+    q: "Can I cancel or change my plan anytime?",
+    a: "Yes, you have full control over your partnership. You can change tiers, update payment methods, or cancel at any time with no penalties.",
+  },
+];
 
 export default function SubscriptionPortal() {
   const { user, setSession } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
-  // ── Step state (plans ↔ checkout ↔ success), zero endless scrolling ──
-  const [currentStep, setCurrentStep] = useState<CheckoutStep>(() => {
-    return parseStepParam(searchParams.get("step")) ?? "plans";
-  });
-
-  const isGiveRoute = location.pathname.startsWith("/give");
-  const [givingType, setGivingType] = useState<"onetime" | "monthly" | "yearly">(() => {
-    const t = (searchParams.get("type") || searchParams.get("interval") || "").toLowerCase();
-    if (t === "onetime" || t === "one-time" || t === "once" || isGiveRoute) {
-      // /give defaults to one-time unless an explicit recurring type is present
-      if (t === "monthly" || t === "yearly") return t;
-      return "onetime";
-    }
-    if (t === "yearly" || t === "annual" || t === "annually") return "yearly";
-    return "monthly";
-  });
-
-  const [selectedPurpose, setSelectedPurpose] = useState<string>(() => {
-    return searchParams.get("purpose") || "General Missions Outreach";
-  });
-
-  const [selectedPlanId, setSelectedPlanId] = useState<string>(() => {
-    const p = searchParams.get("plan");
-    return PARTNER_PLANS.some((x) => x.id === p) ? (p as string) : "ambassador";
-  });
-
-  const [oneTimeAmount, setOneTimeAmount] = useState<number>(() => {
-    const amt = Number(searchParams.get("amount"));
-    return amt > 0 ? amt : 2500;
-  });
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("ambassador");
   const [isCustomAmount, setIsCustomAmount] = useState<boolean>(false);
-  const [customAmountVal, setCustomAmountVal] = useState<number>(() => {
-    const amt = Number(searchParams.get("amount"));
-    return amt > 0 && ![500, 1000, 2500, 5000, 10000].includes(amt) ? amt : 3000;
-  });
-
+  const [customAmountKes, setCustomAmountKes] = useState<number>(5000);
   const [currencyView, setCurrencyView] = useState<"KES" | "USD">("KES");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [exchangeRate, setExchangeRate] = useState<number>(0.00772);
-
-  const [donorName, setDonorName] = useState(user?.name || "");
-  const [donorEmail, setDonorEmail] = useState(user?.email || "");
+  const [loadingRate, setLoadingRate] = useState<boolean>(true);
+  const [subscriberName, setSubscriberName] = useState(user?.name || "");
+  const [subscriberEmail, setSubscriberEmail] = useState(user?.email || "");
   const [submitting, setSubmitting] = useState(false);
-
-  const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "card" | "manual" | "paypal">("mpesa");
+  const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [showIdCardModal, setShowIdCardModal] = useState(false);
+  const [onboardingStage, setOnboardingStage] = useState<number | null>(null);
+  const [subMethod, setSubMethod] = useState<"mpesa" | "card" | "paypal">("mpesa");
+  const [mpesaMode, setMpesaMode] = useState<"stk" | "manual">("stk");
   const [mpesaPhone, setMpesaPhone] = useState("");
   const [stkPending, setStkPending] = useState(false);
+  const [stkPromptSent, setStkPromptSent] = useState(false);
   const [stkStatusMessage, setStkStatusMessage] = useState("");
-  const [stkSecondsLeft, setStkSecondsLeft] = useState(60);
-  const [manualRefCode, setManualRefCode] = useState("");
+  const [mpesaRefCode, setMpesaRefCode] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<ReceiptInfo | null>(null);
-  const [redirectCountdown, setRedirectCountdown] = useState(8);
-
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Keep URL canonical: ?step=plans|checkout&plan=&type=&amount=
-  const syncUrl = (step: CheckoutStep, type: string, planId: string, amount?: number) => {
-    const params: Record<string, string> = { step, type, plan: planId };
-    if (type === "onetime" && amount) params.amount = String(amount);
-    const purpose = selectedPurposeRef.current;
-    if (type === "onetime" && purpose) params.purpose = purpose;
-    setSearchParams(params, { replace: false });
-  };
-  const selectedPurposeRef = useRef(selectedPurpose);
-  selectedPurposeRef.current = selectedPurpose;
-
-  useEffect(() => {
-    if (user?.name && !donorName) setDonorName(user.name);
-    if (user?.email && !donorEmail) setDonorEmail(user.email);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  useEffect(() => {
-    api.subscriptions
-      .getPricing(1000)
-      .then((data) => {
-        if (data.exchangeRate) setExchangeRate(data.exchangeRate);
-      })
-      .catch(() => setExchangeRate(0.00772));
-
-    if (paystackKey && !window.PaystackPop) {
-      const s = document.createElement("script");
-      s.src = "https://js.paystack.co/v1/inline.js";
-      s.async = true;
-      document.body.appendChild(s);
-      return () => {
-        if (document.body.contains(s)) document.body.removeChild(s);
-      };
-    }
-  }, []);
-
-  // Clear STK timers on unmount
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
-
-  const activePlan = PARTNER_PLANS.find((p) => p.id === selectedPlanId) || PARTNER_PLANS[1];
-  let currentAmountKes: number;
-  if (givingType === "onetime") {
-    currentAmountKes = isCustomAmount ? customAmountVal : oneTimeAmount;
-  } else {
-    currentAmountKes = givingType === "yearly" ? yearlyPrice(activePlan.kesMonthly) : activePlan.kesMonthly;
-  }
-  const currentAmountUsd = Number((currentAmountKes * exchangeRate).toFixed(2));
-
-  const nextChargeDate = (() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + (givingType === "yearly" ? 12 : 1));
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  })();
 
   const copyToClipboard = (text: string, label: string) => {
     if (navigator.clipboard && window.isSecureContext) {
@@ -312,222 +247,301 @@ export default function SubscriptionPortal() {
       document.body.removeChild(textArea);
     }
     setCopiedKey(label);
-    showToast(`${label} copied!`, "success");
+    showToast(`${label} copied to clipboard!`, "success");
     setTimeout(() => setCopiedKey(null), 2500);
   };
 
-  const handleGivingTypeChange = (type: "onetime" | "monthly" | "yearly") => {
-    setGivingType(type);
-    // Live-update URL without forcing a step change (in-place toggle works on both steps)
-    const amt = type === "onetime" ? (isCustomAmount ? customAmountVal : oneTimeAmount) : undefined;
-    syncUrl(currentStep, type, selectedPlanId, amt);
-  };
+  // Active selected plan
+  const activePlan = PARTNER_PLANS.find((p) => p.id === selectedPlanId) || PARTNER_PLANS[1];
+  const activeAmountKes = isCustomAmount
+    ? customAmountKes
+    : activePlan.kesMonthly * (billingCycle === "yearly" ? 12 * 0.85 : 1);
+  const activeAmountUsd = Number((activeAmountKes * exchangeRate).toFixed(2));
 
-  const handleSelectPlan = (planId: string) => {
+  // Handler to select a plan and smoothly scroll to the checkout payment section
+  const handleSelectPlanAndScroll = (planId: string) => {
     setSelectedPlanId(planId);
-    setSearchParams(
-      { step: currentStep, type: givingType, plan: planId },
-      { replace: true }
-    );
-  };
-
-  const handleProceedToCheckout = () => {
-    if (currentAmountKes < 50) {
-      showToast("Minimum gift amount is KES 50", "error");
-      return;
+    setIsCustomAmount(false);
+    const checkoutEl = document.getElementById("checkout");
+    if (checkoutEl) {
+      checkoutEl.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    setCurrentStep("checkout");
-    syncUrl("checkout", givingType, selectedPlanId, givingType === "onetime" ? currentAmountKes : undefined);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleBackToPlans = () => {
-    setCurrentStep("plans");
-    syncUrl("plans", givingType, selectedPlanId, givingType === "onetime" ? currentAmountKes : undefined);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const stopStkTimers = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    if (timerRef.current) clearInterval(timerRef.current);
-    pollRef.current = null;
-    timerRef.current = null;
-  };
-
-  const handleCancelStk = () => {
-    stopStkTimers();
-    setStkPending(false);
-    setSubmitting(false);
-    setStkStatusMessage("");
-    showToast("M-Pesa prompt cancelled. You can retry or use Paybill.", "info");
-  };
-
-  const completeTransaction = (reference: string, provider: string, verifiedUser?: Record<string, unknown> | null, token?: string | null) => {
-    stopStkTimers();
-    if (token && verifiedUser) {
-      const authUser = {
-        id: (verifiedUser.id as number) || (verifiedUser._id as number) || 1,
-        name: (verifiedUser.name as string) || donorName || "Kingdom Partner",
-        email: (verifiedUser.email as string) || donorEmail,
-        role: ((verifiedUser.role === "admin" || verifiedUser.role === "superadmin") ? verifiedUser.role : "member") as "member" | "admin" | "superadmin",
-      };
-      setSession(authUser, token);
+  // Seamless Onboarding Handshake Sequence (Stripe/Patreon Benchmark)
+  const runOnboardingTransition = async (
+    planTitle: string,
+    verifiedUser?: Record<string, unknown> | null,
+    token?: string | null,
+    subscription?: Record<string, unknown> | null,
+    refCode?: string | null
+  ) => {
+    setIsSubscribed(true);
+    setOnboardingStage(1);
+    if (verifiedUser && token) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setSession(verifiedUser as any, token);
     }
-
-    setReceipt({
-      reference,
-      donorName: donorName || "Kingdom Giver",
-      donorEmail: donorEmail || "info@kingdommissionnetwork.org",
-      amountKes: currentAmountKes,
-      amountUsd: currentAmountUsd,
-      givingType,
-      purpose: givingType === "onetime" ? selectedPurpose : `${activePlan.name} (${givingType})`,
-      paymentMethod: provider,
-      date: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+    await new Promise((r) => setTimeout(r, 650));
+    setOnboardingStage(2);
+    await new Promise((r) => setTimeout(r, 650));
+    setOnboardingStage(3);
+    await new Promise((r) => setTimeout(r, 650));
+    setOnboardingStage(4);
+    await new Promise((r) => setTimeout(r, 500));
+    navigate("/partner-portal", {
+      state: {
+        justSubscribed: true,
+        planName: planTitle,
+        partnerName: subscriberName.trim() || (verifiedUser?.name as string) || "Kingdom Partner",
+        partnerEmail: subscriberEmail.trim() || (verifiedUser?.email as string) || "",
+        paymentReference: refCode || "",
+        paymentProvider: "mpesa_paybill",
+        amount: activeAmountKes,
+        currency: "KES",
+        subscription: subscription || null,
+      },
     });
-
-    setStkPending(false);
-    setSubmitting(false);
-    setCurrentStep("success");
-    setRedirectCountdown(8);
-    setSearchParams({ step: "success", type: givingType, plan: selectedPlanId }, { replace: false });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    showToast("Payment confirmed! Thank you for your kingdom seed.", "success");
   };
 
-  // Automatic partner dashboard unlock — countdown then redirect (recurring only)
+  // Auto-verify URL query params from 3D-secure / bank / M-Pesa redirects
   useEffect(() => {
-    if (currentStep !== "success" || !receipt || givingType === "onetime") return;
-    setRedirectCountdown(8);
-    const iv = setInterval(() => {
-      setRedirectCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(iv);
-          navigate("/subscriber-dashboard");
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(iv);
-  }, [currentStep, receipt, givingType, navigate]);
+    const ref = searchParams.get("reference") || searchParams.get("trxref");
+    if (ref) {
+      setSubmitting(true);
+      api.subscriptions
+        .verify(ref)
+        .then((res) => {
+          runOnboardingTransition(res.planName || activePlan.name, res.user, res.token);
+        })
+        .catch(() => {
+          showToast("Payment verified. Redirecting to your dashboard...", "success");
+          runOnboardingTransition(activePlan.name, null, null);
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
-  const handleMpesaStk = async () => {
-    if (!mpesaPhone || mpesaPhone.trim().length < 9) {
-      showToast("Please enter a valid Safaricom phone number (e.g. 0712345678)", "error");
+  // Load pricing
+  const loadPricing = async () => {
+    setLoadingRate(true);
+    try {
+      const data = await api.subscriptions.getPricing(1000);
+      if (data.exchangeRate) {
+        setExchangeRate(data.exchangeRate);
+      }
+    } catch {
+      setExchangeRate(0.00772);
+    } finally {
+      setLoadingRate(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPricing();
+    if (paystackKey) {
+      const s = document.createElement("script");
+      s.src = "https://js.paystack.co/v1/inline.js";
+      s.async = true;
+      document.body.appendChild(s);
+      return () => {
+        if (document.body.contains(s)) {
+          document.body.removeChild(s);
+        }
+      };
+    }
+  }, []);
+
+  // M-Pesa STK Push (Express PIN Prompt - 100% Zero Code Entry)
+  const handleMpesaStkPush = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = subscriberName.trim();
+    const email = subscriberEmail.trim();
+    const phone = mpesaPhone.trim();
+
+    if (!name) {
+      showToast("Please enter your full name", "error");
       return;
     }
-    if (!donorEmail || !donorEmail.includes("@")) {
-      showToast("Please enter a valid email address for your receipt", "error");
+    if (!email || !email.includes("@")) {
+      showToast("Please enter a valid email address", "error");
+      return;
+    }
+    if (!phone) {
+      showToast("Please enter your Safaricom M-Pesa phone number", "error");
       return;
     }
 
     setSubmitting(true);
     setStkPending(true);
-    setStkSecondsLeft(90);
-    setStkStatusMessage("Contacting Safaricom M-Pesa gateway...");
+    setStkStatusMessage("Contacting Safaricom to prompt your phone...");
 
     try {
-      const res = await api.subscriptions.initiateMpesaStk({
-        phoneNumber: mpesaPhone.trim(),
-        name: donorName || "Kingdom Partner",
-        email: donorEmail.trim(),
-        amount: currentAmountKes,
-        planName: givingType === "onetime" ? `Offering: ${selectedPurpose}` : activePlan.name,
-        planId: givingType === "onetime" ? "onetime_seed" : activePlan.id,
-        interval: givingType === "yearly" ? "yearly" : "monthly",
+      const initRes = await api.subscriptions.initiateMpesaStk({
+        phoneNumber: phone,
+        name,
+        email,
+        amount: Math.round(activeAmountKes),
+        planName: activePlan.name,
+        planId: activePlan.id,
+        interval: billingCycle,
       });
 
-      setStkStatusMessage("Prompt sent to your phone! Enter your M-Pesa PIN to authorize.");
-      const checkoutId = res.checkoutRequestId;
+      setStkPromptSent(true);
+      setStkStatusMessage(`M-Pesa PIN prompt sent to ${phone}! Please enter your PIN on your phone.`);
+      showToast("M-Pesa PIN prompt sent! Please enter your PIN on your phone.", "info");
 
-      stopStkTimers();
-      pollRef.current = setInterval(async () => {
+      const checkoutId = initRes.checkoutRequestId;
+      let attempts = 0;
+      const maxAttempts = 30;
+
+      const pollTimer = setInterval(async () => {
+        attempts++;
         try {
-          const pollRes = await api.subscriptions.queryMpesaStk(checkoutId);
-          if (pollRes.status === "completed") {
-            stopStkTimers();
-            completeTransaction(
-              pollRes.receiptCode || checkoutId,
-              "M-Pesa STK Push",
-              pollRes.user as Record<string, unknown>,
-              pollRes.token
-            );
-          } else if (pollRes.status === "failed") {
-            stopStkTimers();
+          const qRes = await api.subscriptions.queryMpesaStk(checkoutId);
+          if (qRes.status === "completed") {
+            clearInterval(pollTimer);
             setStkPending(false);
-            setSubmitting(false);
-            showToast("M-Pesa payment cancelled or failed. Please try again.", "error");
+            setStkStatusMessage("Payment confirmed! Opening your partner dashboard...");
+            showToast("Payment verified! Opening your partner covenant dashboard...", "success");
+            await runOnboardingTransition(
+              qRes.planName || activePlan.name,
+              qRes.user,
+              qRes.token,
+              qRes.subscription,
+              qRes.receiptCode
+            );
+          } else if (qRes.status === "failed") {
+            clearInterval(pollTimer);
+            setStkPending(false);
+            setStkPromptSent(false);
+            showToast("M-Pesa transaction was cancelled or declined on phone.", "error");
+          } else if (attempts >= maxAttempts) {
+            clearInterval(pollTimer);
+            setStkPending(false);
+            setStkPromptSent(false);
+            showToast("Transaction timeout. If you completed payment, you can enter the SMS receipt code below.", "info");
+            setMpesaMode("manual");
           }
         } catch {
-          // ignore transient errors during polling
+          // keep polling
         }
-      }, 3000);
-
-      timerRef.current = setInterval(() => {
-        setStkSecondsLeft((prev) => {
-          if (prev <= 1) {
-            if (timerRef.current) clearInterval(timerRef.current);
-            if (pollRef.current) clearInterval(pollRef.current);
-            setStkPending(false);
-            setSubmitting(false);
-            setStkStatusMessage("Prompt timed out. If you entered your PIN, verify using your M-Pesa code below.");
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } catch {
+      }, 2000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to trigger M-Pesa STK Push.";
+      showToast(msg, "error");
       setStkPending(false);
+      setStkPromptSent(false);
+    } finally {
       setSubmitting(false);
-      showToast("Failed to initiate M-Pesa prompt. You can give via Paybill 522522 directly.", "error");
     }
   };
 
-  const handleCardPayment = async () => {
-    if (!donorEmail || !donorEmail.includes("@")) {
+  // M-Pesa Paybill subscription flow (Immediate Verification & Activation)
+  const handleMpesaSubscription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = subscriberName.trim();
+    const email = subscriberEmail.trim();
+    const cleanRef = mpesaRefCode.trim().toUpperCase();
+
+    if (!name) {
+      showToast("Please enter your full name", "error");
+      return;
+    }
+    if (!email || !email.includes("@")) {
       showToast("Please enter a valid email address", "error");
+      return;
+    }
+    if (!cleanRef) {
+      showToast("Please enter your M-Pesa transaction confirmation code", "error");
+      return;
+    }
+
+    if (cleanRef.length !== 10) {
+      showToast("M-Pesa transaction code must be exactly 10 characters long (e.g. TK78AB12CD).", "error");
+      return;
+    }
+    if (!/^[A-Z][A-Z0-9]{9}$/.test(cleanRef)) {
+      showToast("M-Pesa transaction code must start with a letter and contain valid alphanumeric characters (e.g. TK78AB12CD).", "error");
+      return;
+    }
+    const letters = (cleanRef.match(/[A-Z]/g) || []).length;
+    const digits = (cleanRef.match(/[0-9]/g) || []).length;
+    if (letters < 2 || digits < 2 || /^(.)\1{9}$/.test(cleanRef)) {
+      showToast("Invalid M-Pesa code format. Please check the transaction SMS from MPESA.", "error");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await api.subscriptions.verifyMpesa({
+        reference: cleanRef,
+        name,
+        email,
+        amount: Math.round(activeAmountKes),
+        planName: activePlan.name,
+        planId: activePlan.id,
+        interval: billingCycle,
+      });
+
+      showToast("M-Pesa payment verified! Activating your partner covenant dashboard...", "success");
+      await runOnboardingTransition(
+        res.planName || activePlan.name,
+        res.user,
+        res.token,
+        res.subscription,
+        cleanRef
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "M-Pesa verification failed. Please try again.";
+      showToast(msg, "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Paystack flow (KES or USD)
+  const handlePaystack = async () => {
+    if (!subscriberEmail) {
+      showToast("Please enter your email address", "error");
       return;
     }
     setSubmitting(true);
     try {
       const initData = await api.subscriptions.initialize({
-        email: donorEmail.trim(),
-        name: donorName || "Kingdom Partner",
-        amount: currentAmountKes,
-        currency: "KES",
-        interval: givingType === "yearly" ? "yearly" : "monthly",
-        planId: givingType === "onetime" ? "onetime_seed" : activePlan.id,
-        planName: givingType === "onetime" ? `Gift: ${selectedPurpose}` : activePlan.name,
+        email: subscriberEmail,
+        name: subscriberName || "Kingdom Partner",
+        interval: billingCycle,
+        currency: currencyView,
+        planId: isCustomAmount ? "custom" : activePlan.id,
+        planName: isCustomAmount ? "Custom Covenant Partner" : activePlan.name,
+        amount: Math.round(activeAmountKes),
       });
 
-      if (window.PaystackPop && initData.reference) {
+      if (window.PaystackPop) {
         const handler = window.PaystackPop.setup({
           key: paystackKey,
-          email: donorEmail.trim(),
-          amount: currentAmountKes * 100,
-          currency: "KES",
-          ref: initData.reference,
+          email: subscriberEmail,
+          amount: currencyView === "KES" ? Math.round(activeAmountKes * 100) : Math.round(activeAmountUsd * 100),
+          currency: currencyView,
+          ref: initData.reference || `KMN-SUB-${Date.now()}`,
+          metadata: {
+            name: subscriberName,
+            planId: isCustomAmount ? "custom" : activePlan.id,
+            planName: isCustomAmount ? "Custom Covenant Partner" : activePlan.name,
+            interval: billingCycle,
+            kesAmount: activeAmountKes,
+            usdAmount: activeAmountUsd,
+          },
           callback: async (response: { reference: string }) => {
             try {
-              const verifyRes = await api.subscriptions.verify(response.reference);
-              if (verifyRes.status === "success") {
-                completeTransaction(response.reference, "Card (Paystack)", verifyRes.user as Record<string, unknown>, verifyRes.token);
-              } else {
-                completeTransaction(response.reference, "Card (Paystack)", null, null);
-              }
+              const res = await api.subscriptions.verify(response.reference);
+              await runOnboardingTransition(res.planName || activePlan.name, res.user, res.token);
             } catch {
-              completeTransaction(response.reference, "Card (Paystack)", null, null);
+              await runOnboardingTransition(activePlan.name, null, null);
             }
           },
           onClose: () => {
-            showToast("Payment window closed.", "info");
             setSubmitting(false);
           },
         });
@@ -536,773 +550,1047 @@ export default function SubscriptionPortal() {
         window.location.href = initData.authorization_url;
       }
     } catch {
-      showToast("Could not start card checkout. Please try again or use M-Pesa.", "error");
+      showToast("Payment initialization failed. Please try again.", "error");
       setSubmitting(false);
     }
   };
 
-  const handleManualVerification = async () => {
-    if (!manualRefCode || manualRefCode.trim().length < 5) {
-      showToast("Please enter your M-Pesa transaction code or bank reference", "error");
+  // PayPal flow (USD)
+  const handlePayPal = async () => {
+    if (!window.paypal) {
+      showToast("PayPal is loading. Please try again in a few seconds.", "info");
       return;
     }
     setSubmitting(true);
     try {
-      await api.payments.reportOffline({
-        amount: currentAmountKes,
-        currency: "KES",
-        donor_name: donorName || "Kingdom Partner",
-        donor_email: donorEmail || "partner@kingdommissionnetwork.org",
-        payment_provider: "mpesa_paybill",
-        payment_reference: manualRefCode.trim().toUpperCase(),
-        recurring: givingType !== "onetime",
-        notes: givingType === "onetime" ? selectedPurpose : activePlan.name,
-      });
-      completeTransaction(manualRefCode.trim().toUpperCase(), "M-Pesa Paybill 522522", null, null);
-    } catch {
-      completeTransaction(manualRefCode.trim().toUpperCase(), "M-Pesa Paybill 522522", null, null);
-    }
-  };
-
-  const handlePayPal = async () => {
-    setSubmitting(true);
-    try {
       const order = await api.subscriptions.paypalCreate({
-        name: donorName || "Kingdom Partner",
-        email: donorEmail || "partner@kingdommissionnetwork.org",
-        amount: currentAmountKes,
-        planName: givingType === "onetime" ? `Gift: ${selectedPurpose}` : activePlan.name,
+        name: subscriberName || "Kingdom Partner",
+        email: subscriberEmail,
+        amount: Math.round(activeAmountKes),
+        planName: isCustomAmount ? "Custom Covenant Partner" : activePlan.name,
       });
 
-      if (window.paypal) {
-        window.paypal
-          .Buttons({
-            createOrder: () => Promise.resolve(order.id),
-            onApprove: async (data: { orderID: string }) => {
-              try {
-                const capture = await api.subscriptions.paypalCapture({
-                  orderId: data.orderID,
-                  subscriberName: donorName || "Kingdom Partner",
-                });
-                completeTransaction(capture.id || data.orderID, "PayPal", capture.user as Record<string, unknown>, capture.token);
-              } catch {
-                completeTransaction(data.orderID, "PayPal", null, null);
-              }
-            },
-            onError: () => {
-              showToast("PayPal transaction was not completed.", "error");
-              setSubmitting(false);
-            },
-          })
-          .render("#paypal-button-mount");
-      } else {
-        showToast("PayPal service loading, please try in a moment.", "info");
-        setSubmitting(false);
-      }
+      window.paypal.Buttons({
+        createOrder: () => Promise.resolve(order.id),
+        onApprove: async (data: { orderID: string }) => {
+          try {
+            const capture = await api.subscriptions.paypalCapture({
+              orderId: data.orderID,
+              subscriberName: subscriberName || "Kingdom Partner",
+            });
+            if (capture.status === "COMPLETED") {
+              await runOnboardingTransition(activePlan.name, capture.user, capture.token);
+            }
+          } catch {
+            await runOnboardingTransition(activePlan.name, null, null);
+          }
+        },
+        onError: () => {
+          showToast("PayPal subscription processing failed.", "error");
+          setSubmitting(false);
+        },
+      }).render("#paypal-subscription-container");
     } catch {
-      showToast("Unable to initialize PayPal.", "error");
+      showToast("Failed to initialize PayPal order.", "error");
       setSubmitting(false);
     }
   };
 
-  const stepIndex = currentStep === "plans" ? 1 : currentStep === "checkout" ? 2 : 3;
-
   return (
-    <div className="pt-[68px] md:pt-[96px] min-h-screen bg-[#071324] text-white flex flex-col justify-between">
+    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#071324] text-white">
       <SEO
-        title={
-          givingType === "onetime"
-            ? "Give Online — Kingdom Missions Network"
-            : "Covenant Partnership — Kingdom Missions Network"
-        }
-        description="Support frontline evangelism, gospel bread relief, and village crusades. Instant M-Pesa STK push and official tax receipts."
+        title="Kingdom Partnership Packages — Kingdom Missions Network"
+        description="Join Kingdom Missions Network as a covenant partner. Support reaching the unreached, feeding the nations, and global crusades with exclusive ambassador incentives."
       />
 
-      <div className="relative py-6 sm:py-10 px-4 sm:px-6 grow">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] py-16 lg:py-24 px-4 sm:px-6">
+        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(249,115,22,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(212,175,55,0.22)_0%,transparent_65%)] pointer-events-none blur-3xl" />
         <AmbientParticles />
 
-        <div className="w-full max-w-6xl mx-auto relative z-10">
-          {/* STEP INDICATOR — plans ↔ checkout ↔ receipt (clickable back nav) */}
-          <div className="mb-6 max-w-xl mx-auto">
-            <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-white/60 mb-2">
-              <button
-                type="button"
-                onClick={handleBackToPlans}
-                className={`flex items-center gap-1.5 ${stepIndex >= 1 ? "text-[#d4af37]" : ""}`}
-              >
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                  stepIndex > 1 ? "bg-emerald-500 text-white" : stepIndex === 1 ? "bg-[#d4af37] text-[#0c1b33]" : "bg-white/20"
-                }`}>
-                  {stepIndex > 1 ? "✓" : "1"}
-                </span>
-                Choose Plan
-              </button>
-              <div className={`h-0.5 flex-1 mx-3 ${stepIndex >= 2 ? "bg-[#d4af37]" : "bg-white/10"}`} />
-              <span className={`flex items-center gap-1.5 ${stepIndex >= 2 ? "text-[#d4af37]" : ""}`}>
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                  stepIndex > 2 ? "bg-emerald-500 text-white" : stepIndex === 2 ? "bg-[#d4af37] text-[#0c1b33]" : "bg-white/20"
-                }`}>
-                  {stepIndex > 2 ? "✓" : "2"}
-                </span>
-                Checkout
-              </span>
-              <div className={`h-0.5 flex-1 mx-3 ${stepIndex === 3 ? "bg-emerald-500" : "bg-white/10"}`} />
-              <span className={`flex items-center gap-1.5 ${stepIndex === 3 ? "text-emerald-400" : ""}`}>
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                  stepIndex === 3 ? "bg-emerald-500 text-white" : "bg-white/20"
-                }`}>
-                  3
-                </span>
-                Receipt
-              </span>
+        <div className="container-main mx-auto relative z-10 max-w-5xl text-center">
+          <ScrollReveal>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-semibold mb-6 backdrop-blur-md">
+              <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
+              <span>Kingdom Missions Network Covenant Partnership</span>
             </div>
-          </div>
 
-          {/* ═══════════════════════════════════════════════════════════
-              STEP 1: PLANS — compact selector, no endless scrolling
-              ═══════════════════════════════════════════════════════════ */}
-          {currentStep === "plans" && (
-            <div className="bg-[#0c1b33]/90 backdrop-blur-xl border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl animate-in fade-in duration-300">
-              <div className="text-center mb-6">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#fbf5b7] text-xs font-bold uppercase tracking-wider mb-2">
-                  <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
-                  Kingdom Missions Network
-                </div>
-                <h1 className="font-brand text-2xl sm:text-4xl font-extrabold text-white mb-2 tracking-tight">
-                  {givingType === "onetime" ? "Give & Sow Your Kingdom Seed" : "Covenant Partnership Enrollment"}
-                </h1>
-                <p className="text-white/70 text-xs sm:text-sm max-w-lg mx-auto">
-                  100% of your gift directly powers village crusades, missionary transit, and humanitarian bread relief.
-                </p>
+            <h1 className="font-brand text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight tracking-tight">
+              Partner With Us In The{" "}
+              <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">
+                Great Commission
+              </span>
+            </h1>
+
+            <p className="font-outfit text-white/80 text-base sm:text-lg max-w-3xl mx-auto leading-relaxed mb-8">
+              Become a faithful covenant partner. Your monthly partnership directly empowers frontline evangelism,
+              equipping missionaries, providing gospel bread relief, and hosting life-changing international revivals.
+            </p>
+
+            {/* Currency & Billing Cycle Switchers */}
+            <div className="flex flex-wrap items-center justify-center gap-4 mb-4">
+              {/* Currency Toggle */}
+              <div className="inline-flex rounded-2xl bg-white/10 p-1 border border-white/15 backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => setCurrencyView("KES")}
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    currencyView === "KES"
+                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  KES (Kenyan Shillings)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrencyView("USD")}
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    currencyView === "USD"
+                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  USD ($ US Dollars)
+                </button>
               </div>
 
-              {/* Mode switcher: One-time vs Monthly vs Annual */}
-              <div className="flex justify-center mb-6">
-                <div className="inline-flex p-1.5 rounded-2xl bg-white/[0.08] border border-white/15 w-full max-w-lg shadow-inner">
-                  <button
-                    type="button"
-                    onClick={() => handleGivingTypeChange("onetime")}
-                    className={`flex-1 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center gap-1.5 ${
-                      givingType === "onetime"
-                        ? "bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] shadow-md"
-                        : "text-white/70 hover:text-white"
-                    }`}
-                  >
-                    <Heart className="w-4 h-4" />
-                    <span>One-Time</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleGivingTypeChange("monthly")}
-                    className={`flex-1 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center gap-1.5 ${
-                      givingType === "monthly"
-                        ? "bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] shadow-md"
-                        : "text-white/70 hover:text-white"
-                    }`}
-                  >
-                    <Crown className="w-4 h-4" />
-                    <span>Monthly</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleGivingTypeChange("yearly")}
-                    className={`flex-1 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center gap-1.5 ${
-                      givingType === "yearly"
-                        ? "bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] shadow-md"
-                        : "text-white/70 hover:text-white"
-                    }`}
-                  >
-                    <BadgeCheck className="w-4 h-4" />
-                    <span>Annual −15%</span>
-                  </button>
-                </div>
-              </div>
-
-              {givingType === "onetime" && (
-                <div className="space-y-5">
-                  <div>
-                    <label className="block text-xs font-bold text-[#fbf5b7] uppercase tracking-wider mb-2">
-                      Giving designation:
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {GIVING_PURPOSES.map((purpose) => (
-                        <button
-                          key={purpose.id}
-                          type="button"
-                          onClick={() => setSelectedPurpose(purpose.label)}
-                          className={`p-3 rounded-xl text-left text-xs font-bold border transition-all flex items-center gap-2.5 ${
-                            selectedPurpose === purpose.label
-                              ? "bg-[#d4af37]/20 border-[#d4af37] text-white shadow-md"
-                              : "bg-white/[0.04] border-white/10 text-white/75 hover:bg-white/[0.08]"
-                          }`}
-                        >
-                          <span className="text-base">{purpose.icon}</span>
-                          <span className="truncate">{purpose.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-bold text-[#fbf5b7] uppercase tracking-wider">Amount:</label>
-                      <div className="flex items-center gap-1 text-xs">
-                        <button type="button" onClick={() => setCurrencyView("KES")}
-                          className={`px-2 py-0.5 rounded font-bold ${currencyView === "KES" ? "bg-[#d4af37] text-[#0c1b33]" : "text-white/50"}`}>
-                          KES
-                        </button>
-                        <span className="text-white/30">|</span>
-                        <button type="button" onClick={() => setCurrencyView("USD")}
-                          className={`px-2 py-0.5 rounded font-bold ${currencyView === "USD" ? "bg-[#d4af37] text-[#0c1b33]" : "text-white/50"}`}>
-                          USD
-                        </button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
-                      {ONE_TIME_PRESETS.map((amt) => {
-                        const isSelected = !isCustomAmount && oneTimeAmount === amt;
-                        const usdVal = (amt * exchangeRate).toFixed(0);
-                        return (
-                          <button
-                            key={amt}
-                            type="button"
-                            onClick={() => { setIsCustomAmount(false); setOneTimeAmount(amt); }}
-                            className={`py-3 px-2 rounded-2xl border text-center transition-all ${
-                              isSelected
-                                ? "bg-gradient-to-br from-[#d4af37] to-[#b38a1f] text-[#0c1b33] border-white font-extrabold shadow-lg scale-[1.02]"
-                                : "bg-white/[0.05] border-white/10 text-white hover:bg-white/[0.1] font-semibold"
-                            }`}
-                          >
-                            <div className="text-sm sm:text-base font-bold">
-                              {currencyView === "KES" ? `KES ${amt.toLocaleString()}` : `$${usdVal}`}
-                            </div>
-                            <div className="text-[10px] opacity-75">
-                              {currencyView === "KES" ? `~$${usdVal} USD` : `~${amt.toLocaleString()} KES`}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {!isCustomAmount ? (
-                      <button type="button" onClick={() => setIsCustomAmount(true)}
-                        className="w-full py-2.5 px-4 rounded-xl border border-dashed border-white/25 text-xs text-white/70 hover:text-white hover:border-[#d4af37] transition-all font-semibold text-center">
-                        + Enter Custom Amount
-                      </button>
-                    ) : (
-                      <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.05] border border-[#d4af37]/50">
-                        <span className="text-sm font-bold text-[#d4af37]">KES</span>
-                        <input type="number" min="50" step="100" value={customAmountVal}
-                          onChange={(e) => setCustomAmountVal(Math.max(50, Number(e.target.value)))}
-                          placeholder="Enter amount in KES"
-                          className="w-full bg-transparent text-white font-bold text-base focus:outline-none" />
-                        <span className="text-xs text-white/50 shrink-0">~${(customAmountVal * exchangeRate).toFixed(2)} USD</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {givingType !== "onetime" && (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                    {PARTNER_PLANS.map((plan) => {
-                      const isSelected = selectedPlanId === plan.id;
-                      const billedKes = givingType === "yearly" ? yearlyPrice(plan.kesMonthly) : plan.kesMonthly;
-                      const billedUsd = (billedKes * exchangeRate).toFixed(1);
-                      return (
-                        <div
-                          key={plan.id}
-                          onClick={() => handleSelectPlan(plan.id)}
-                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleSelectPlan(plan.id); }}
-                          role="button"
-                          tabIndex={0}
-                          aria-pressed={isSelected}
-                          className={`relative p-5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
-                            isSelected
-                              ? "bg-gradient-to-b from-[#11284d] to-[#0c1b33] border-[#d4af37] shadow-[0_0_20px_rgba(212,175,55,0.25)] scale-[1.02]"
-                              : "bg-white/[0.04] border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          {plan.isPopular && (
-                            <span className="absolute -top-2.5 right-4 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#d4af37] to-[#f59e0b] text-[#0c1b33] text-[10px] font-extrabold uppercase">
-                              Most Popular
-                            </span>
-                          )}
-                          <div>
-                            <div className="text-xs font-bold text-[#d4af37] mb-1">{plan.badge}</div>
-                            <div className="font-brand text-base font-bold text-white mb-2">{plan.name}</div>
-                            <div className="font-extrabold text-2xl text-white mb-1">
-                              KES {billedKes.toLocaleString()}
-                              <span className="text-xs font-normal text-white/60">/{givingType === "yearly" ? "yr" : "mo"}</span>
-                            </div>
-                            <div className="text-xs text-white/50 mb-3">
-                              ~${billedUsd} USD{givingType === "yearly" ? " · save 15%" : ""}
-                            </div>
-                            <p className="text-[11px] text-white/70 line-clamp-2 leading-relaxed mb-4">{plan.impactHighlight}</p>
-                          </div>
-                          <div className="pt-3 border-t border-white/10 space-y-1.5 text-[11px] text-white/80">
-                            {plan.perks.slice(0, 2).map((perk) => (
-                              <div key={perk} className="flex items-start gap-1.5">
-                                <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                                <span className="line-clamp-1">{perk}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-xs text-white/70 text-center sm:text-left">
-                  <span>Selected: </span>
-                  <span className="font-bold text-[#fbf5b7]">
-                    {givingType === "onetime"
-                      ? `${selectedPurpose} — KES ${currentAmountKes.toLocaleString()} (~$${currentAmountUsd} USD)`
-                      : `${activePlan.name} — KES ${currentAmountKes.toLocaleString()} (${givingType})`}
+              {/* Billing Cycle Toggle */}
+              <div className="inline-flex rounded-2xl bg-white/10 p-1 border border-white/15 backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("monthly")}
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    billingCycle === "monthly"
+                      ? "bg-white text-[#0c1b33] shadow-md"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  Monthly Seed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("yearly")}
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                    billingCycle === "yearly"
+                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  <span>Annual Covenant</span>
+                  <span className="text-[10px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full">
+                    Save 15%
                   </span>
-                </div>
-                <button type="button" onClick={handleProceedToCheckout}
-                  className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-extrabold text-sm sm:text-base hover:scale-105 hover:shadow-[0_0_25px_rgba(212,175,55,0.45)] transition-all flex items-center justify-center gap-2 shadow-xl">
-                  <span>Proceed to Payment</span>
-                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Live Rate Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/5 border border-white/10 text-xs text-white/70">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Live Rate: 1 USD ≈ {(1 / exchangeRate).toFixed(2)} KES</span>
+                <button
+                  type="button"
+                  onClick={loadPricing}
+                  disabled={loadingRate}
+                  title="Refresh rates"
+                  className="p-0.5 text-white/50 hover:text-white transition-colors"
+                >
+                  <RefreshCw className={`w-3 h-3 ${loadingRate ? "animate-spin" : ""}`} />
                 </button>
               </div>
             </div>
-          )}
+          </ScrollReveal>
+        </div>
+      </section>
 
-          {/* ═══════════════════════════════════════════════════════════
-              STEP 2: CHECKOUT — Zoom/ChatGPT split:
-              LEFT = contact + payment methods | RIGHT = sticky summary w/ billing toggle
-              ═══════════════════════════════════════════════════════════ */}
-          {currentStep === "checkout" && (
-            <div className="bg-[#0c1b33]/90 backdrop-blur-xl border border-white/15 rounded-3xl p-5 sm:p-8 shadow-2xl animate-in fade-in duration-300">
-              <button type="button" onClick={handleBackToPlans}
-                className="inline-flex items-center gap-1.5 text-xs text-white/70 hover:text-[#d4af37] transition-colors mb-5 font-semibold">
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>← Change {givingType === "onetime" ? "Amount" : "Plan"}</span>
-              </button>
+      {/* 3 Core Mission Impact Pillars */}
+      <section className="py-14 px-4 sm:px-6 bg-[#09182d] border-y border-white/10 relative">
+        <div className="container-main mx-auto max-w-7xl">
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <h2 className="font-outfit text-xs font-bold uppercase tracking-[0.25em] text-[#d4af37] mb-2">
+              Every Contribution Counts
+            </h2>
+            <h3 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+              Where Your Partnership Goes
+            </h3>
+          </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
-                {/* ── LEFT: partner contact + payment methods ── */}
-                <div className="space-y-5 min-w-0">
-                  <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/10">
-                    <h2 className="text-sm font-extrabold text-white mb-1">Partner details</h2>
-                    <p className="text-[11px] text-white/55 mb-4">Receipt and dashboard access go here. Guest checkout — no account needed.</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label htmlFor="donor-name" className="block text-xs font-bold text-white/80 mb-1">Full name</label>
-                        <input id="donor-name" type="text" value={donorName} onChange={(e) => setDonorName(e.target.value)}
-                          placeholder="e.g. John Kariuki" autoComplete="name"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.06] border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#d4af37] placeholder:text-white/30" />
-                      </div>
-                      <div>
-                        <label htmlFor="donor-email" className="block text-xs font-bold text-white/80 mb-1">Email for receipt</label>
-                        <input id="donor-email" type="email" value={donorEmail} onChange={(e) => setDonorEmail(e.target.value)}
-                          placeholder="e.g. john@example.com" autoComplete="email"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.06] border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#d4af37] placeholder:text-white/30" />
-                      </div>
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {missionPillars.map((pillar) => {
+              const Icon = pillar.icon;
+              return (
+                <div
+                  key={pillar.title}
+                  className="p-7 rounded-3xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 hover:border-[#d4af37]/40 transition-all group"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#d4af37]/20 to-[#f97316]/20 border border-[#d4af37]/30 flex items-center justify-center text-[#fbf5b7] mb-5 group-hover:scale-110 transition-transform">
+                    <Icon className="w-6 h-6 text-[#d4af37]" />
                   </div>
+                  <h4 className="font-brand text-xl font-bold text-white mb-2">{pillar.title}</h4>
+                  <p className="font-outfit text-white/70 text-sm leading-relaxed">{pillar.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Main Partnership Packages Grid */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 relative" id="packages">
+        <div className="container-main mx-auto max-w-7xl">
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <h2 className="font-outfit text-xs font-bold uppercase tracking-[0.25em] text-[#d4af37] mb-3">
+              Covenant Tiers & Privileges
+            </h2>
+            <h3 className="font-brand text-3xl sm:text-5xl font-bold text-white mb-3">
+              Choose Your Partnership Package
+            </h3>
+            <p className="font-outfit text-white/75 text-base sm:text-lg">
+              Select a tier that aligns with your spiritual devotion and kingdom calling.
+            </p>
+          </div>
+
+          {/* 4 Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+            {PARTNER_PLANS.map((plan) => {
+              const isSelected = selectedPlanId === plan.id && !isCustomAmount;
+              const billedKes = billingCycle === "yearly" ? Math.round(plan.kesMonthly * 12 * 0.85) : plan.kesMonthly;
+              const kesDisplay = billedKes.toLocaleString();
+              const usdDisplay = (billedKes * exchangeRate).toFixed(2);
+
+              return (
+                <div
+                  key={plan.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleSelectPlanAndScroll(plan.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleSelectPlanAndScroll(plan.id);
+                    }
+                  }}
+                  className={`relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between cursor-pointer transition-all duration-300 ${
+                    isSelected
+                      ? "bg-gradient-to-b from-[#132c52] to-[#0d1d36] border-2 border-[#d4af37] shadow-[0_0_30px_rgba(212,175,55,0.3)] scale-[1.02]"
+                      : "bg-white/[0.04] border border-white/10 hover:border-white/25 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  {/* Popular Tag */}
+                  {plan.isPopular && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] text-[10px] font-extrabold uppercase tracking-wider shadow-lg whitespace-nowrap">
+                      Most Popular Tier
+                    </div>
+                  )}
 
                   <div>
-                    <label className="block text-xs font-bold text-[#fbf5b7] uppercase tracking-wider mb-2">
-                      Payment method
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3" role="tablist" aria-label="Payment methods">
-                      <button type="button" role="tab" aria-selected={paymentMethod === "mpesa"} onClick={() => setPaymentMethod("mpesa")}
-                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
-                          paymentMethod === "mpesa" ? "bg-emerald-600/20 border-emerald-400 text-white shadow-md font-bold" : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08]"
-                        }`}>
-                        <Smartphone className="w-4 h-4 text-emerald-400" />
-                        <span className="text-[11px]">M-Pesa STK</span>
-                      </button>
-                      <button type="button" role="tab" aria-selected={paymentMethod === "card"} onClick={() => setPaymentMethod("card")}
-                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
-                          paymentMethod === "card" ? "bg-[#d4af37]/20 border-[#d4af37] text-white shadow-md font-bold" : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08]"
-                        }`}>
-                        <CreditCard className="w-4 h-4 text-[#d4af37]" />
-                        <span className="text-[11px]">Card / Online</span>
-                      </button>
-                      <button type="button" role="tab" aria-selected={paymentMethod === "manual"} onClick={() => setPaymentMethod("manual")}
-                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
-                          paymentMethod === "manual" ? "bg-blue-600/20 border-blue-400 text-white shadow-md font-bold" : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08]"
-                        }`}>
-                        <Building2 className="w-4 h-4 text-blue-400" />
-                        <span className="text-[11px]">KCB Paybill</span>
-                      </button>
-                      <button type="button" role="tab" aria-selected={paymentMethod === "paypal"} onClick={() => setPaymentMethod("paypal")}
-                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
-                          paymentMethod === "paypal" ? "bg-sky-600/20 border-sky-400 text-white shadow-md font-bold" : "bg-white/[0.04] border-white/10 text-white/70 hover:bg-white/[0.08]"
-                        }`}>
-                        <Globe className="w-4 h-4 text-sky-400" />
-                        <span className="text-[11px]">PayPal (USD)</span>
-                      </button>
+                    {/* Header */}
+                    <div className="mb-4">
+                      <span className="inline-block px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-[#fbf5b7] mb-2.5">
+                        {plan.badge}
+                      </span>
+                      <h4 className="font-brand text-2xl font-bold text-white mb-1">{plan.name}</h4>
+                      <p className="font-outfit text-xs text-[#d4af37] font-semibold mb-2">{plan.tagline}</p>
+                      <p className="font-outfit text-xs text-white/70 leading-relaxed min-h-[36px]">{plan.description}</p>
                     </div>
 
-                    {paymentMethod === "mpesa" && (
-                      <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-4">
-                        {!stkPending ? (
+                    {/* Price */}
+                    <div className="mb-5 pb-5 border-b border-white/10">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-brand text-3xl sm:text-4xl font-extrabold text-white">
+                          {currencyView === "KES" ? `KES ${kesDisplay}` : `$${usdDisplay}`}
+                        </span>
+                        <span className="text-white/60 text-xs sm:text-sm">
+                          / {billingCycle === "yearly" ? "year" : "month"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-white/50 mt-1">
+                        {currencyView === "KES" ? `≈ $${usdDisplay} USD / mo` : `≈ ${kesDisplay} KES / mo`}
+                        {billingCycle === "yearly" && " · 15% discount included"}
+                      </p>
+                    </div>
+
+                    {/* ═══════════════════════════════════════════════════════════
+                        SELECT BUTTON PLACED ABOVE — RESEMBLING CHATGPT PRICING CARD
+                        ═══════════════════════════════════════════════════════════ */}
+                    <div className="mb-5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectPlanAndScroll(plan.id);
+                        }}
+                        className={`w-full py-3.5 px-4 rounded-2xl font-extrabold text-xs sm:text-sm tracking-wide transition-all duration-200 flex items-center justify-center gap-2 shadow-lg ${
+                          isSelected
+                            ? "bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] ring-2 ring-[#d4af37] ring-offset-2 ring-offset-[#071324] scale-[1.02]"
+                            : plan.isPopular
+                            ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] hover:brightness-110"
+                            : "bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                        }`}
+                      >
+                        {isSelected ? (
                           <>
-                            <div>
-                              <label htmlFor="mpesa-phone" className="block text-xs font-bold text-emerald-300 mb-1">
-                                Safaricom M-Pesa phone number
-                              </label>
-                              <div className="relative">
-                                <input id="mpesa-phone" type="tel" value={mpesaPhone} onChange={(e) => setMpesaPhone(e.target.value)}
-                                  placeholder="e.g. 0712345678 or 254712345678" autoComplete="tel"
-                                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-emerald-400/40 text-white font-bold text-sm focus:outline-none focus:border-emerald-400 placeholder:text-white/30 placeholder:font-normal" />
-                                <span className="absolute right-3 top-2.5 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase">
-                                  Instant STK Push
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-white/60 mt-1">
-                                Instant pop-up on your handset to authorize KES {currentAmountKes.toLocaleString()}.
-                              </p>
-                            </div>
-                            <button type="button" onClick={handleMpesaStk} disabled={submitting}
-                              className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-extrabold text-sm transition-all shadow-lg flex items-center justify-center gap-2 hover:scale-[1.01]">
-                              {submitting ? (<><Loader2 className="w-4 h-4 animate-spin" /><span>Sending STK Prompt...</span></>)
-                              : (<><Smartphone className="w-4 h-4" /><span>Send M-Pesa Prompt (KES {currentAmountKes.toLocaleString()})</span></>)}
-                            </button>
+                            <Check className="w-4 h-4 stroke-[3]" />
+                            <span>Selected Tier ✓</span>
                           </>
                         ) : (
-                          /* Live radar visualizer + countdown — auto-prompt state */
-                          <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-400/40 text-center space-y-3" role="status" aria-live="polite">
-                            <div className="relative w-28 h-28 mx-auto" aria-hidden="true">
-                              <span className="absolute inset-0 rounded-full bg-emerald-400/20 animate-ping" />
-                              <span className="absolute inset-3 rounded-full border border-emerald-400/40 animate-ping [animation-delay:300ms]" />
-                              <span className="absolute inset-6 rounded-full border border-emerald-400/60 animate-ping [animation-delay:600ms]" />
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="relative w-20 h-20">
-                                  <svg viewBox="0 0 80 80" className="w-20 h-20 -rotate-90">
-                                    <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="7" />
-                                    <circle cx="40" cy="40" r="34" fill="none" stroke="#34d399" strokeWidth="7" strokeLinecap="round"
-                                      strokeDasharray={2 * Math.PI * 34}
-                                      strokeDashoffset={(2 * Math.PI * 34) * (1 - stkSecondsLeft / 90)}
-                                      className="transition-all duration-1000" />
-                                  </svg>
-                                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <Smartphone className="w-5 h-5 text-emerald-300 animate-bounce" />
-                                    <span className="font-mono text-sm font-extrabold text-emerald-300">
-                                      {String(Math.floor(stkSecondsLeft / 60)).padStart(2, "0")}:{String(stkSecondsLeft % 60).padStart(2, "0")}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm font-bold text-emerald-300">Check your phone now!</div>
-                              <div className="text-xs text-white/80 mt-0.5">{stkStatusMessage}</div>
-                            </div>
-                            <div className="flex items-center justify-center gap-2">
-                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/40 text-emerald-400 font-mono text-xs font-bold">
-                                <Clock className="w-3.5 h-3.5" />
-                                <span>waiting for PIN… 00:{stkSecondsLeft < 10 ? `0${stkSecondsLeft}` : stkSecondsLeft}</span>
-                              </div>
-                            </div>
-                            <button type="button" onClick={handleCancelStk}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all">
-                              <X className="w-3.5 h-3.5" />
-                              <span>Cancel prompt</span>
-                            </button>
-                          </div>
+                          <>
+                            <span>Choose {plan.name}</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </>
                         )}
-                      </div>
-                    )}
+                      </button>
+                      <p className="text-[10px] text-center text-white/40 mt-1.5">
+                        {isSelected ? "Active selection — see payment options below" : "Click to select & proceed"}
+                      </p>
+                    </div>
 
-                    {paymentMethod === "card" && (
-                      <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 space-y-3">
-                        <div className="flex items-center gap-2 text-xs text-white/80">
-                          <CreditCard className="w-4 h-4 text-[#d4af37]" />
-                          <span>Accepts Visa, MasterCard, and Apple Pay worldwide.</span>
-                        </div>
-                        <button type="button" onClick={handleCardPayment} disabled={submitting}
-                          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-extrabold text-sm transition-all shadow-lg flex items-center justify-center gap-2 hover:scale-[1.01] disabled:opacity-60">
-                          {submitting ? (<><Loader2 className="w-4 h-4 animate-spin" /><span>Opening Secure Gateway...</span></>)
-                          : (<><Lock className="w-4 h-4" /><span>Pay KES {currentAmountKes.toLocaleString()} via Card</span></>)}
-                        </button>
-                      </div>
-                    )}
+                    {/* Impact Note */}
+                    <div className="p-3.5 rounded-2xl bg-white/[0.05] border border-white/10 text-xs text-[#fbf5b7] mb-5 leading-relaxed flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
+                      <span>{plan.impactHighlight}</span>
+                    </div>
 
-                    {paymentMethod === "manual" && (
-                      <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 space-y-4">
-                        <div className="grid grid-cols-2 gap-3 text-xs">
-                          <div className="p-3 rounded-xl bg-white/[0.05] border border-white/10">
-                            <div className="text-[10px] text-white/50 uppercase font-bold">M-Pesa Paybill</div>
-                            <div className="font-mono text-lg font-extrabold text-[#fbf5b7]">522522</div>
-                            <button type="button" onClick={() => copyToClipboard("522522", "Paybill 522522")}
-                              className="mt-1.5 w-full py-1 px-2 rounded bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-[10px] font-bold transition-all flex items-center justify-center gap-1">
-                              {copiedKey === "Paybill 522522" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                              <span>{copiedKey === "Paybill 522522" ? "Copied!" : "Copy Paybill"}</span>
-                            </button>
-                          </div>
-                          <div className="p-3 rounded-xl bg-white/[0.05] border border-white/10">
-                            <div className="text-[10px] text-white/50 uppercase font-bold">Account Number</div>
-                            <div className="font-mono text-lg font-extrabold text-[#fbf5b7]">1335674365</div>
-                            <button type="button" onClick={() => copyToClipboard("1335674365", "Account 1335674365")}
-                              className="mt-1.5 w-full py-1 px-2 rounded bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-[10px] font-bold transition-all flex items-center justify-center gap-1">
-                              {copiedKey === "Account 1335674365" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                              <span>{copiedKey === "Account 1335674365" ? "Copied!" : "Copy Account"}</span>
-                            </button>
-                          </div>
-                        </div>
-                        <div className="text-[11px] text-white/70">
-                          Account Name: <strong className="text-white">Heavenly God Kingdom Churches</strong> (KCB Bank)
-                        </div>
-                        <div className="pt-2 border-t border-white/10">
-                          <label htmlFor="manual-ref" className="block text-xs font-bold text-white/80 mb-1">
-                            Already sent? Enter your M-Pesa transaction code:
-                          </label>
-                          <div className="flex gap-2">
-                            <input id="manual-ref" type="text" value={manualRefCode}
-                              onChange={(e) => setManualRefCode(e.target.value.toUpperCase())}
-                              placeholder="e.g. QKJ8921820"
-                              className="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white font-mono font-bold text-sm focus:outline-none focus:border-[#d4af37] placeholder:text-white/30" />
-                            <button type="button" onClick={handleManualVerification} disabled={submitting}
-                              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shrink-0 transition-all disabled:opacity-60">
-                              {submitting ? "Verifying..." : "Confirm & Receipt"}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    {/* Perks Section Heading */}
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-white/60 mb-3">
+                      Everything in this tier:
+                    </div>
 
-                    {paymentMethod === "paypal" && (
-                      <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 space-y-3">
-                        <div className="text-xs text-white/80">
-                          Total Charge: <strong className="text-[#fbf5b7]">${currentAmountUsd} USD</strong>
-                        </div>
-                        <button type="button" onClick={handlePayPal} disabled={submitting}
-                          className="w-full py-3.5 px-4 rounded-xl bg-[#0070ba] hover:bg-[#005ea6] text-white font-extrabold text-sm transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-60">
-                          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
-                          <span>Pay with PayPal (${currentAmountUsd} USD)</span>
-                        </button>
-                        <div id="paypal-button-mount" className="mt-2" />
+                    {/* Perks List */}
+                    <ul className="space-y-3">
+                      {plan.perks.map((perk, i) => (
+                        <li key={i} className="flex items-start gap-2.5 text-xs text-white/80 leading-snug">
+                          <Check className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
+                          <span>{perk}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Quick Proceed to Payment Link */}
+          <div className="text-center mt-8">
+            <button
+              type="button"
+              onClick={() => {
+                const checkoutEl = document.getElementById("checkout");
+                if (checkoutEl) checkoutEl.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-sm shadow-xl hover:brightness-110 transition-all"
+            >
+              <span>Proceed to Payment</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Custom Giving Option */}
+          <div className="mt-12 max-w-2xl mx-auto p-6 sm:p-8 rounded-3xl bg-white/[0.04] border border-white/10 text-center">
+            <h4 className="font-brand text-xl font-bold text-white mb-2">Desire to Sow a Custom Covenant Amount?</h4>
+            <p className="text-white/70 text-xs sm:text-sm mb-6">
+              Enter any amount you are led in your heart to support the global harvest.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="relative w-full max-w-xs">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-sm font-semibold">
+                  {currencyView}
+                </span>
+                <input
+                  type="number"
+                  min="100"
+                  value={isCustomAmount ? customAmountKes : ""}
+                  onChange={(e) => {
+                    setIsCustomAmount(true);
+                    setCustomAmountKes(Math.max(100, Number(e.target.value)));
+                  }}
+                  placeholder="e.g. 15,000"
+                  className="w-full pl-16 pr-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-sm focus:outline-none focus:border-[#d4af37]"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCustomAmount(true);
+                  const checkoutEl = document.getElementById("checkout");
+                  if (checkoutEl) checkoutEl.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                className={`px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all ${
+                  isCustomAmount
+                    ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md"
+                    : "bg-white/10 text-white hover:bg-white/15"
+                }`}
+              >
+                Set Custom Amount
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Ambassador Incentives & Privileges Deep Dive */}
+      <section className="py-16 px-4 sm:px-6 bg-gradient-to-b from-[#09182d] to-[#071324] border-t border-white/10">
+        <div className="container-main mx-auto max-w-7xl">
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#d4af37]/15 text-[#fbf5b7] border border-[#d4af37]/30 text-xs font-semibold mb-3">
+              <Award className="w-4 h-4 text-[#d4af37]" />
+              <span>Partner Recognition & Global Access</span>
+            </div>
+            <h3 className="font-brand text-3xl sm:text-5xl font-bold text-white mb-3">
+              Exclusive Kingdom Ambassador Incentives
+            </h3>
+            <p className="font-outfit text-white/75 text-base sm:text-lg">
+              We honor our covenant partners with practical ministerial support, travel opportunities, and verified credentials.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-14">
+            {ambassadorIncentives.map((incentive) => {
+              const Icon = incentive.icon;
+              return (
+                <div
+                  key={incentive.title}
+                  className="p-7 rounded-3xl bg-white/[0.04] border border-white/10 hover:border-[#d4af37]/30 transition-all flex flex-col sm:flex-row items-start gap-5"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#d4af37]/20 to-[#f97316]/20 border border-[#d4af37]/30 flex items-center justify-center text-[#fbf5b7] shrink-0">
+                    <Icon className="w-6 h-6 text-[#d4af37]" />
+                  </div>
+                  <div>
+                    <h4 className="font-brand text-xl font-bold text-white mb-2">{incentive.title}</h4>
+                    <p className="font-outfit text-white/70 text-sm leading-relaxed">{incentive.desc}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Interactive Digital Partner ID Card Mockup Preview */}
+          <div className="max-w-xl mx-auto p-7 rounded-3xl bg-gradient-to-br from-[#0c1b33] via-[#112440] to-[#1a1208] border-2 border-[#d4af37]/50 shadow-[0_0_40px_rgba(212,175,55,0.2)] text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-[radial-gradient(circle,rgba(212,175,55,0.15)_0%,transparent_70%)] pointer-events-none blur-2xl" />
+
+            <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
+              <img src={brandLogo} alt="" className="w-56 h-56 object-contain" />
+            </div>
+
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5 relative z-10">
+              <div className="flex items-center gap-3">
+                <img
+                  src={brandLogo}
+                  alt="Kingdom Missions Network"
+                  className="w-12 h-12 rounded-xl object-contain border border-[#d4af37]/40 p-1 bg-white/5 drop-shadow-[0_0_10px_rgba(212,175,55,0.4)]"
+                  width="48"
+                  height="48"
+                />
+                <div>
+                  <span className="font-brand text-base font-bold text-white tracking-wider block">
+                    KINGDOM MISSIONS NETWORK
+                  </span>
+                  <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#d4af37]">
+                    Official Global Partner Credential
+                  </span>
+                </div>
+              </div>
+              <ShieldCheck className="w-7 h-7 text-[#d4af37]" />
+            </div>
+
+            <div className="space-y-4 mb-5">
+              <div>
+                <span className="text-[10px] uppercase text-white/50 block font-semibold">Covenant Partner</span>
+                <span className="font-outfit text-lg font-bold text-white">
+                  {subscriberName || user?.name || "Dr. / Pastor / Partner"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Partnership Level</span>
+                  <span className="font-outfit text-sm font-bold text-[#fbf5b7]">
+                    {isCustomAmount ? "Custom Covenant Partner" : activePlan.name}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Deployment Status</span>
+                  <span className="font-outfit text-sm font-bold text-emerald-400 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Verified Active
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-white/50">
+              <span>Spiritual Oversight: Bishop Dr. George Githinji</span>
+              <span className="font-mono">ID: KMN-{Date.now().toString().slice(-6)}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Checkout Section */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 bg-[#071324] border-t border-white/10" id="checkout">
+        <div className="container-main mx-auto max-w-3xl">
+          <div className="p-7 sm:p-10 rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/15 shadow-2xl">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-semibold mb-3">
+                <Check className="w-3.5 h-3.5" />
+                <span>Selected: {isCustomAmount ? "Custom Covenant" : activePlan.name}</span>
+              </div>
+              <h3 className="font-brand text-2xl sm:text-4xl font-bold text-white mb-2">
+                Activate Your Monthly Partnership
+              </h3>
+              <p className="text-white/70 text-xs sm:text-sm">
+                Total Seed:{" "}
+                <span className="text-white font-bold">
+                  {currencyView === "KES" ? `KES ${Math.round(activeAmountKes).toLocaleString()}` : `$${activeAmountUsd.toFixed(2)} USD`}
+                </span>{" "}
+                per {billingCycle === "yearly" ? "year" : "month"}
+              </p>
+            </div>
+
+            {/* Payment Method Selector */}
+            <div className="flex justify-center mb-6">
+              <div className="inline-flex p-1.5 rounded-2xl bg-white/[0.08] border border-white/15 w-full max-w-md shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => setSubMethod("mpesa")}
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    subMethod === "mpesa"
+                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-extrabold"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  <Smartphone className="w-4 h-4" />
+                  <span>M-Pesa</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 text-[10px] font-bold">
+                    Active
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubMethod("card")}
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    subMethod === "card"
+                      ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-extrabold"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>Card</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubMethod("paypal")}
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    subMethod === "paypal"
+                      ? "bg-[#0070ba] text-white shadow-md font-extrabold"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  <span>PayPal</span>
+                </button>
+              </div>
+            </div>
+
+            {/* METHOD 1: M-PESA */}
+            {subMethod === "mpesa" && (
+              <div className="space-y-6">
+                {/* Official Paybill Details Tile */}
+                <div className="p-6 rounded-2xl bg-white/[0.06] border border-[#d4af37]/40 shadow-inner">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-[#d4af37]" />
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-[#d4af37]">
+                        Heavenly God Kingdom Churches · KCB Bank
+                      </span>
+                    </div>
+                    <span className="text-xs text-white/60">
+                      Amount: <strong className="text-[#fbf5b7]">KES {Math.round(activeAmountKes).toLocaleString()}</strong>
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-white/60 uppercase font-semibold block">M-Pesa Paybill No</span>
+                        <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">522522</span>
                       </div>
-                    )}
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard("522522", "Paybill 522522")}
+                        className="py-1 px-2.5 rounded-lg bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-[11px] font-bold transition-all flex items-center gap-1"
+                      >
+                        {copiedKey === "Paybill 522522" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>Copy</span>
+                      </button>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-white/60 uppercase font-semibold block">Account Number</span>
+                        <span className="font-mono text-xl font-extrabold text-[#fbf5b7]">1335674365</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard("1335674365", "Account 1335674365")}
+                        className="py-1 px-2.5 rounded-lg bg-white/10 hover:bg-[#d4af37] hover:text-[#0c1b33] text-[11px] font-bold transition-all flex items-center gap-1"
+                      >
+                        {copiedKey === "Account 1335674365" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>Copy</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* ── RIGHT: sticky order summary w/ in-place billing toggle ── */}
-                <aside className="lg:sticky lg:top-[110px] p-5 rounded-2xl bg-white/[0.04] border border-[#d4af37]/30 space-y-4 shadow-xl">
-                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                    <span className="text-xs uppercase font-bold tracking-wider text-[#d4af37]">Order summary</span>
-                    <button type="button" onClick={handleBackToPlans}
-                      className="text-[11px] text-[#fbf5b7] underline hover:text-white">Edit</button>
+                {/* M-Pesa Mode Toggle */}
+                <div className="flex items-center justify-center">
+                  <div className="inline-flex p-1 rounded-2xl bg-white/[0.08] border border-white/15 w-full">
+                    <button
+                      type="button"
+                      onClick={() => { setMpesaMode("stk"); setStkPending(false); setStkPromptSent(false); setStkStatusMessage(""); }}
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        mpesaMode === "stk"
+                          ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      <Smartphone className="w-3.5 h-3.5" />
+                      <span>Express Auto-Prompt</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/20 font-extrabold">✨ NEW</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMpesaMode("manual"); setStkPending(false); }}
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        mpesaMode === "manual"
+                          ? "bg-white/20 text-white shadow-md"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Enter Receipt Code</span>
+                    </button>
                   </div>
+                </div>
 
-                  {givingType === "onetime" ? (
+                {/* STK Push Mode */}
+                {mpesaMode === "stk" && (
+                  <form onSubmit={handleMpesaStkPush} className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-300 leading-relaxed flex items-start gap-3">
+                      <Zap className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
+                      <span>
+                        <strong className="text-emerald-200 block mb-0.5">Zero code entry — fully automatic</strong>
+                        Enter your Safaricom number and tap the button. Your phone will instantly receive an M-Pesa PIN prompt. Just enter your PIN and your partner dashboard unlocks automatically.
+                      </span>
+                    </div>
+
+                    <div>
+                      <label htmlFor="partnerNameStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        Full Name / Ministry Name *
+                      </label>
+                      <input
+                        id="partnerNameStk"
+                        type="text"
+                        value={subscriberName}
+                        onChange={(e) => setSubscriberName(e.target.value)}
+                        placeholder="Enter your full name"
+                        required
+                        disabled={stkPending}
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37] disabled:opacity-50"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="partnerEmailStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        Email Address (For receipt &amp; Partner ID) *
+                      </label>
+                      <input
+                        id="partnerEmailStk"
+                        type="email"
+                        value={subscriberEmail}
+                        onChange={(e) => setSubscriberEmail(e.target.value)}
+                        placeholder="your.email@example.com"
+                        required
+                        disabled={stkPending}
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37] disabled:opacity-50"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="mpesaPhoneStk" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        Safaricom M-Pesa Phone Number *
+                      </label>
+                      <div className="flex items-stretch gap-2">
+                        <span className="flex items-center gap-1 px-3 rounded-2xl bg-white/10 border border-white/15 text-white/60 text-sm font-mono shrink-0">
+                          🇰🇪 +254
+                        </span>
+                        <input
+                          id="mpesaPhoneStk"
+                          type="tel"
+                          value={mpesaPhone}
+                          onChange={(e) => setMpesaPhone(e.target.value)}
+                          placeholder="7XX XXX XXX"
+                          required
+                          disabled={stkPending}
+                          className="flex-1 px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono font-bold tracking-wider placeholder:text-white/40 focus:outline-none focus:border-emerald-400 disabled:opacity-50"
+                        />
+                      </div>
+                      <span className="text-[10px] text-white/50 mt-1 block">
+                        e.g. 0722000000 or 254722000000 — must be a Safaricom M-Pesa line
+                      </span>
+                    </div>
+
+                    {stkPending && (
+                      <div className="p-4 rounded-2xl bg-amber-900/30 border border-amber-500/40 flex items-center gap-3 animate-pulse">
+                        <Loader2 className="w-5 h-5 text-amber-400 animate-spin shrink-0" />
+                        <div>
+                          <p className="text-sm font-bold text-amber-300">
+                            {stkPromptSent ? "Check your phone — enter your M-Pesa PIN" : "Contacting Safaricom…"}
+                          </p>
+                          <p className="text-xs text-amber-300/70 mt-0.5">{stkStatusMessage}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {!stkPending && (
+                      <button
+                        id="btn-stk-push"
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-green-400 to-emerald-600 text-white font-extrabold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                      >
+                        {submitting ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span>Sending PIN Prompt to Your Phone…</span>
+                          </>
+                        ) : (
+                          <>
+                            <Smartphone className="w-5 h-5" />
+                            <span>Send M-Pesa Prompt to My Phone — KES {Math.round(activeAmountKes).toLocaleString()}</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    <p className="text-center text-[11px] text-white/40">
+                      Secured by Safaricom STK Push · Paybill 522522 · KCB Bank
+                    </p>
+                  </form>
+                )}
+
+                {/* Manual Code Mode */}
+                {mpesaMode === "manual" && (
+                  <form onSubmit={handleMpesaSubscription} className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/25 text-xs text-blue-300 leading-relaxed">
+                      First send <strong>KES {Math.round(activeAmountKes).toLocaleString()}</strong> to Paybill <strong>522522</strong>, Account <strong>1335674365</strong>, then paste the M-Pesa transaction code from your SMS below.
+                    </div>
+
+                    <div>
+                      <label htmlFor="partnerNameMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        Full Name / Ministry Name *
+                      </label>
+                      <input
+                        id="partnerNameMpesa"
+                        type="text"
+                        value={subscriberName}
+                        onChange={(e) => setSubscriberName(e.target.value)}
+                        placeholder="Enter your full name"
+                        required
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="partnerEmailMpesa" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        Email Address (For receipt &amp; Partner ID Card) *
+                      </label>
+                      <input
+                        id="partnerEmailMpesa"
+                        type="email"
+                        value={subscriberEmail}
+                        onChange={(e) => setSubscriberEmail(e.target.value)}
+                        placeholder="your.email@example.com"
+                        required
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="mpesaRefInput" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                        M-Pesa Transaction Code *
+                      </label>
+                      <input
+                        id="mpesaRefInput"
+                        type="text"
+                        value={mpesaRefCode}
+                        onChange={(e) => setMpesaRefCode(e.target.value.toUpperCase())}
+                        placeholder="e.g. SI84XYZ123"
+                        required
+                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono font-bold tracking-wider placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                      />
+                      <span className="text-[10px] text-white/50 mt-1 block">
+                        10-character code in the M-Pesa confirmation SMS (e.g. TK78AB12CD)
+                      </span>
+                    </div>
+
+                    <button
+                      id="btn-mpesa-verify"
+                      type="submit"
+                      disabled={submitting}
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Verifying M-Pesa Payment…</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-5 h-5" />
+                          <span>Verify &amp; Activate Partner Dashboard</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {/* METHOD 2: CARD (PAYSTACK) */}
+            {subMethod === "card" && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handlePaystack();
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label htmlFor="cardSubscriberName" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                    Full Name *
+                  </label>
+                  <input
+                    id="cardSubscriberName"
+                    type="text"
+                    value={subscriberName}
+                    onChange={(e) => setSubscriberName(e.target.value)}
+                    placeholder="Enter your full name"
+                    required
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="cardSubscriberEmail" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                    Email Address *
+                  </label>
+                  <input
+                    id="cardSubscriberEmail"
+                    type="email"
+                    value={subscriberEmail}
+                    onChange={(e) => setSubscriberEmail(e.target.value)}
+                    placeholder="your.email@example.com"
+                    required
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder:text-white/40 focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {submitting ? (
                     <>
-                      <div>
-                        <div className="text-sm font-bold text-white mb-1">{selectedPurpose}</div>
-                        <div className="text-xs text-white/60 mb-2">One-Time Kingdom Seed</div>
-                        <div className="font-brand text-3xl font-extrabold text-[#fbf5b7]">KES {currentAmountKes.toLocaleString()}</div>
-                        <div className="text-xs text-white/50">~${currentAmountUsd} USD · one-time charge</div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] text-white/70 leading-relaxed">
-                        Your offering directly supports crusade sound gears, Bibles, and missionary bread rations.
-                      </div>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Initializing Secure Checkout...</span>
                     </>
                   ) : (
                     <>
-                      {/* In-place billing cycle toggle (no page scroll, updates total live) */}
-                      <div className="grid grid-cols-2 p-1 rounded-xl bg-black/30 border border-white/10 text-xs font-extrabold">
-                        <button type="button" onClick={() => handleGivingTypeChange("monthly")}
-                          aria-pressed={givingType === "monthly"}
-                          className={`py-2 rounded-lg transition-all ${givingType === "monthly" ? "bg-[#d4af37] text-[#0c1b33]" : "text-white/60 hover:text-white"}`}>
-                          Monthly
-                        </button>
-                        <button type="button" onClick={() => handleGivingTypeChange("yearly")}
-                          aria-pressed={givingType === "yearly"}
-                          className={`py-2 rounded-lg transition-all ${givingType === "yearly" ? "bg-[#d4af37] text-[#0c1b33]" : "text-white/60 hover:text-white"}`}>
-                          Annual −15%
-                        </button>
-                      </div>
-
-                      <div>
-                        <label htmlFor="plan-switcher" className="block text-[10px] uppercase font-bold text-white/50 mb-1">Plan</label>
-                        <select id="plan-switcher" value={selectedPlanId}
-                          onChange={(e) => handleSelectPlan(e.target.value)}
-                          className="w-full px-3 py-2.5 rounded-xl bg-black/40 border border-white/15 text-white text-sm font-bold focus:outline-none focus:border-[#d4af37]">
-                          {PARTNER_PLANS.map((p) => (
-                            <option key={p.id} value={p.id} className="text-black">
-                              {p.name} — KES {(givingType === "yearly" ? yearlyPrice(p.kesMonthly) : p.kesMonthly).toLocaleString()}
-                              {givingType === "yearly" ? "/yr" : "/mo"}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <div className="text-sm font-bold text-white mb-1">{activePlan.badge}</div>
-                        <div className="text-xs text-white/60 mb-2">
-                          {givingType === "yearly" ? "Annual Covenant Partnership" : "Monthly Covenant Partnership"} · renews {nextChargeDate}
-                        </div>
-                        <div className="font-brand text-3xl font-extrabold text-[#fbf5b7]">KES {currentAmountKes.toLocaleString()}</div>
-                        <div className="text-xs text-white/50">
-                          ~${currentAmountUsd} USD{givingType === "yearly" ? ` · KES ${activePlan.kesMonthly.toLocaleString()}/mo billed annually` : " · billed monthly"}
-                        </div>
-                      </div>
-
-                      <dl className="text-[11px] space-y-1.5 pt-3 border-t border-white/10">
-                        <div className="flex justify-between text-white/70">
-                          <dt>{activePlan.name} × 1 {givingType === "yearly" ? "year" : "month"}</dt>
-                          <dd className="font-bold text-white">KES {currentAmountKes.toLocaleString()}</dd>
-                        </div>
-                        {givingType === "yearly" && (
-                          <div className="flex justify-between text-emerald-300">
-                            <dt>Annual savings (15%)</dt>
-                            <dd className="font-bold">−KES {(activePlan.kesMonthly * 12 - yearlyPrice(activePlan.kesMonthly)).toLocaleString()}</dd>
-                          </div>
-                        )}
-                        <div className="flex justify-between text-white/70">
-                          <dt>Fees & taxes</dt>
-                          <dd className="font-bold text-white">KES 0</dd>
-                        </div>
-                        <div className="flex justify-between pt-1.5 border-t border-white/10 text-sm">
-                          <dt className="font-extrabold text-white">Total due today</dt>
-                          <dd className="font-extrabold text-[#fbf5b7]">KES {currentAmountKes.toLocaleString()}</dd>
-                        </div>
-                      </dl>
-
-                      <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] text-white/70 leading-relaxed">
-                        {activePlan.impactHighlight}
-                      </div>
+                      <CreditCard className="w-5 h-5" />
+                      <span>
+                        Subscribe via Card ({currencyView === "KES" ? `KES ${Math.round(activeAmountKes).toLocaleString()}` : `$${activeAmountUsd} USD`})
+                      </span>
                     </>
                   )}
-
-                  <div className="space-y-2 pt-2 text-[11px] text-white/60">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span>256-Bit SSL Encrypted & Bank Compliant</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Lock className="w-3.5 h-3.5 text-[#d4af37] shrink-0" />
-                      <span>Safaricom M-Pesa & Central Bank Verified</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                      <span>Instant Digital Tax Receipt Issued</span>
-                    </div>
-                  </div>
-                </aside>
-              </div>
-            </div>
-          )}
-
-          {/* ═══════════════════════════════════════════════════════════
-              STEP 3: SUCCESS & AUTO-UNLOCK
-              ═══════════════════════════════════════════════════════════ */}
-          {currentStep === "success" && receipt && (
-            <div className="bg-[#0c1b33]/90 backdrop-blur-xl border border-emerald-500/40 rounded-3xl p-6 sm:p-10 shadow-2xl animate-in zoom-in-95 duration-300">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center mx-auto text-emerald-400 mb-3 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <h2 className="font-brand text-2xl sm:text-4xl font-extrabold text-white mb-2">
-                  Seed Successfully Received!
-                </h2>
-                <p className="text-white/70 text-xs sm:text-sm max-w-md mx-auto">
-                  May God replenish your storehouse abundantly according to Luke 6:38. An official receipt has been issued below.
-                </p>
-              </div>
-
-              {/* Auto-unlock banner for covenant partners */}
-              {givingType !== "onetime" && (
-                <div className="max-w-lg mx-auto mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-400/40 text-center" role="status" aria-live="polite">
-                  <div className="flex items-center justify-center gap-2 text-sm font-extrabold text-emerald-300 mb-1">
-                    <Crown className="w-4 h-4" />
-                    <span>Partner Hub unlocked — redirecting in {redirectCountdown}s</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-3">
-                    <div className="h-full bg-emerald-400 transition-all duration-1000" style={{ width: `${(redirectCountdown / 8) * 100}%` }} />
-                  </div>
-                  <button type="button" onClick={() => navigate("/subscriber-dashboard")}
-                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm hover:scale-105 transition-all inline-flex items-center gap-1.5 shadow-lg">
-                    <Crown className="w-4 h-4" />
-                    <span>Access Covenant Partner Hub →</span>
-                  </button>
-                </div>
-              )}
-
-              <div className="p-6 rounded-2xl bg-white/[0.05] border border-white/15 max-w-lg mx-auto mb-8 space-y-4 text-xs sm:text-sm">
-                <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                  <div className="flex items-center gap-2">
-                    <img src={brandLogo} alt="" className="w-6 h-6 object-contain" />
-                    <span className="font-bold text-white tracking-wide">KINGDOM MISSIONS NETWORK</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">Official Receipt</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <span className="text-[10px] text-white/50 uppercase font-semibold block">Receipt Ref</span>
-                    <span className="font-mono font-bold text-white">{receipt.reference}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-white/50 uppercase font-semibold block">Date & Time</span>
-                    <span className="text-white">{receipt.date}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-white/50 uppercase font-semibold block">Donor Name</span>
-                    <span className="font-bold text-white">{receipt.donorName}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-white/50 uppercase font-semibold block">Email</span>
-                    <span className="text-white truncate">{receipt.donorEmail}</span>
-                  </div>
-                  <div className="col-span-2 pt-2 border-t border-white/5 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] text-white/50 uppercase font-semibold block">Designation</span>
-                      <span className="font-bold text-[#fbf5b7]">{receipt.purpose}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[10px] text-white/50 uppercase font-semibold block">Total Gift</span>
-                      <span className="font-brand text-lg font-bold text-emerald-300">KES {receipt.amountKes.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="pt-3 border-t border-white/10 text-[10px] text-white/50 flex items-center justify-between">
-                  <span>Method: {receipt.paymentMethod}</span>
-                  <span>Bishop Dr. George Githinji</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button type="button" onClick={() => window.print()}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print Receipt</span>
                 </button>
-                {givingType !== "onetime" ? (
-                  <button type="button" onClick={() => navigate("/subscriber-dashboard")}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm hover:scale-105 transition-all flex items-center justify-center gap-1.5 shadow-lg">
-                    <Crown className="w-4 h-4" />
-                    <span>Access Covenant Partner Hub →</span>
-                  </button>
-                ) : (
-                  <Link to="/"
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm hover:scale-105 transition-all flex items-center justify-center gap-1.5 shadow-lg">
-                    <span>Return to Home</span>
-                  </Link>
-                )}
-                <button type="button"
-                  onClick={() => {
-                    setReceipt(null);
-                    setCurrentStep("plans");
-                    setSearchParams({ step: "plans", type: givingType, plan: selectedPlanId }, { replace: false });
-                  }}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/10 text-white/80 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Give Another Gift</span>
+              </form>
+            )}
+
+            {/* METHOD 3: PAYPAL */}
+            {subMethod === "paypal" && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-400/20 text-xs text-blue-200">
+                  International covenant partners can subscribe securely in USD (${activeAmountUsd.toFixed(2)}/month) via PayPal.
+                </div>
+                <button
+                  type="button"
+                  onClick={handlePayPal}
+                  disabled={submitting}
+                  className="w-full py-3.5 rounded-2xl bg-[#0070ba] hover:bg-[#005ea6] text-white font-bold text-xs sm:text-sm tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                  <span>Launch PayPal Checkout (${activeAmountUsd.toFixed(2)} USD)</span>
                 </button>
+                <div id="paypal-subscription-container" className="pt-2" />
               </div>
+            )}
+
+            <div className="flex items-center justify-center gap-6 pt-6 text-xs text-white/50 border-t border-white/10 mt-6">
+              <span className="flex items-center gap-1">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                256-Bit SSL Encryption
+              </span>
+              <span className="flex items-center gap-1">
+                <Heart className="w-4 h-4 text-[#d4af37]" />
+                Cancel Anytime
+              </span>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* FAQs */}
+      <section className="py-16 px-4 sm:px-6 bg-[#09182d] border-t border-white/10">
+        <div className="container-main mx-auto max-w-4xl">
+          <div className="text-center mb-10">
+            <h3 className="font-brand text-2xl sm:text-4xl font-bold text-white mb-2">
+              Frequently Asked Questions
+            </h3>
+            <p className="text-white/70 text-xs sm:text-sm">Everything you need to know about partnering with KMN.</p>
+          </div>
+
+          <div className="space-y-4">
+            {faqs.map((faq, index) => (
+              <div
+                key={index}
+                className="rounded-2xl bg-white/[0.04] border border-white/10 overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => setActiveFaq(activeFaq === index ? null : index)}
+                  className="w-full p-6 text-left font-bold text-sm sm:text-base text-white flex items-center justify-between gap-4"
+                >
+                  <span>{faq.q}</span>
+                  <HelpCircle className="w-4 h-4 text-[#d4af37] shrink-0" />
+                </button>
+                {activeFaq === index && (
+                  <div className="px-6 pb-6 text-xs sm:text-sm text-white/75 leading-relaxed border-t border-white/10 pt-4">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Verified Partner ID Card Modal */}
+      {showIdCardModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#0c1b33] via-[#112440] to-[#1a1208] border-2 border-[#d4af37] shadow-[0_0_50px_rgba(212,175,55,0.3)] text-white">
+            <button
+              type="button"
+              onClick={() => setShowIdCardModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center mb-6">
+              <img
+                src={brandLogo}
+                alt="Kingdom Missions Network"
+                className="w-16 h-16 rounded-2xl mx-auto mb-3 object-contain border-2 border-[#d4af37] p-1.5 bg-[#0c1b33] drop-shadow-[0_0_16px_rgba(212,175,55,0.5)]"
+                width="64"
+                height="64"
+              />
+              <h3 className="font-brand text-2xl font-bold text-white">Official Partner Credential</h3>
+              <p className="text-xs text-emerald-400 font-semibold mt-1">
+                {isSubscribed ? "✓ Covenant Partnership Activated" : "Official Verification Ready"}
+              </p>
+            </div>
+
+            {/* Credential Card Display */}
+            <div className="p-6 rounded-2xl bg-white/[0.05] border border-white/15 space-y-4 mb-6 relative overflow-hidden">
+              <div className="absolute -right-6 -bottom-6 opacity-10 pointer-events-none">
+                <img src={brandLogo} alt="" className="w-36 h-36 object-contain" />
+              </div>
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 relative z-10">
+                <div className="flex items-center gap-2.5">
+                  <img src={brandLogo} alt="" className="w-6 h-6 object-contain" width="24" height="24" />
+                  <span className="font-brand text-sm font-bold text-white">KINGDOM MISSIONS NETWORK</span>
+                </div>
+                <span className="text-[10px] font-bold text-[#d4af37] tracking-wider uppercase">{activePlan.badge}</span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase text-white/50 block font-semibold">Partner Name</span>
+                <span className="font-outfit text-base font-bold text-white">{subscriberName || user?.name || "Partner"}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Deployment Level</span>
+                  <span className="font-bold text-[#fbf5b7]">{isCustomAmount ? "Custom Partner" : activePlan.name}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Oversight</span>
+                  <span className="font-bold text-white/90">Bishop Dr. George Githinji</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.print();
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Print / Save Credential</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowIdCardModal(false)}
+                  className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+              <Link
+                to="/partner-portal"
+                className="block text-center text-xs text-[#d4af37] hover:underline font-semibold"
+              >
+                Go to Partner Covenant Dashboard →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Transition Modal */}
+      {onboardingStage !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="w-full max-w-md p-8 rounded-3xl bg-[#0c1b33] border border-[#d4af37]/50 text-center text-white shadow-2xl">
+            <Loader2 className="w-12 h-12 text-[#d4af37] animate-spin mx-auto mb-4" />
+            <h4 className="font-brand text-2xl font-bold mb-2">Activating Your Covenant Partnership</h4>
+            <p className="text-white/70 text-xs sm:text-sm mb-6">
+              {onboardingStage === 1 && "Verifying contribution transaction..."}
+              {onboardingStage === 2 && "Registering membership on the global covenant ledger..."}
+              {onboardingStage === 3 && "Generating your official digital Partner ID Card..."}
+              {onboardingStage === 4 && "Provisioning your partner covenant dashboard..."}
+            </p>
+            <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-[#d4af37] to-emerald-400 h-2 transition-all duration-500"
+                style={{ width: `${(onboardingStage / 4) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
