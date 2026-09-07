@@ -61,14 +61,18 @@ CREATE TABLE IF NOT EXISTS public.events (
     title TEXT NOT NULL,
     date TEXT NOT NULL,
     end_date TEXT,
+    date_range TEXT,
     day TEXT NOT NULL,
     month TEXT NOT NULL,
     time TEXT NOT NULL,
-    timezone TEXT DEFAULT 'EST',
+    timezone TEXT DEFAULT 'EAT',
     location TEXT NOT NULL,
+    country TEXT,
     is_online BOOLEAN DEFAULT false,
     image TEXT DEFAULT '/images/event-worship-night.jpg',
     description TEXT NOT NULL,
+    badge TEXT,
+    partnership_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
@@ -202,10 +206,11 @@ INSERT INTO public.sermons (title, speaker, ministry, duration, category, thumbn
 ('Healing is the Children''s Bread', 'Evangelist Mark Peters', 'Healing Rooms International', '1 hr 5 min', 'Healing', '/images/sermon-thumb-3.jpg', 'June 4, 2026')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO public.events (title, date, end_date, day, month, time, timezone, location, is_online, image, description) VALUES
-('Zimbabwe Kingdom Missions Conference', '2026-10-06', '2026-10-10', '06', 'OCT', '9:00 AM - 7:00 PM', 'CAT', 'Harare, Zimbabwe', false, '/images/zimbabwe-conference.jpg', 'October 6-10, 2026. An apostolic gathering of leaders, ministers, and believers across nations uniting in prayer, revival fire, and kingdom impact in Zimbabwe. Register to participate or partner with this transformative mission.'),
-('Pakistan Kingdom Gospel Mission', '2026-12-01', '2026-12-06', '01', 'DEC', '5:00 PM - 9:00 PM', 'PKT', 'Lahore, Pakistan', false, '/images/pakistan-mission.jpg', 'December 1-6, 2026. An extraordinary week of evangelistic mass crusades, pastors empowerment seminars, and salvation outreach reaching unreached souls in Pakistan. Support this groundbreaking mission through Kingdom Partnership.'),
-('New Dawn Conference', '2027-03-12', '2027-03-16', '12', 'MAR', '8:30 AM - 6:30 PM', 'EAT', 'HKM Ministries, Jomvu, Mombasa', false, '/images/new-dawn-conference-2027-v2.jpg', 'March 12-16, 2027. New Dawn - A Fresh Wind, A New Fire (Acts 2:2-4). A prophetic gathering with Rev. Susan Sarah (Host), Dr. Bishop George Githinji (Nairobi) and Dr. Apostle Cookhorn (USA). Enquiries: +254 726-912577 / +254 724 672208.')
+INSERT INTO public.events (title, date, end_date, day, month, time, timezone, location, country, is_online, image, description, badge) VALUES
+('Nairobi Leaders Summit 2026', '2026-10-20', '2026-10-23', '20', 'OCT', '9:00 AM – 6:00 PM', 'EAT', 'Nairobi, Kenya', 'Kenya', false, '/images/nairobi-leaders-summit-2026.png', 'October 20–23, 2026. A landmark apostolic leaders'' summit gathering senior pastors, bishops, apostles, and ministry leaders across East Africa for strategic kingdom alignment, prophetic impartation, and revival fire. Join us as we unite in one accord for a fresh outpouring of the Holy Spirit across the nations.', 'SUMMIT'),
+('Zimbabwe Kingdom Missions Conference', '2026-10-06', '2026-10-10', '06', 'OCT', '9:00 AM - 7:00 PM', 'CAT', 'Harare, Zimbabwe', 'Zimbabwe', false, '/images/zimbabwe-conference.jpg', 'October 6-10, 2026. An apostolic gathering of leaders, ministers, and believers across nations uniting in prayer, revival fire, and kingdom impact in Zimbabwe. Register to participate or partner with this transformative mission.', NULL),
+('Pakistan Kingdom Gospel Mission', '2026-12-01', '2026-12-06', '01', 'DEC', '5:00 PM - 9:00 PM', 'PKT', 'Lahore, Pakistan', 'Pakistan', false, '/images/pakistan-mission.jpg', 'December 1-6, 2026. An extraordinary week of evangelistic mass crusades, pastors empowerment seminars, and salvation outreach reaching unreached souls in Pakistan. Support this groundbreaking mission through Kingdom Partnership.', NULL),
+('New Dawn Conference', '2027-03-12', '2027-03-16', '12', 'MAR', '8:30 AM - 6:30 PM', 'EAT', 'HKM Ministries, Jomvu, Mombasa', 'Kenya', false, '/images/new-dawn-conference-2027-v2.jpg', 'March 12-16, 2027. New Dawn - A Fresh Wind, A New Fire (Acts 2:2-4). A prophetic gathering with Rev. Susan Sarah (Host), Dr. Bishop George Githinji (Nairobi) and Dr. Apostle Cookhorn (USA). Enquiries: +254 726-912577 / +254 724 672208.', NULL)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.prayers (name, anonymous, category, text, prayers, comments, status) VALUES
