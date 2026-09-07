@@ -2,14 +2,15 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import SubscriptionPortal from "../pages/SubscriptionPortal";
 import { HelmetProvider } from "react-helmet-async";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../lib/api", () => ({
   api: {
     subscriptions: {
       getPricing: vi.fn().mockResolvedValue({
-        planName: "Kingdom Partner",
-        kesAmount: 1000,
-        usdAmount: 7.72,
+        planName: "Kingdom Ambassador",
+        kesAmount: 3000,
+        usdAmount: 23.16,
         exchangeRate: 0.00772,
         interval: "monthly",
         provider: "exchangerate-api",
@@ -21,10 +22,8 @@ vi.mock("../lib/api", () => ({
 }));
 
 vi.mock("../lib/auth", () => ({
-  useAuth: () => ({ user: null }),
+  useAuth: () => ({ user: null, setSession: vi.fn() }),
 }));
-
-import { MemoryRouter } from "react-router-dom";
 
 describe("SubscriptionPortal", () => {
   it("renders partnership packages and partner heading", async () => {
@@ -35,12 +34,12 @@ describe("SubscriptionPortal", () => {
         </MemoryRouter>
       </HelmetProvider>
     );
-    const headings = await screen.findAllByText(/Kingdom Ambassador|Seed Partner|Global Harvest Partner/i);
+    const headings = await screen.findAllByText(/Kingdom Ambassador|Seed Partner|Global Harvest/i);
     expect(headings.length).toBeGreaterThan(0);
-    expect(await screen.findByText(/Kingdom Partner/i)).toBeDefined();
+    expect(await screen.findByText(/Covenant Partnership/i)).toBeDefined();
   });
 
-  it("renders live currency exchange calculation and perks", async () => {
+  it("renders currency exchange calculation and payment actions", async () => {
     render(
       <HelmetProvider>
         <MemoryRouter>
@@ -48,7 +47,8 @@ describe("SubscriptionPortal", () => {
         </MemoryRouter>
       </HelmetProvider>
     );
-    const badges = await screen.findAllByText(/Live Rate/i);
-    expect(badges.length).toBeGreaterThan(0);
+    const amounts = await screen.findAllByText(/KES/i);
+    expect(amounts.length).toBeGreaterThan(0);
+    expect(await screen.findByText(/Proceed to Payment/i)).toBeDefined();
   });
 });

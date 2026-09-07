@@ -73,6 +73,7 @@ export default function App() {
                   <Route path="/events/past" element={<PastEvents />} />
                   <Route path="/events" element={<Events />} />
                   <Route path="/donations" element={<DonationHistory />} />
+                  <Route path="/give" element={<SubscriptionPortal />} />
                   <Route path="/subscribe" element={<SubscriptionPortal />} />
                   <Route path="/subscriber-dashboard" element={<SubscriberDashboard />} />
                   <Route path="/partner-portal" element={<SubscriberDashboard />} />

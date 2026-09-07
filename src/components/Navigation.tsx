@@ -11,6 +11,7 @@ const navLinks = [
   { label: "Prayer Wall", path: "/prayer-wall", icon: Heart },
   { label: "Sermons", path: "/sermons", icon: Headphones },
   { label: "Events", path: "/events", icon: Calendar },
+  { label: "Give", path: "/give", icon: Gift },
   { label: "Partner", path: "/subscribe", icon: Crown },
 ];
 
@@ -44,8 +45,7 @@ export default function Navigation() {
   }, [location.pathname]);
 
   const isActive = (path: string) => {
-    if (path === "/#give") return location.pathname === "/" && location.hash === "#give";
-    return location.pathname.startsWith(path);
+    return location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
   };
 
   return (
@@ -106,18 +106,7 @@ export default function Navigation() {
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Standout Gold Give CTA Button */}
             <Link
-              to="/#give"
-              onClick={(e) => {
-                e.preventDefault();
-                if (location.pathname !== "/") {
-                  window.location.hash = "#/";
-                  setTimeout(() => {
-                    document.getElementById("give")?.scrollIntoView({ behavior: "smooth" });
-                  }, 300);
-                } else {
-                  document.getElementById("give")?.scrollIntoView({ behavior: "smooth" });
-                }
-              }}
+              to="/give"
               className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm tracking-wide shadow-md hover:shadow-[0_0_15px_rgba(212,175,55,0.4)] hover:scale-105 transition-all whitespace-nowrap"
             >
               <Gift className="w-4 h-4 text-[#0c1b33]" />
@@ -285,18 +274,7 @@ export default function Navigation() {
                     >
                       <Link
                         to={link.path}
-                        onClick={(e) => {
-                          setMobileOpen(false);
-                          if (link.path === "/#give") {
-                            e.preventDefault();
-                            if (location.pathname !== "/") {
-                              window.location.hash = "#/";
-                            }
-                            setTimeout(() => {
-                              document.getElementById("give")?.scrollIntoView({ behavior: "smooth" });
-                            }, 500);
-                          }
-                        }}
+                        onClick={() => setMobileOpen(false)}
                         className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
                           isActive(link.path)
                             ? "bg-[#d4af37]/10 text-[#d4af37]"

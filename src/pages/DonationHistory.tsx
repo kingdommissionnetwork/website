@@ -106,7 +106,7 @@ export default function DonationHistory() {
             <DollarSign className="w-12 h-12 text-[#6b7c93]/30 mx-auto mb-3" />
             <p className="text-[#6b7c93]">No donations found</p>
             <p className="text-sm text-[#6b7c93]/70 mt-1">Donations made with {email} will appear here.</p>
-            <Link to="/#give" className="mt-4 inline-block text-[#d4af37] font-medium text-sm hover:underline">
+            <Link to="/give" className="mt-4 inline-block text-[#d4af37] font-medium text-sm hover:underline">
               Make a donation
             </Link>
           </div>
