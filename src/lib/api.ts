@@ -232,7 +232,7 @@ export const api = {
       recurring?: boolean;
       notes?: string;
     }) => {
-      return request<{ status: string; message?: string; donation?: Record<string, unknown> }>("/payments/report-offline", {
+      return request<{ status: string; claimStatus?: string; message?: string; donation?: Record<string, unknown> }>("/payments/report-offline", {
         method: "POST",
         body: JSON.stringify(data),
       });
@@ -286,6 +286,8 @@ export const api = {
       return request<{
         status: string;
         message?: string;
+        code?: string;
+        claimId?: number | null;
         reference: string;
         planName: string;
         amount: number;
@@ -298,6 +300,14 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       });
+    },
+    getClaimStatus: async (reference: string, email?: string) => {
+      const qs = email ? `?email=${encodeURIComponent(email)}` : "";
+      return request<{
+        status: string;
+        claim?: Record<string, unknown>;
+        subscription?: Record<string, unknown> | null;
+      }>(`/subscriptions/mpesa/claim/${encodeURIComponent(reference)}${qs}`);
     },
     initiateMpesaStk: async (data: {
       phoneNumber: string;

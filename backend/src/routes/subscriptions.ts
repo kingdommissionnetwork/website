@@ -6,7 +6,21 @@ import { computeKesToUsd } from "../lib/exchangeRate";
 import { sendDonationEmail, sendPartnerWelcomeEmail, sendClaimOtpEmail, sendDunningReminderEmail } from "../lib/email";
 import { signToken } from "../lib/jwt";
 import { setCookie } from "hono/cookie";
+import { requireAdmin } from "../lib/jwt";
 import { rateLimit, strictRateLimit } from "../lib/rateLimiter";
+import {
+  CLAIM_TTL_HOURS,
+  consumeReceipt,
+  findOpenClaimForReference,
+  findReceiptByTransId,
+  matchReceiptToClaim,
+  normalizeDarajaConfirmation,
+  normalizeKcbIpn,
+  recordPaybillReceipt,
+  setClaimStatus,
+  upsertPaymentClaim,
+  type ClaimRow,
+} from "../lib/paybill";
 import {
   ONETIME_PLAN_ID,
   PARTNER_PLAN_CATALOG,
@@ -308,7 +322,120 @@ export function isValidMpesaCode(code: string): { valid: boolean; reason?: strin
 
 export const subscriptionRoutes = new Hono();
 
-// M-Pesa Paybill Subscription Verification & Instant Activation
+export interface PaybillRedemption {
+  name: string;
+  email: string;
+  amount: number;
+  planName: string;
+  planId: string;
+  interval: "monthly" | "yearly";
+  phone?: string | null;
+  kind?: string;
+}
+
+/**
+ * Fulfill an approved Paybill redemption into the ledger. Called ONLY after:
+ *  - a provider receipt matched (code + amount + account + freshness), or
+ *  - an admin manually approved against the M-Pesa statement.
+ * Never call this on format checks alone.
+ */
+async function fulfillPaybillRedemption(
+  c: import("hono").Context,
+  cleanRef: string,
+  r: PaybillRedemption
+) {
+  const supabase = getSupabase();
+  const normEmail = r.email.trim().toLowerCase();
+  const displayName = r.name.trim() || "Kingdom Partner";
+
+  const periodEnd = new Date();
+  periodEnd.setMonth(periodEnd.getMonth() + (r.interval === "yearly" ? 12 : 1));
+  const usdAmount = Number((r.amount * 0.00772).toFixed(2));
+
+  const { data: subData, error: subError } = await supabase
+    .from("subscriptions")
+    .insert({
+      subscriber_name: displayName,
+      subscriber_email: normEmail,
+      plan_name: r.planName,
+      plan_id: r.planId,
+      amount: r.amount,
+      currency: "KES",
+      usd_amount: usdAmount,
+      exchange_rate: 0.00772,
+      interval: r.interval,
+      status: "active",
+      retry_count: 0,
+      next_retry_at: null,
+      payment_provider: "mpesa_paybill",
+      payment_reference: cleanRef,
+      current_period_start: new Date().toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      metadata: {
+        paybill: "522522",
+        account: "1335674365",
+        verifiedAt: new Date().toISOString(),
+        planId: r.planId,
+        phone: r.phone || null,
+        kind: r.kind || "subscription",
+      },
+    })
+    .select()
+    .single();
+
+  if (subError) {
+    if (subError.code === "23505" || String(subError.message || "").includes("unique")) {
+      const dup: Error & { code?: string } = new Error("This M-Pesa transaction code has already been registered.");
+      dup.code = "REFERENCE_ALREADY_REDEEMED";
+      throw dup;
+    }
+    throw new Error(subError.message || "Failed to register subscription");
+  }
+
+  await supabase.from("donations").upsert(
+    {
+      amount: r.amount,
+      currency: "KES",
+      donor_email: normEmail,
+      donor_name: displayName,
+      recurring: r.interval === "monthly",
+      payment_provider: "mpesa_paybill",
+      payment_reference: cleanRef,
+      status: "completed",
+    },
+    { onConflict: "payment_reference", ignoreDuplicates: true }
+  );
+
+  // Provision Partner profile (existing identities are OTP-gated)
+  const authSession = await provisionSubscriberUser(c, displayName, normEmail);
+  await logBillingEvent(normEmail, "mpesa_paybill_verified", "subscription", cleanRef, {
+    planName: r.planName,
+    amount: r.amount,
+    claimRequired: authSession?.claimRequired || false,
+  });
+
+  try {
+    await sendDonationEmail(c, normEmail, displayName, r.amount, "KES", {
+      reference: cleanRef,
+      planName: r.planName,
+    });
+  } catch (e) {
+    console.error("[EMAIL] Donation receipt error:", e);
+  }
+
+  try {
+    await sendPartnerWelcomeEmail(c, normEmail, displayName, r.planName, r.amount, "KES");
+  } catch (e) {
+    console.error("[EMAIL] Partner welcome error:", e);
+  }
+
+  return { subData, authSession, periodEnd };
+}
+
+// M-Pesa Paybill code redemption (FAIL-CLOSED).
+// A code activates ONLY when a provider-confirmed receipt exists for it
+// (Daraja C2B confirmation or KCB IPN) with matching amount + account.
+// Unknown codes return 202 pending — the claim waits for the receipt.
 subscriptionRoutes.post(
   "/mpesa/verify",
   strictRateLimit,
@@ -335,7 +462,7 @@ subscriptionRoutes.post(
       return c.json({ error: validation.reason }, 400);
     }
 
-    // 1b. Server-side price truth: the client never sets the price.
+    // 2. Server-side price truth: the client never sets the price.
     const priceCheck = validatePaymentAmount({ planId, planName, interval, amount });
     if (!priceCheck.ok) {
       return c.json({ error: priceCheck.error, code: priceCheck.code, expectedKes: priceCheck.expectedKes }, 400);
@@ -345,7 +472,7 @@ subscriptionRoutes.post(
 
     const supabase = getSupabase();
 
-    // 2. Anti-Replay: Prevent duplicate redemption of the same M-Pesa code
+    // 3. Anti-Replay: Prevent duplicate redemption of the same M-Pesa code
     const { data: existingSub } = await supabase
       .from("subscriptions")
       .select("id, subscriber_name, status, created_at")
@@ -378,156 +505,251 @@ subscriptionRoutes.post(
       );
     }
 
-    // 3. Calculate period end
-    const periodEnd = new Date();
-    periodEnd.setMonth(periodEnd.getMonth() + (interval === "yearly" ? 12 : 1));
-    const usdAmount = Number((canonicalAmount * 0.00772).toFixed(2));
+    // 4. Ground truth: is there a provider-confirmed receipt for this code?
+    const receipt = await findReceiptByTransId(supabase, cleanRef);
 
-    // 4. Instant atomic insert into `subscriptions` table
-    const { data: subData, error: subError } = await supabase
-      .from("subscriptions")
-      .insert({
-        subscriber_name: name.trim(),
-        subscriber_email: email.trim().toLowerCase(),
-        plan_name: canonicalPlanName,
-        plan_id: priceCheck.isRecurring ? planId : ONETIME_PLAN_ID,
+    if (!receipt) {
+      // Fail closed: record the intent, activate nothing.
+      const claim = await upsertPaymentClaim(supabase, {
+        paymentReference: cleanRef,
+        email,
+        name: name.trim(),
         amount: canonicalAmount,
-        currency: "KES",
-        usd_amount: usdAmount,
-        exchange_rate: 0.00772,
-        interval: interval,
-        status: "active",
-        retry_count: 0,
-        next_retry_at: null,
-        payment_provider: "mpesa_paybill",
-        payment_reference: cleanRef,
-        current_period_start: new Date().toISOString(),
-        current_period_end: periodEnd.toISOString(),
-        metadata: {
-          paybill: "522522",
-          account: "1335674365",
-          verifiedAt: new Date().toISOString(),
-          planId,
-          phone: phone || null,
-        },
-      })
-      .select()
-      .single();
-
-    if (subError) {
-      if (subError.code === "23505" || subError.message.includes("unique")) {
-        return c.json({ error: "This M-Pesa transaction code has already been registered." }, 409);
-      }
-      return c.json({ error: subError.message || "Failed to register subscription" }, 500);
-    }
-
-    // 5. Instant insert into `donations` ledger
-    await supabase.from("donations").upsert(
-      {
-        amount: canonicalAmount,
-        currency: "KES",
-        donor_email: email.trim().toLowerCase(),
-        donor_name: name.trim(),
-        recurring: interval === "monthly",
-        payment_provider: "mpesa_paybill",
-        payment_reference: cleanRef,
-        status: "completed",
-      },
-      { onConflict: "payment_reference", ignoreDuplicates: true }
-    );
-
-    // 6. Automatically provision Partner User Profile & clean session token
-    //    (existing identities are OTP-gated: token is null + claimRequired true)
-    const authSession = await provisionSubscriberUser(c, name.trim(), email.trim().toLowerCase());
-    await logBillingEvent(email.trim().toLowerCase(), "mpesa_paybill_verified", "subscription", cleanRef, {
-      planName: canonicalPlanName,
-      amount: canonicalAmount,
-      claimRequired: authSession?.claimRequired || false,
-    });
-
-    // 7. Dispatch Confirmation and Welcome Emails
-    try {
-      await sendDonationEmail(c, email.trim().toLowerCase(), name.trim(), canonicalAmount, "KES", {
-        reference: cleanRef,
+        planId: priceCheck.isRecurring ? planId : ONETIME_PLAN_ID,
         planName: canonicalPlanName,
+        interval,
+        phone: phone || null,
       });
-    } catch (e) {
-      console.error("[EMAIL] Donation receipt error:", e);
-    }
-
-    try {
-      await sendPartnerWelcomeEmail(c, email.trim().toLowerCase(), name.trim(), canonicalPlanName, canonicalAmount, "KES");
-    } catch (e) {
-      console.error("[EMAIL] Partner welcome error:", e);
-    }
-
-    return c.json(
-      {
-        status: "success",
-        message: "M-Pesa payment verified. Covenant partnership activated!",
-        reference: cleanRef,
+      await logBillingEvent(email.trim().toLowerCase(), "paybill_claim_awaiting_receipt", "payment_claim", cleanRef, {
         planName: canonicalPlanName,
         amount: canonicalAmount,
-        currency: "KES",
-        claimRequired: authSession?.claimRequired || false,
-        user: authSession?.user || {
-          id: "p-" + Date.now(),
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          role: "member",
+      });
+      return c.json(
+        {
+          status: "pending",
+          code: "RECEIPT_NOT_FOUND",
+          claimId: claim?.id || null,
+          message:
+            "We have not yet received confirmation of this payment from Safaricom/KCB. If you just paid, wait 1–2 minutes and retry — your claim is saved. Double-check the code from your M-Pesa SMS.",
         },
-        token: authSession?.token || null,
-        subscription: subData || {
-          subscriber_name: name.trim(),
-          subscriber_email: email.trim().toLowerCase(),
-          plan_name: canonicalPlanName,
+        202
+      );
+    }
+
+    // 5. Match receipt → claim (amount, account, freshness) + atomic consume.
+    const verdict = matchReceiptToClaim({
+      receipt: { amount: Number(receipt.amount), billRef: receipt.bill_ref || "", consumed: receipt.consumed, transTime: receipt.trans_time },
+      claimedAmount: canonicalAmount,
+      requireExact: priceCheck.isRecurring,
+    });
+    if (!verdict.ok) {
+      const claim = await upsertPaymentClaim(supabase, {
+        paymentReference: cleanRef,
+        email,
+        name: name.trim(),
+        amount: canonicalAmount,
+        planId: priceCheck.isRecurring ? planId : ONETIME_PLAN_ID,
+        planName: canonicalPlanName,
+        interval,
+        phone: phone || null,
+      });
+      if (claim) {
+        await setClaimStatus(supabase, claim.id, verdict.code === "ALREADY_CONSUMED" ? "rejected" : "amount_mismatch", {
+          receipt_id: receipt.id,
+          note: verdict.reason,
+        });
+      }
+      await logBillingEvent(email.trim().toLowerCase(), "paybill_claim_rejected", "payment_claim", cleanRef, {
+        reason: verdict.reason,
+        receiptAmount: receipt.amount,
+        claimedAmount: canonicalAmount,
+      });
+      return c.json({ error: verdict.reason, code: verdict.code }, 409);
+    }
+
+    const consumed = await consumeReceipt(supabase, receipt.id, email.trim().toLowerCase());
+    if (!consumed) {
+      return c.json(
+        {
+          error: "This M-Pesa transaction code has already been redeemed.",
+          code: "REFERENCE_ALREADY_REDEEMED",
+        },
+        409
+      );
+    }
+
+    // 6. Approved: fulfill into the ledger.
+    try {
+      const { subData, authSession, periodEnd } = await fulfillPaybillRedemption(c, cleanRef, {
+        name: name.trim(),
+        email: email.trim(),
+        amount: canonicalAmount,
+        planName: canonicalPlanName,
+        planId: priceCheck.isRecurring ? (planId as string) : ONETIME_PLAN_ID,
+        interval,
+        phone: phone || null,
+      });
+      const claim = await upsertPaymentClaim(supabase, {
+        paymentReference: cleanRef,
+        email,
+        name: name.trim(),
+        amount: canonicalAmount,
+        planId: priceCheck.isRecurring ? planId : ONETIME_PLAN_ID,
+        planName: canonicalPlanName,
+        interval,
+        phone: phone || null,
+      });
+      if (claim) {
+        await setClaimStatus(supabase, claim.id, "matched", { receipt_id: receipt.id });
+      }
+
+      return c.json(
+        {
+          status: "success",
+          message: "M-Pesa payment verified. Covenant partnership activated!",
+          reference: cleanRef,
+          planName: canonicalPlanName,
           amount: canonicalAmount,
           currency: "KES",
-          payment_provider: "mpesa_paybill",
-          payment_reference: cleanRef,
-          status: "active",
-          current_period_end: periodEnd.toISOString(),
+          claimRequired: authSession?.claimRequired || false,
+          user: authSession?.user || {
+            id: "p-" + Date.now(),
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            role: "member",
+          },
+          token: authSession?.token || null,
+          subscription: subData || {
+            subscriber_name: name.trim(),
+            subscriber_email: email.trim().toLowerCase(),
+            plan_name: canonicalPlanName,
+            amount: canonicalAmount,
+            currency: "KES",
+            payment_provider: "mpesa_paybill",
+            payment_reference: cleanRef,
+            status: "active",
+            current_period_end: periodEnd.toISOString(),
+          },
         },
-      },
-      201
-    );
+        201
+      );
+    } catch (err: unknown) {
+      const code = (err as Error & { code?: string }).code;
+      if (code === "REFERENCE_ALREADY_REDEEMED") {
+        return c.json({ error: (err as Error).message, code }, 409);
+      }
+      return c.json({ error: err instanceof Error ? err.message : "Failed to register subscription" }, 500);
+    }
   }
 );
 
 // Safaricom Daraja C2B IPN Validation Webhook
+// NOTE: external validation is OFF by default on the shortcode. This endpoint
+// only needs to ack; redemption strictness lives in /mpesa/verify matching.
 subscriptionRoutes.post("/mpesa/c2b-validation", async (c) => {
   return c.json({ ResultCode: 0, ResultDesc: "Accepted" });
 });
 
-// Safaricom Daraja C2B IPN Confirmation Webhook (Immediate payment registration)
+/**
+ * Auto-fulfill an open claim when its provider receipt arrives. Shared by the
+ * Daraja confirmation and KCB IPN handlers (callbacks must always ack fast).
+ */
+async function tryAutoFulfillClaim(c: import("hono").Context, transId: string): Promise<void> {
+  try {
+    const supabase = getSupabase();
+    const claim: ClaimRow | null = await findOpenClaimForReference(supabase, transId);
+    if (!claim) return;
+
+    // Claim is stale (user never came back) — leave it for expiry sweeps.
+    if (Date.now() - new Date(claim.created_at).getTime() > CLAIM_TTL_HOURS * 3600000) {
+      await setClaimStatus(supabase, claim.id, "expired", { note: "Claim expired before receipt arrival." });
+      return;
+    }
+
+    const receipt = await findReceiptByTransId(supabase, transId);
+    if (!receipt || receipt.consumed) return;
+
+    const verdict = matchReceiptToClaim({
+      receipt: { amount: Number(receipt.amount), billRef: receipt.bill_ref || "", consumed: receipt.consumed, transTime: receipt.trans_time },
+      claimedAmount: Number(claim.amount),
+      requireExact: true,
+    });
+    if (!verdict.ok) {
+      await setClaimStatus(supabase, claim.id, verdict.code === "ALREADY_CONSUMED" ? "rejected" : "amount_mismatch", {
+        receipt_id: receipt.id,
+        note: verdict.reason,
+      });
+      await logBillingEvent(claim.email, "paybill_autofulfill_rejected", "payment_claim", transId, { reason: verdict.reason });
+      return;
+    }
+
+    const consumed = await consumeReceipt(supabase, receipt.id, claim.email);
+    if (!consumed) return;
+    await fulfillPaybillRedemption(c, transId, {
+      name: claim.name,
+      email: claim.email,
+      amount: Number(claim.amount),
+      planName: claim.plan_name || "Kingdom Partner",
+      planId: claim.plan_id || ONETIME_PLAN_ID,
+      interval: (claim.interval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly",
+      phone: claim.phone,
+      kind: claim.kind || "subscription",
+    });
+    await setClaimStatus(supabase, claim.id, "matched", { receipt_id: receipt.id });
+    await logBillingEvent(claim.email, "paybill_claim_autofulfilled", "payment_claim", transId, { claimId: claim.id });
+  } catch (err) {
+    console.error("[PAYBILL AUTOFULFILL ERROR]", err);
+  }
+}
+
+// Safaricom Daraja C2B IPN Confirmation Webhook.
+// REGISTER this URL on paybill 522522 via the Daraja Register-URL API
+// (one-time production step): every successful Paybill payment is POSTed here
+// and becomes redemption truth in mpesa_paybill_receipts. NO ledger rows are
+// written here — activation happens only through claim matching.
 subscriptionRoutes.post("/mpesa/c2b-confirmation", async (c) => {
   try {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
-    const transId = String(body.TransID || "").trim().toUpperCase();
-    const transAmount = Number(body.TransAmount) || 0;
-    const phone = String(body.MSISDN || "").trim();
-    const customerName = `${body.FirstName || ""} ${body.LastName || ""}`.trim() || "M-Pesa Partner";
-
-    if (transId) {
+    const normalized = normalizeDarajaConfirmation(body);
+    if (normalized) {
       const supabase = getSupabase();
-      await supabase.from("donations").upsert(
-        {
-          amount: transAmount,
-          currency: "KES",
-          donor_name: customerName,
-          donor_email: `${phone}@mpesa.kmn.org`,
-          recurring: true,
-          payment_provider: "mpesa_paybill",
-          payment_reference: transId,
-          status: "completed",
-        },
-        { onConflict: "payment_reference", ignoreDuplicates: true }
-      );
+      await recordPaybillReceipt(supabase, normalized);
+      await logBillingEvent("daraja-c2b", "paybill_receipt_recorded", "mpesa_receipt", normalized.transId, {
+        amount: normalized.amount,
+        billRef: normalized.billRef,
+      });
+      await tryAutoFulfillClaim(c, normalized.transId);
+    } else {
+      console.warn("[DARAJA C2B] unparseable confirmation payload");
     }
   } catch (err) {
     console.error("[DARAJA C2B CONFIRMATION ERROR]", err);
   }
   return c.json({ ResultCode: 0, ResultDesc: "Confirmation received successfully" });
+});
+
+// KCB Buni Instant Payment Notification for credits to the collection account.
+// Register this URL in the Buni portal as the IPN / callbackUrl target so
+// direct Paybill/bank credits become redemption truth the same way.
+subscriptionRoutes.post("/mpesa/kcb-ipn", async (c) => {
+  try {
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const normalized = normalizeKcbIpn(body);
+    if (normalized) {
+      const supabase = getSupabase();
+      await recordPaybillReceipt(supabase, normalized);
+      await logBillingEvent("kcb-ipn", "paybill_receipt_recorded", "mpesa_receipt", normalized.transId, {
+        amount: normalized.amount,
+        billRef: normalized.billRef,
+      });
+      await tryAutoFulfillClaim(c, normalized.transId);
+    } else {
+      console.warn("[KCB IPN] unparseable notification payload");
+    }
+  } catch (err) {
+    console.error("[KCB IPN ERROR]", err);
+  }
+  return c.json({ statusCode: "0", statusDescription: "Notification received successfully" });
 });
 
 interface MpesaCheckoutSession {
@@ -578,6 +800,18 @@ subscriptionRoutes.post(
     const priceCheck = validatePaymentAmount({ planId, planName, interval, amount });
     if (!priceCheck.ok) {
       return c.json({ error: priceCheck.error, code: priceCheck.code, expectedKes: priceCheck.expectedKes }, 400);
+    }
+
+    // STK Push is disabled until the KCB Buni gateway is live in production.
+    // (Frontend hides the option via VITE_ENABLE_STK_PUSH; this is the server lock.)
+    if (getSecret(c, "KCB_BUNI_ENV") !== "production") {
+      return c.json(
+        {
+          error: "M-Pesa STK Push is temporarily unavailable. Please pay via M-Pesa Paybill 522522, account 1335674365, then enter your SMS code.",
+          code: "STK_DISABLED",
+        },
+        503
+      );
     }
     const canonicalAmount = priceCheck.expectedKes;
     const canonicalPlanName = priceCheck.isRecurring ? priceCheck.planName : planName;
@@ -1523,6 +1757,126 @@ subscriptionRoutes.post(
       immediateBalance,
     });
     return c.json({ preview, subscription: data || { ...sub, plan_id: newPlan.id, plan_name: newPlan.name, amount: newAmount, interval } });
+  }
+);
+
+// Poll a Paybill claim (frontend waits on provider confirmation after 202).
+subscriptionRoutes.get("/mpesa/claim/:reference", rateLimit, async (c) => {
+  const cleanRef = c.req.param("reference").trim().toUpperCase();
+  const email = (c.req.query("email") || "").trim().toLowerCase();
+  try {
+    const supabase = getSupabase();
+    let q = supabase
+      .from("payment_claims")
+      .select("*")
+      .eq("payment_reference", cleanRef)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (email) q = q.eq("email", email);
+    const { data } = await q.maybeSingle();
+    const claim = data as ClaimRow | null;
+    if (!claim) {
+      return c.json({ status: "not_found", message: "No claim found for this code." }, 404);
+    }
+    if (claim.status === "matched") {
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("payment_reference", cleanRef)
+        .maybeSingle();
+      return c.json({ status: "matched", claim, subscription: sub || null });
+    }
+    return c.json({ status: claim.status, claim });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Lookup failed." }, 500);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin reconciliation queue: unmatched receipts, open claims, manual resolve.
+// (Manual approval = human checked the M-Pesa statement; fully audited.)
+// ─────────────────────────────────────────────────────────────────────────────
+
+subscriptionRoutes.get("/mpesa/receipts/unmatched", requireAdmin, async (c) => {
+  try {
+    const limit = Math.min(100, Math.max(1, Number(c.req.query("limit")) || 50));
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from("mpesa_paybill_receipts")
+      .select("*")
+      .eq("consumed", false)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    return c.json({ receipts: data || [] });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Query failed." }, 500);
+  }
+});
+
+subscriptionRoutes.get("/mpesa/claims/pending", requireAdmin, async (c) => {
+  try {
+    const limit = Math.min(100, Math.max(1, Number(c.req.query("limit")) || 50));
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from("payment_claims")
+      .select("*")
+      .in("status", ["awaiting_receipt", "amount_mismatch"])
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    return c.json({ claims: data || [] });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Query failed." }, 500);
+  }
+});
+
+subscriptionRoutes.post(
+  "/mpesa/claims/:id/resolve",
+  requireAdmin,
+  zValidator("json", z.object({ decision: z.enum(["approve", "reject"]), note: z.string().max(255).optional() })),
+  async (c) => {
+    const id = Number(c.req.param("id"));
+    const { decision, note } = c.req.valid("json");
+    if (!Number.isFinite(id)) return c.json({ error: "Invalid claim id." }, 400);
+    try {
+      const supabase = getSupabase();
+      const { data: row } = await supabase.from("payment_claims").select("*").eq("id", id).maybeSingle();
+      const claim = row as ClaimRow | null;
+      if (!claim) return c.json({ error: "Claim not found." }, 404);
+      if (claim.status === "matched") return c.json({ status: "matched", claim });
+
+      const actor = ((c.get as unknown as (key: string) => { email?: string } | undefined)("user"))?.email || "admin";
+      if (decision === "reject") {
+        await setClaimStatus(supabase, claim.id, "rejected", { note: note || "Rejected by admin." });
+        await logBillingEvent(actor, "paybill_claim_admin_rejected", "payment_claim", claim.payment_reference, { claimId: claim.id, note: note || null });
+        return c.json({ status: "rejected", claim: { ...claim, status: "rejected" } });
+      }
+
+      // Approve: consume the linked receipt when present (keeps single-use true),
+      // then fulfill. Works receipt-less when the admin verified the statement.
+      const receipt = await findReceiptByTransId(supabase, claim.payment_reference);
+      if (receipt && !receipt.consumed) {
+        const won = await consumeReceipt(supabase, receipt.id, `admin:${actor}`);
+        if (!won) return c.json({ error: "Receipt was already consumed.", code: "REFERENCE_ALREADY_REDEEMED" }, 409);
+      }
+      const { subData } = await fulfillPaybillRedemption(c, claim.payment_reference, {
+        name: claim.name,
+        email: claim.email,
+        amount: Number(claim.amount),
+        planName: claim.plan_name || "Kingdom Partner",
+        planId: claim.plan_id || ONETIME_PLAN_ID,
+        interval: (claim.interval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly",
+        phone: claim.phone,
+        kind: claim.kind || "subscription",
+      });
+      await setClaimStatus(supabase, claim.id, "matched", {
+        receipt_id: receipt?.id || null,
+        note: note ? `Admin-approved: ${note}` : "Admin-approved against statement.",
+      });
+      await logBillingEvent(actor, "paybill_claim_admin_approved", "payment_claim", claim.payment_reference, { claimId: claim.id, note: note || null });
+      return c.json({ status: "matched", claim: { ...claim, status: "matched" }, subscription: subData || null });
+    } catch (err: unknown) {
+      return c.json({ error: err instanceof Error ? err.message : "Resolve failed." }, 500);
+    }
   }
 );
 

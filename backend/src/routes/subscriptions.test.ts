@@ -150,6 +150,43 @@ describe("Subscription Routes", () => {
     expect(tooSmall.ok).toBe(false);
   });
 
+  test("POST /mpesa/stkpush returns 503 STK_DISABLED in sandbox even for valid pricing", async () => {
+    const res = await app.request("/mpesa/stkpush", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phoneNumber: "0712345678",
+        name: "Faithful Partner",
+        email: "partner@example.com",
+        amount: 3000,
+        planId: "ambassador",
+        planName: "Kingdom Ambassador",
+        interval: "monthly",
+      }),
+    });
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("STK_DISABLED");
+  });
+
+  test("POST /mpesa/kcb-ipn acks unparseable payloads without touching the ledger", async () => {
+    const res = await app.request("/mpesa/kcb-ipn", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hello: "world" }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  test("POST /mpesa/c2b-confirmation acks unparseable payloads without touching the ledger", async () => {
+    const res = await app.request("/mpesa/c2b-confirmation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bogus: true }),
+    });
+    expect(res.status).toBe(200);
+  });
+
   test("POST /mpesa/stkpush rejects tampered recurring amounts before provider call", async () => {
     const res = await app.request("/mpesa/stkpush", {
       method: "POST",

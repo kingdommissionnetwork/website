@@ -177,6 +177,43 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
+-- 13. PAYBILL RECEIPTS TABLE (provider-confirmed credits, redemption truth)
+CREATE TABLE IF NOT EXISTS public.mpesa_paybill_receipts (
+    id BIGSERIAL PRIMARY KEY,
+    trans_id TEXT UNIQUE NOT NULL,
+    amount NUMERIC NOT NULL,
+    phone TEXT,
+    bill_ref TEXT,
+    shortcode TEXT,
+    trans_time TEXT,
+    source TEXT NOT NULL DEFAULT 'daraja_c2b',
+    consumed BOOLEAN DEFAULT false,
+    consumed_by TEXT,
+    consumed_at TIMESTAMP WITH TIME ZONE,
+    raw JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- 14. PAYMENT CLAIMS TABLE (redemption intents, fulfilled only on receipt match)
+CREATE TABLE IF NOT EXISTS public.payment_claims (
+    id BIGSERIAL PRIMARY KEY,
+    payment_reference TEXT NOT NULL,
+    email TEXT NOT NULL,
+    name TEXT NOT NULL DEFAULT 'Kingdom Partner',
+    amount NUMERIC NOT NULL,
+    plan_id TEXT,
+    plan_name TEXT,
+    interval TEXT DEFAULT 'monthly',
+    phone TEXT,
+    kind TEXT NOT NULL DEFAULT 'subscription',
+    status TEXT NOT NULL DEFAULT 'awaiting_receipt',
+    receipt_id BIGINT REFERENCES public.mpesa_paybill_receipts(id) ON DELETE SET NULL,
+    attempts INTEGER DEFAULT 1,
+    note TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
 -- =============================================================================
 -- PERFORMANCE INDEXES
 -- =============================================================================
@@ -195,6 +232,10 @@ CREATE INDEX IF NOT EXISTS idx_subscriber_otps_email ON public.subscriber_otps(e
 CREATE INDEX IF NOT EXISTS idx_billing_attempts_email ON public.billing_attempts(subscriber_email);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON public.audit_logs(actor);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON public.audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_paybill_receipts_trans ON public.mpesa_paybill_receipts(trans_id);
+CREATE INDEX IF NOT EXISTS idx_paybill_receipts_unconsumed ON public.mpesa_paybill_receipts(consumed) WHERE consumed = false;
+CREATE INDEX IF NOT EXISTS idx_payment_claims_ref ON public.payment_claims(payment_reference);
+CREATE INDEX IF NOT EXISTS idx_payment_claims_status ON public.payment_claims(status);
 
 -- =============================================================================
 -- STORED RPC FUNCTIONS
@@ -228,6 +269,8 @@ ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriber_otps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.billing_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mpesa_paybill_receipts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_claims ENABLE ROW LEVEL SECURITY;
 
 -- Public read policies
 CREATE POLICY "Public read approved prayers" ON public.prayers FOR SELECT USING (status = 'approved');
@@ -251,6 +294,8 @@ CREATE POLICY "Service role full access subscriptions" ON public.subscriptions F
 CREATE POLICY "Service role full access subscriber_otps" ON public.subscriber_otps FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Service role full access billing_attempts" ON public.billing_attempts FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Service role full access audit_logs" ON public.audit_logs FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role full access paybill_receipts" ON public.mpesa_paybill_receipts FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role full access payment_claims" ON public.payment_claims FOR ALL USING (auth.role() = 'service_role');
 
 -- =============================================================================
 -- SEED INITIAL CONTENT

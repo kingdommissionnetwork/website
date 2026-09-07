@@ -4,6 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { sendDonationEmail } from "../lib/email";
 import { fetchExchangeRate } from "../lib/exchangeRate";
+import { upsertPaymentClaim } from "../lib/paybill";
 
 function getSecret(c: { env?: unknown }, key: string): string {
   const env = c.env as Record<string, string> | undefined;
@@ -260,6 +261,27 @@ paymentRoutes.post("/report-offline", zValidator("json", z.object({
     return c.json({ error: error.message }, 500);
   }
 
+  // Join the Paybill redemption pipeline: the gift stays pending until a
+  // provider receipt matches this code (fail-closed, same as subscriptions).
+  // The receipt email below is a *submission* notice, not proof of payment.
+  let claimStatus = "awaiting_receipt";
+  try {
+    const claim = await upsertPaymentClaim(supabase, {
+      paymentReference: cleanRef,
+      email: donor_email,
+      name: donor_name,
+      amount,
+      planId: "onetime_seed",
+      planName: typeof recurring === "boolean" && recurring ? "Recurring Gift" : "One-Time Gift",
+      interval: "monthly",
+      phone: null,
+      kind: "donation",
+    });
+    claimStatus = claim?.status || "awaiting_receipt";
+  } catch (claimErr) {
+    console.error("[Claim Pipeline Error]", claimErr);
+  }
+
   // Attempt to dispatch receipt email
   try {
     await sendDonationEmail(c, donor_email, donor_name, amount, currency);
@@ -267,5 +289,5 @@ paymentRoutes.post("/report-offline", zValidator("json", z.object({
     console.error("[Donation Email Error]", emailErr);
   }
 
-  return c.json({ status: "success", donation: data }, 201);
+  return c.json({ status: claimStatus === "matched" ? "matched" : "pending_verification", claimStatus, donation: data }, 201);
 });

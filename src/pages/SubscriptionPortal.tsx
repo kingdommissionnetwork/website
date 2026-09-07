@@ -174,6 +174,7 @@ export default function SubscriptionPortal() {
   const [stkSecondsLeft, setStkSecondsLeft] = useState(60);
   const [mpesaRefCode, setMpesaRefCode] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [claimPolling, setClaimPolling] = useState(false);
 
   const copyToClipboard = (text: string, label: string) => {
     if (navigator.clipboard && window.isSecureContext) {
@@ -441,6 +442,26 @@ export default function SubscriptionPortal() {
         interval: billingCycle,
       });
 
+      // Fail-closed: unknown codes return 202 pending until Safaricom/KCB
+      // confirms the payment. Poll the claim; activate only on match.
+      if (res.status === "pending") {
+        showToast("Code received — waiting for Safaricom confirmation. This usually takes under a minute.", "info");
+        setClaimPolling(true);
+        const matched = await pollPaybillClaim(cleanRef, email);
+        setClaimPolling(false);
+        if (!matched) return;
+        const matchedSub = (matched.subscription as Record<string, unknown>) || null;
+        await runOnboardingTransition(
+          (matchedSub?.plan_name as string) || activePlan.name,
+          null,
+          null,
+          matchedSub,
+          cleanRef,
+          true
+        );
+        return;
+      }
+
       showToast("M-Pesa payment verified! Activating your partner covenant dashboard...", "success");
       await runOnboardingTransition(
         res.planName || activePlan.name,
@@ -456,6 +477,34 @@ export default function SubscriptionPortal() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Poll a pending Paybill claim until the provider confirms it (or timeout).
+  // Returns the matched claim payload, or null when still pending/failed.
+  const pollPaybillClaim = async (cleanRef: string, email: string) => {
+    for (let i = 0; i < 12; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      try {
+        const s = await api.subscriptions.getClaimStatus(cleanRef, email);
+        if (s.status === "matched") return s;
+        if (s.status === "amount_mismatch" || s.status === "rejected" || s.status === "expired") {
+          showToast(
+            s.status === "amount_mismatch"
+              ? "The confirmed M-Pesa amount does not match this plan. Please contact support with your SMS code."
+              : "This code could not be confirmed. Please check the code or contact support.",
+            "error"
+          );
+          return null;
+        }
+      } catch {
+        // keep polling through transient errors
+      }
+    }
+    showToast(
+      "Still awaiting Safaricom confirmation — your claim is saved. You will receive your receipt by email once confirmed.",
+      "info"
+    );
+    return null;
   };
 
   // Paystack flow (KES or USD)
@@ -1215,13 +1264,13 @@ export default function SubscriptionPortal() {
                       <button
                         id="btn-mpesa-verify"
                         type="submit"
-                        disabled={submitting}
+                        disabled={submitting || claimPolling}
                         className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-sm sm:text-base tracking-wide shadow-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
                       >
-                        {submitting ? (
+                        {submitting || claimPolling ? (
                           <>
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            <span>Verifying M-Pesa Payment…</span>
+                            <span>{claimPolling ? "Awaiting Safaricom confirmation…" : "Verifying M-Pesa Payment…"}</span>
                           </>
                         ) : (
                           <>
@@ -1230,6 +1279,11 @@ export default function SubscriptionPortal() {
                           </>
                         )}
                       </button>
+                      {claimPolling && (
+                        <p className="text-center text-[11px] text-amber-300/80" role="status">
+                          Your code is saved — we are waiting for the provider confirmation. Please keep this page open.
+                        </p>
+                      )}
                     </form>
                   )}
                 </div>

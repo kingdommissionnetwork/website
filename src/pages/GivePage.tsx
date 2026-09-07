@@ -96,6 +96,7 @@ export default function GivePage() {
   const [stkStatusMessage, setStkStatusMessage] = useState("");
   const [stkSecondsLeft, setStkSecondsLeft] = useState(60);
   const [manualRefCode, setManualRefCode] = useState("");
+  const [paybillPending, setPaybillPending] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ReceiptInfo | null>(null);
 
@@ -225,9 +226,9 @@ export default function GivePage() {
           return prev - 1;
         });
       }, 1000);
-    } catch {
+    } catch (err: unknown) {
       setStkPending(false); setSubmitting(false);
-      showToast("Failed to initiate M-Pesa prompt. You can give via Paybill 522522 directly.", "error");
+      showToast(err instanceof Error ? err.message : "Failed to initiate M-Pesa prompt. You can give via Paybill 522522 directly.", "error");
     }
   };
 
@@ -263,18 +264,49 @@ export default function GivePage() {
     if (!manualRefCode || manualRefCode.trim().length < 5) {
       showToast("Please enter your M-Pesa transaction code", "error"); return;
     }
+    const cleanRef = manualRefCode.trim().toUpperCase();
     setSubmitting(true);
+    setPaybillPending(null);
     try {
-      await api.payments.reportOffline({
+      const res = await api.payments.reportOffline({
         amount: currentAmountKes, currency: "KES",
         donor_name: donorName || "Kingdom Partner",
         donor_email: donorEmail || "partner@kingdommissionnetwork.org",
         payment_provider: "mpesa_paybill",
-        payment_reference: manualRefCode.trim().toUpperCase(),
+        payment_reference: cleanRef,
         recurring: false, notes: selectedPurpose,
       });
-      completeTransaction(manualRefCode.trim().toUpperCase(), "M-Pesa Paybill 522522", null, null);
-    } catch { completeTransaction(manualRefCode.trim().toUpperCase(), "M-Pesa Paybill 522522", null, null); }
+      if (res.status === "matched") {
+        completeTransaction(cleanRef, "M-Pesa Paybill 522522", null, null);
+        return;
+      }
+      // Fail-closed: receipt is issued only after provider confirmation.
+      // Poll the claim; the code stays saved server-side meanwhile.
+      const email = (donorEmail || "partner@kingdommissionnetwork.org").trim();
+      setPaybillPending("Code received — waiting for Safaricom confirmation. Please keep this page open…");
+      for (let i = 0; i < 12; i++) {
+        await new Promise((r) => setTimeout(r, 5000));
+        try {
+          const s = await api.subscriptions.getClaimStatus(cleanRef, email);
+          if (s.status === "matched") {
+            setPaybillPending(null);
+            completeTransaction(cleanRef, "M-Pesa Paybill 522522", null, null);
+            return;
+          }
+          if (s.status === "amount_mismatch" || s.status === "rejected" || s.status === "expired") {
+            setPaybillPending(null);
+            showToast("This code could not be confirmed. Please check the code or contact support with your M-Pesa SMS.", "error");
+            return;
+          }
+        } catch { /* keep polling through transient errors */ }
+      }
+      setPaybillPending("Still awaiting confirmation — your code is saved. Your receipt will arrive by email once Safaricom confirms the payment.");
+    } catch (err: unknown) {
+      setPaybillPending(null);
+      showToast(err instanceof Error ? err.message : "Could not submit code. Please try again.", "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handlePayPal = async () => {
@@ -640,6 +672,9 @@ export default function GivePage() {
                             {submitting ? "Verifying..." : "Confirm & Receipt"}
                           </button>
                         </div>
+                        {paybillPending && (
+                          <p className="text-[11px] text-amber-300/90 leading-relaxed" role="status">{paybillPending}</p>
+                        )}
                       </div>
                     </div>
                   )}
