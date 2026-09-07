@@ -204,7 +204,7 @@ export default function GiveSection() {
                 {/* Primary CTA Button: Seamless Transition to /give with Pre-filled Amount */}
                 <div className="pt-2 text-center">
                   <Link
-                    to={`/give?amount=${effectiveAmount}&type=${givingType}&step=payment`}
+                    to={`/give?amount=${effectiveAmount}&type=${givingType}&step=checkout`}
                     className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-extrabold text-sm sm:text-base hover:scale-105 hover:shadow-[0_0_25px_rgba(212,175,55,0.45)] transition-all shadow-xl"
                   >
                     <span>Proceed to Payment (KES {effectiveAmount.toLocaleString()})</span>
@@ -296,7 +296,7 @@ export default function GiveSection() {
                     <span>Account Name: <strong className="text-white">Heavenly God Kingdom Churches</strong></span>
                   </div>
                   <Link
-                    to="/give?step=payment"
+                    to="/give?step=checkout"
                     className="text-[#fbf5b7] hover:underline font-bold text-xs shrink-0"
                   >
                     Enter Reference for Receipt →
