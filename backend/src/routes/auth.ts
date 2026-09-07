@@ -42,7 +42,8 @@ authRoutes.post("/login", rateLimit, zValidator("json", loginSchema), async (c) 
       user = userByEmail;
     } else {
       // Auto-provision profile if missing
-      const isSuperAdmin = authUser.user.email.toLowerCase() === "admin@kingdommissionsnetwork.org";
+      const emailLower = authUser.user.email.toLowerCase();
+      const isSuperAdmin = emailLower === "admin@kingdommissionsnetwork.org" || emailLower === "admin@kingdommissionsnetwork.com";
       const role = isSuperAdmin ? "superadmin" : "member";
       const { data: created } = await supabase.from("users").insert({
         id: authUser.user.id,
