@@ -1881,6 +1881,54 @@ subscriptionRoutes.post(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SANDBOX-ONLY receipt simulator. Lets QA exercise the full fail-closed loop
+// (claim → pending → receipt → match → activate) without touching the live
+// paybill or registering provider URLs. Double-locked: requires
+// ALLOW_SANDBOX_TOOLS=true AND KCB_BUNI_ENV != "production". Never enable in
+// production — provider callbacks are the only receipt source there.
+// ─────────────────────────────────────────────────────────────────────────────
+subscriptionRoutes.post(
+  "/mpesa/simulate-receipt",
+  strictRateLimit,
+  zValidator(
+    "json",
+    z.object({
+      transId: z.string().min(3).max(32),
+      amount: z.number().positive().max(1_000_000),
+      billRef: z.string().max(32).optional(),
+      phone: z.string().max(16).optional(),
+    })
+  ),
+  async (c) => {
+    if (getSecret(c, "ALLOW_SANDBOX_TOOLS") !== "true" || getSecret(c, "KCB_BUNI_ENV") === "production") {
+      return c.json({ error: "Sandbox tools are disabled.", code: "SANDBOX_DISABLED" }, 403);
+    }
+    const { transId, amount, billRef, phone } = c.req.valid("json");
+    const cleanId = transId.trim().toUpperCase();
+    try {
+      const supabase = getSupabase();
+      const receipt = await recordPaybillReceipt(supabase, {
+        transId: cleanId,
+        amount: Math.round(amount),
+        phone: phone || "",
+        billRef: billRef || "1335674365",
+        shortcode: "SANDBOX",
+        transTime: null,
+        source: "sandbox",
+        raw: { simulated: true, at: new Date().toISOString() },
+      });
+      await logBillingEvent("sandbox", "paybill_receipt_simulated", "mpesa_receipt", cleanId, {
+        amount: Math.round(amount),
+      });
+      await tryAutoFulfillClaim(c, cleanId);
+      return c.json({ ok: true, receipt });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : "Simulation failed." }, 500);
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Renewal dunning engine (P2): M-Pesa needs a PIN every cycle, so renewals are
 // nudge-and-confirm. Cron calls retry-due; due lists upcoming renewals.
 // Guarded by CRON_SECRET when configured.

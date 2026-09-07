@@ -33,7 +33,7 @@ export interface NormalizedReceipt {
   billRef: string;
   shortcode: string;
   transTime: string | null;
-  source: "daraja_c2b" | "kcb_ipn" | "admin";
+  source: "daraja_c2b" | "kcb_ipn" | "admin" | "sandbox";
   raw: Record<string, unknown>;
 }
 

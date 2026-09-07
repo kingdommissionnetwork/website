@@ -187,6 +187,26 @@ describe("Subscription Routes", () => {
     expect(res.status).toBe(200);
   });
 
+  test("POST /mpesa/simulate-receipt is locked without the sandbox flag", async () => {
+    const res = await app.request("/mpesa/simulate-receipt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transId: "TK78AB12CD", amount: 3000 }),
+    });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("SANDBOX_DISABLED");
+  });
+
+  test("POST /mpesa/simulate-receipt rejects bad payloads", async () => {
+    const res = await app.request("/mpesa/simulate-receipt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: -5 }),
+    });
+    expect(res.status).toBe(400);
+  });
+
   test("POST /mpesa/stkpush rejects tampered recurring amounts before provider call", async () => {
     const res = await app.request("/mpesa/stkpush", {
       method: "POST",
