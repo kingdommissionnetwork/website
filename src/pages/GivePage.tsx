@@ -332,7 +332,7 @@ export default function GivePage() {
   };
 
   return (
-    <div className="pt-[68px] md:pt-[96px] min-h-screen bg-[#071324] text-white flex flex-col">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#071324] text-white flex flex-col">
       <SEO
         title="Give Online — Kingdom Missions Network"
         description="Support frontline evangelism, gospel bread relief, and village crusades. Instant M-Pesa STK push and official tax receipts."

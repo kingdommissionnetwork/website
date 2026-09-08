@@ -122,7 +122,7 @@ export default function PrayerWall() {
   const paginatedPrayers = filteredPrayers.slice(0, visibleCount);
 
   return (
-    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#e6eef7]">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#e6eef7]">
       <SEO title="Prayer Wall" description="Share your prayer requests and pray for others. Join our global prayer community." />
       
       {/* Hero Header with Orange Gradient and Ambient Particles */}

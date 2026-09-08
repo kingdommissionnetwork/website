@@ -583,7 +583,7 @@ export default function SubscriberDashboard() {
   };
 
   return (
-    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#071324] text-white flex flex-col font-outfit">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#071324] text-white flex flex-col font-outfit">
       <SEO
         title="Covenant Partner Hub — Kingdom Missions Network"
         description="Subscriber & Partner Portal: access official credentials, giving statements, prophetic briefings, mission delegations, and the 24/7 prayer altar."
@@ -639,14 +639,14 @@ export default function SubscriberDashboard() {
                 className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all"
               >
                 <Award className="w-4 h-4 text-[#d4af37]" />
-                <span>Partner Credential</span>
+                <span className="hidden sm:inline">Official ID Seal</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("prayer")}
                 className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:brightness-110 transition-all"
               >
-                <Flame className="w-4 h-4" />
+                <Heart className="w-4 h-4 text-[#0c1b33] fill-current" />
                 <span>Submit Altar Prayer</span>
               </button>
             </div>
@@ -659,7 +659,7 @@ export default function SubscriberDashboard() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Subscriber Navigation Sidebar */}
           <aside className="w-full lg:w-64 shrink-0">
-            <div className="bg-[#09182d] rounded-2xl border border-white/10 p-3 sticky top-28 space-y-1 shadow-lg">
+            <div className="bg-[#09182d] rounded-2xl border border-white/10 p-3 static lg:sticky lg:top-28 space-y-1 shadow-lg">
               <div className="px-3 py-2 text-[10px] uppercase font-bold text-white/40 tracking-[0.2em]">
                 Partner Portal Navigation
               </div>
@@ -1094,9 +1094,51 @@ export default function SubscriberDashboard() {
                   </button>
                 </div>
 
-                {/* Ledger Table */}
-                <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-6 space-y-4">
-                  <div className="overflow-x-auto">
+                {/* Ledger Table & Mobile Cards */}
+                <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-6 space-y-4">
+                  {/* Mobile Card List (< sm) */}
+                  <div className="sm:hidden space-y-3">
+                    {donations.map((d, index) => (
+                      <div key={index} className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-semibold text-white text-sm">
+                              {d.recurring ? "Covenant Monthly Partnership Seed" : "Kingdom Mission Offering"}
+                            </p>
+                            <p className="text-white/50 text-xs mt-0.5">
+                              {new Date(d.created_at).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </p>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold shrink-0">
+                            Verified
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                          <div>
+                            <span className="text-xs text-white/50 block">Amount</span>
+                            <span className="font-bold text-[#fbf5b7] text-sm">
+                              {d.currency} {Number(d.amount).toLocaleString()}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Receipt</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop / Tablet Table (>= sm) */}
+                  <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-left text-xs sm:text-sm">
                       <thead>
                         <tr className="border-b border-white/10 text-white/50 text-[11px] uppercase tracking-wider">

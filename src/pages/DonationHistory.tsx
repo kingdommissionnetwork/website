@@ -50,7 +50,7 @@ export default function DonationHistory() {
   };
 
   return (
-    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#e6eef7]">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#e6eef7]">
       <SEO title="Giving History" description="View your past donations to Kingdom Missions Network." />
       
       {/* Hero Header with Orange Gradient and Ambient Particles */}

@@ -609,7 +609,7 @@ export default function SubscriptionPortal() {
   };
 
   return (
-    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#071324] text-white">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#071324] text-white">
       <SEO
         title="Kingdom Partnership Packages — Kingdom Missions Network"
         description="Join Kingdom Missions Network as a covenant partner. Support reaching the unreached, feeding the nations, and global crusades with exclusive ambassador incentives."
@@ -617,7 +617,7 @@ export default function SubscriptionPortal() {
 
       {/* STEP 1: CHOOSE PACKAGE (ULTRA COMPACT HEADER + 4 TIERS GRID) */}
       {currentStep === "plans" && (
-        <section className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] pt-3 pb-8 sm:pt-4 sm:pb-12 px-3 sm:px-6 lg:px-8 min-h-[calc(100vh-92px)] supports-[height:100dvh]:min-h-[calc(100dvh-92px)] flex flex-col justify-between" id="packages">
+        <section className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] pt-3 pb-8 sm:pt-4 sm:pb-12 px-3 sm:px-6 lg:px-8 min-h-[calc(100vh-64px)] md:min-h-[calc(100vh-92px)] supports-[height:100dvh]:min-h-[calc(100dvh-64px)] md:supports-[height:100dvh]:min-h-[calc(100dvh-92px)] flex flex-col justify-between" id="packages">
           <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.12)_0%,transparent_65%)] pointer-events-none blur-3xl" />
           <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.15)_0%,transparent_65%)] pointer-events-none blur-3xl" />
           <AmbientParticles />
@@ -883,7 +883,7 @@ export default function SubscriptionPortal() {
 
       {/* STEP 2: CHECKOUT SECTION (OCCUPIES ENTIRE SCREEN, NO ENDLESS SCROLLING) */}
       {currentStep === "checkout" && (
-        <section className="py-8 sm:py-12 px-4 sm:px-6 min-h-[calc(100vh-92px)] supports-[height:100dvh]:min-h-[calc(100dvh-92px)] flex flex-col justify-start" id="checkout">
+        <section className="py-8 sm:py-12 px-4 sm:px-6 min-h-[calc(100vh-64px)] md:min-h-[calc(100vh-92px)] supports-[height:100dvh]:min-h-[calc(100dvh-64px)] md:supports-[height:100dvh]:min-h-[calc(100dvh-92px)] flex flex-col justify-start" id="checkout">
           <div className="container-main mx-auto max-w-3xl w-full">
             {/* Step Navigation & Breadcrumbs */}
             <div className="flex items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">

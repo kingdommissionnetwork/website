@@ -47,7 +47,7 @@ export default function HeroSection() {
   const currentEvent = UPCOMING_MISSIONS[activeTab];
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#071324] via-[#0c1b33] to-[#1a1107] pt-[72px] sm:pt-24 md:pt-[100px] lg:pt-[108px] pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#071324] via-[#0c1b33] to-[#1a1107] pt-16 sm:pt-20 md:pt-[92px] lg:pt-[108px] pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8">
       {/* Dynamic Warm Orange & Gold Background Glows */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] md:w-[650px] h-[400px] md:h-[650px] bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,transparent_70%)] pointer-events-none blur-2xl" />
       <div className="absolute top-12 right-0 md:right-10 w-[350px] md:w-[550px] h-[350px] md:h-[550px] bg-[radial-gradient(circle,rgba(249,115,22,0.16)_0%,transparent_65%)] pointer-events-none blur-3xl" />

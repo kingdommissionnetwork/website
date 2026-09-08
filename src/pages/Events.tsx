@@ -218,7 +218,7 @@ export default function Events() {
   };
 
   return (
-    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-white">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-white">
       <SEO
         title="Events & Global Summits"
         description="Join our global events — conferences, gospel missions, worship nights, and prayer summits. Browse upcoming gatherings, RSVP free, and add them to your calendar."

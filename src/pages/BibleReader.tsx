@@ -191,20 +191,20 @@ export default function BibleReader() {
 
   if (loadingBooks) {
     return (
-      <div className="pt-[72px] md:pt-[108px] min-h-screen bg-[#e6eef7] flex items-center justify-center">
+      <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#e6eef7] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="pt-[72px] md:pt-[108px] h-screen bg-[#e6eef7] flex flex-col overflow-hidden">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen lg:h-screen bg-[#e6eef7] flex flex-col lg:overflow-hidden">
       <SEO title={selectedBook ? `${selectedBook} ${selectedChapter} — Bible` : "Bible"} description="Read the Bible online with multiple translations (KJV, WEB, ASV). Search, bookmark, and take study notes." />
-      <div className="bg-[#0c1b33] py-6 px-4 shrink-0 z-10">
+      <div className="bg-[#0c1b33] py-5 sm:py-6 px-4 shrink-0 z-10">
         <div className="container-main mx-auto flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             <h1 className="font-display text-2xl md:text-3xl font-bold text-white">Holy Bible</h1>
-            <div className="hidden sm:flex items-center gap-1.5 ml-4 pl-4 border-l border-white/10">
+            <div className="flex flex-wrap items-center gap-1.5 mt-2 sm:mt-0 sm:ml-4 sm:pl-4 sm:border-l sm:border-white/10 w-full sm:w-auto">
               {translations.map((t) => (
                 <button
                   key={t}
@@ -223,9 +223,9 @@ export default function BibleReader() {
         </div>
       </div>
 
-      <div className="container-main mx-auto px-4 sm:px-6 py-6 flex-1 overflow-hidden">
-        <div className="grid lg:grid-cols-12 gap-6 h-full">
-          <div className="lg:col-span-3 h-full overflow-y-auto pr-2 pb-6">
+      <div className="container-main mx-auto px-4 sm:px-6 py-6 flex-1 lg:overflow-hidden">
+        <div className="grid lg:grid-cols-12 gap-6 lg:h-full">
+          <div className="lg:col-span-3 lg:h-full lg:overflow-y-auto pr-0 lg:pr-2 pb-6">
             <ScrollReveal>
               <div className="bg-white rounded-2xl p-5 shadow-sm">
                 <button
@@ -310,7 +310,7 @@ export default function BibleReader() {
             </ScrollReveal>
           </div>
 
-          <div className="lg:col-span-6 h-full overflow-y-auto pr-2 pb-6">
+          <div className="lg:col-span-6 lg:h-full lg:overflow-y-auto pr-0 lg:pr-2 pb-6">
             <ScrollReveal>
               <div className="bg-[#f5f0e8] rounded-2xl p-6 sm:p-10 shadow-sm min-h-full">
                 <div className="text-center mb-8 pb-6 border-b border-[#0c1b33]/10">
@@ -496,27 +496,9 @@ export default function BibleReader() {
             </ScrollReveal>
           </div>
 
-          <div className="lg:col-span-3 h-full overflow-y-auto pr-2 pb-6">
+          <div className="lg:col-span-3 lg:h-full lg:overflow-y-auto pr-0 lg:pr-2 pb-6">
             <ScrollReveal>
               <div className="space-y-6">
-                <div className="sm:hidden bg-white rounded-2xl p-5 shadow-sm">
-                  <h3 className="font-display text-lg font-semibold text-[#0c1b33] mb-3">Translation</h3>
-                  <div className="flex gap-2 flex-wrap">
-                    {translations.map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => handleTranslationChange(t)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                          activeTranslation === t
-                            ? "bg-[#d4af37] text-[#0c1b33]" : "bg-[#f8f6f3] text-[#6b7c93]"
-                        }`}
-                      >
-                        {t.toUpperCase()}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="bg-white rounded-2xl p-5 shadow-sm">
                   <div className="flex items-center gap-2 mb-4">
                     <Highlighter className="w-4 h-4 text-[#d4af37]" />

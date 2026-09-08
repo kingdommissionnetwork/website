@@ -50,7 +50,7 @@ export default function Sermons() {
   };
 
   return (
-    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-white">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-white">
       <SEO title="Sermons" description="Browse our collection of sermons on faith, hope, love, and discipleship." />
       
       <div className="relative overflow-hidden py-16 lg:py-20 px-4 bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107]">

@@ -26,7 +26,7 @@ export default function PastEvents() {
   const past = useMemo(() => getPastEvents(events), [events]);
 
   return (
-    <div className="pt-[72px] md:pt-[108px] min-h-screen bg-white">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-white">
       <SEO
         title="Recent & Past Gatherings"
         description="Browse recently concluded Kingdom gatherings, conferences, and missions. Relive what God did — and partner with the next one."
