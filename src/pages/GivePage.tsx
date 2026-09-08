@@ -147,8 +147,7 @@ export default function GivePage() {
   const completeTransaction = (
     reference: string,
     provider: string,
-    verifiedUser?: Record<string, unknown> | null,
-    _token?: string | null
+    verifiedUser?: Record<string, unknown> | null
   ) => {
     if (verifiedUser) {
       const authUser = {

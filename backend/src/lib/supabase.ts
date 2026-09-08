@@ -17,12 +17,14 @@ function requireSupabaseUrl(): string {
 
 function requireServiceKey(): string {
   const rawKey =
+    getEnv("SUPABASE_SECRET_KEY") ||
     getEnv("SUPABASE_SERVICE_KEY") ||
     getEnv("SUPABASE_SERVICE_ROLE_KEY") ||
+    process.env.SUPABASE_SECRET_KEY ||
     process.env.SUPABASE_SERVICE_KEY ||
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     "";
-  if (!rawKey) throw new Error("SUPABASE_SERVICE_KEY must be set");
+  if (!rawKey) throw new Error("SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_KEY) must be set");
   return rawKey;
 }
 
@@ -39,10 +41,15 @@ export function getSupabase() {
 
 export function createAuthClient() {
   const url = requireSupabaseUrl();
-  // Prefer the anon key for user-facing auth; fall back to service key only
-  // when anon is not configured (e.g. backend-only flows).
-  const anonKey = getEnv("SUPABASE_ANON_KEY") || process.env.SUPABASE_ANON_KEY || "";
-  const key = anonKey || requireServiceKey();
+  // Prefer publishable/anon key for user-facing auth; fall back to secret/service key only
+  // when publishable is not configured (e.g. backend-only flows).
+  const pubKey =
+    getEnv("SUPABASE_PUBLISHABLE_KEY") ||
+    getEnv("SUPABASE_ANON_KEY") ||
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    "";
+  const key = pubKey || requireServiceKey();
   return createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
