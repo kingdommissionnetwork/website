@@ -7,4 +7,5 @@ compatibility_date = "2025-03-01"
 
 [vars]
 SUPABASE_URL = ""
-SUPABASE_SERVICE_KEY = ""
+SUPABASE_SECRET_KEY = ""
+SUPABASE_PUBLISHABLE_KEY = ""

@@ -57,8 +57,8 @@ app.use("*", async (c, next) => {
 app.use("*", logger());
 
 app.onError((err, c) => {
-  console.error("[Worker Error]", err);
-  return c.json({ error: "Internal server error" }, 500);
+  console.error("[Worker Error]", err, { url: c.req.url, method: c.req.method });
+  return c.json({ error: "Internal Server Error" }, 500);
 });
 
 app.get("/api/health", (c) => c.json({ status: "ok", timestamp: new Date().toISOString() }));

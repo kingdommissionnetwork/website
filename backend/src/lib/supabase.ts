@@ -15,23 +15,16 @@ function requireSupabaseUrl(): string {
   return rawUrl;
 }
 
-function requireServiceKey(): string {
-  const rawKey =
-    getEnv("SUPABASE_SECRET_KEY") ||
-    getEnv("SUPABASE_SERVICE_KEY") ||
-    getEnv("SUPABASE_SERVICE_ROLE_KEY") ||
-    process.env.SUPABASE_SECRET_KEY ||
-    process.env.SUPABASE_SERVICE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    "";
-  if (!rawKey) throw new Error("SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_KEY) must be set");
+function requireSecretKey(): string {
+  const rawKey = getEnv("SUPABASE_SECRET_KEY") || process.env.SUPABASE_SECRET_KEY || "";
+  if (!rawKey) throw new Error("SUPABASE_SECRET_KEY must be set");
   return rawKey;
 }
 
 export function getSupabase() {
   if (!_supabase) {
     const url = requireSupabaseUrl();
-    const key = requireServiceKey();
+    const key = requireSecretKey();
     _supabase = createClient(url, key, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
@@ -39,17 +32,17 @@ export function getSupabase() {
   return _supabase;
 }
 
+function requirePublishableKey(): string {
+  const rawKey = getEnv("SUPABASE_PUBLISHABLE_KEY") || process.env.SUPABASE_PUBLISHABLE_KEY || "";
+  if (!rawKey) throw new Error("SUPABASE_PUBLISHABLE_KEY must be set");
+  return rawKey;
+}
+
 export function createAuthClient() {
   const url = requireSupabaseUrl();
-  // Prefer publishable/anon key for user-facing auth; fall back to secret/service key only
-  // when publishable is not configured (e.g. backend-only flows).
-  const pubKey =
-    getEnv("SUPABASE_PUBLISHABLE_KEY") ||
-    getEnv("SUPABASE_ANON_KEY") ||
-    process.env.SUPABASE_PUBLISHABLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    "";
-  const key = pubKey || requireServiceKey();
+  // User-facing auth must run in anon/publishable context — never fall back
+  // to the secret key, which would execute user flows as service-role.
+  const key = requirePublishableKey();
   return createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });

@@ -164,8 +164,9 @@ authRoutes.post("/google", strictRateLimit, zValidator("json", googleSchema), as
 
 authRoutes.post("/forgot-password", strictRateLimit, zValidator("json", z.object({ email: z.string().email() })), async (c) => {
   const { email } = c.req.valid("json");
-  const supabase = getSupabase();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  // User-context flow: must use the publishable client, never service-role.
+  const authClient = createAuthClient();
+  const { error } = await authClient.auth.resetPasswordForEmail(email, {
     redirectTo: `${safeResetBase(c)}/reset-password`,
   });
   // Always return ok to avoid email enumeration; never echo provider errors.
@@ -178,10 +179,11 @@ authRoutes.post("/reset-password", strictRateLimit, zValidator("json", z.object(
   token: z.string().min(1).max(5000),
 })), async (c) => {
   const { password, token } = c.req.valid("json");
-  const supabase = getSupabase();
-  const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+  const authClient = createAuthClient();
+  const { data: { user }, error: userError } = await authClient.auth.getUser(token);
   if (userError || !user) return c.json({ error: "Invalid or expired token" }, 400);
 
+  const supabase = getSupabase();
   const { error } = await supabase.auth.admin.updateUserById(user.id, { password });
   if (error) return c.json({ error: "Failed to update password." }, 400);
   return c.json({ ok: true, message: "Password updated successfully." });
