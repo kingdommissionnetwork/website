@@ -23,7 +23,7 @@ app.use("*", async (c, next) => {
 });
 
 app.use("*", cors({
-  origin: (origin) => {
+  origin: (origin, c) => {
     const allowed = [
       "https://kingdommissionsnetwork.org",
       "https://www.kingdommissionsnetwork.org",
@@ -35,11 +35,24 @@ app.use("*", cors({
       "https://www.heavenlykingdomnetwork.org",
       "https://KingdomMissionNetwork.hkmministries.org",
     ];
-    if (!origin || origin.startsWith("http://localhost:")) return origin || "";
-    return allowed.includes(origin) ? origin : "";
+    const env = (c.env as Record<string, string> | undefined) || {};
+    const isProd = env.ENVIRONMENT === "production";
+    if (!origin) return "";
+    if (origin.startsWith("http://localhost:")) return isProd ? "" : origin;
+    if (allowed.includes(origin)) return origin;
+    const frontendUrl = env.FRONTEND_URL;
+    if (frontendUrl && origin === frontendUrl) return origin;
+    return "";
   },
   credentials: true,
 }));
+
+app.use("*", async (c, next) => {
+  await next();
+  c.res.headers.set("X-Content-Type-Options", "nosniff");
+  c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  c.res.headers.set("X-Frame-Options", "DENY");
+});
 
 app.use("*", logger());
 

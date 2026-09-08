@@ -4,31 +4,32 @@ import { getEnv } from "./env";
 
 let _supabase: SupabaseClient | null = null;
 
-const DEFAULT_SUPABASE_URL = "https://wvjoxhpoxytkjuuridpv.supabase.co";
-const DEFAULT_SUPABASE_KEY = "REDACTED_SUPABASE_KEY";
-
-function sanitizeUrl(rawUrl: string, isTest: boolean): string {
-  if (!rawUrl) return !isTest ? DEFAULT_SUPABASE_URL : "";
-  if (rawUrl.includes("pfrddgiauxibzgzllkbd")) return DEFAULT_SUPABASE_URL;
+/**
+ * Fail-closed env access: no hardcoded defaults. Service keys must come
+ * from the Worker bindings / process env. Throwing here prevents silently
+ * running against the wrong project or with a leaked key baked into source.
+ */
+function requireSupabaseUrl(): string {
+  const rawUrl = getEnv("SUPABASE_URL") || process.env.SUPABASE_URL || "";
+  if (!rawUrl) throw new Error("SUPABASE_URL must be set");
   return rawUrl;
 }
 
-function sanitizeKey(rawKey: string, isTest: boolean, isDefaultUrl: boolean): string {
-  if (isDefaultUrl) return DEFAULT_SUPABASE_KEY;
-  if (!rawKey) return !isTest ? DEFAULT_SUPABASE_KEY : "";
-  if (rawKey.includes("pfrdd")) return DEFAULT_SUPABASE_KEY;
+function requireServiceKey(): string {
+  const rawKey =
+    getEnv("SUPABASE_SERVICE_KEY") ||
+    getEnv("SUPABASE_SERVICE_ROLE_KEY") ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    "";
+  if (!rawKey) throw new Error("SUPABASE_SERVICE_KEY must be set");
   return rawKey;
 }
 
 export function getSupabase() {
   if (!_supabase) {
-    const isTest = process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
-    const rawUrl = getEnv("SUPABASE_URL") || process.env.SUPABASE_URL || "";
-    const url = sanitizeUrl(rawUrl, isTest);
-    const isDefault = url === DEFAULT_SUPABASE_URL && rawUrl !== DEFAULT_SUPABASE_URL;
-    const rawKey = getEnv("SUPABASE_SERVICE_KEY") || getEnv("SUPABASE_SERVICE_ROLE_KEY") || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-    const key = sanitizeKey(rawKey, isTest, isDefault);
-    if (!url || !key) throw new Error("SUPABASE_URL and SUPABASE_SERVICE_KEY must be set");
+    const url = requireSupabaseUrl();
+    const key = requireServiceKey();
     _supabase = createClient(url, key, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
@@ -37,12 +38,11 @@ export function getSupabase() {
 }
 
 export function createAuthClient() {
-  const isTest = process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
-  const rawUrl = getEnv("SUPABASE_URL") || process.env.SUPABASE_URL || "";
-  const url = sanitizeUrl(rawUrl, isTest);
-  const isDefault = url === DEFAULT_SUPABASE_URL && rawUrl !== DEFAULT_SUPABASE_URL;
-  const rawKey = getEnv("SUPABASE_ANON_KEY") || process.env.SUPABASE_ANON_KEY || getEnv("SUPABASE_SERVICE_KEY") || getEnv("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const key = sanitizeKey(rawKey, isTest, isDefault);
+  const url = requireSupabaseUrl();
+  // Prefer the anon key for user-facing auth; fall back to service key only
+  // when anon is not configured (e.g. backend-only flows).
+  const anonKey = getEnv("SUPABASE_ANON_KEY") || process.env.SUPABASE_ANON_KEY || "";
+  const key = anonKey || requireServiceKey();
   return createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });

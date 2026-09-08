@@ -26,16 +26,20 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 function getToken(): string | null {
+  // Cookie-only auth: JWT lives in an httpOnly SameSite=Lax cookie set by the
+  // backend. Nothing is stored in localStorage (XSS-safe). Kept for compat.
   try {
-    return localStorage.getItem("hkn-token");
+    localStorage.removeItem("hkn-token");
   } catch {
-    return null;
+    // storage unavailable — ignore
   }
+  return null;
 }
 
 function authHeaders(): Record<string, string> {
-  const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  // Auth relies on the httpOnly cookie (fetch uses credentials:include).
+  // No Authorization header is sent to avoid token theft via XSS.
+  return {};
 }
 
 type AuthUser = { id: number; name: string; email: string; role: string; avatar?: string };
@@ -46,7 +50,12 @@ export const api = {
     // Token is now set via httpOnly cookie by the backend
   },
   clearToken() {
-    localStorage.removeItem("hkn-token");
+    try {
+      localStorage.removeItem("hkn-token");
+    } catch {
+      // ignore
+    }
+    request("/auth/logout", { method: "POST" }).catch(() => {});
   },
 
   auth: {
@@ -57,19 +66,19 @@ export const api = {
       return request("/auth/reset-password", { method: "POST", body: JSON.stringify({ password, token }) });
     },
     login: async (email: string, password: string) => {
-      return request<{ token: string; user: AuthUser }>("/auth/login", {
+      return request<{ user: AuthUser }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
     },
     register: async (name: string, email: string, password: string) => {
-      return request<{ token: string; user: AuthUser }>("/auth/register", {
+      return request<{ user: AuthUser }>("/auth/register", {
         method: "POST",
         body: JSON.stringify({ name, email, password }),
       });
     },
     google: async (token: string) => {
-      return request<{ token: string; user: AuthUser }>("/auth/google", {
+      return request<{ user: AuthUser }>("/auth/google", {
         method: "POST",
         body: JSON.stringify({ token }),
       });

@@ -51,6 +51,28 @@ async function generateHmacSha512Hex(text: string, secret: string): Promise<stri
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Constant-time string compare to avoid timing oracles on webhook HMACs. */
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * Optional shared-secret guard for provider callbacks (Daraja C2B, KCB IPN,
+ * KCB STK callback). When MPESA_WEBHOOK_SECRET is configured, callers must
+ * send it via `x-webhook-secret`. When unconfigured (local dev / tests) the
+ * endpoints preserve legacy ack behaviour but log a warning. Configure the
+ * secret in production and register it alongside the callback URLs.
+ */
+function mpesaWebhookGuard(c: import("hono").Context): boolean {
+  const expected = getSecret(c, "MPESA_WEBHOOK_SECRET");
+  if (!expected) return true;
+  const provided = c.req.header("x-webhook-secret") || "";
+  return timingSafeEqualHex(provided, expected);
+}
+
 async function paystackPost(path: string, body: unknown, secret: string) {
   const res = await fetch(`https://api.paystack.co${path}`, {
     method: "POST",
@@ -707,7 +729,16 @@ async function tryAutoFulfillClaim(c: import("hono").Context, transId: string): 
 // (one-time production step): every successful Paybill payment is POSTed here
 // and becomes redemption truth in mpesa_paybill_receipts. NO ledger rows are
 // written here — activation happens only through claim matching.
+// Hardening: when MPESA_WEBHOOK_SECRET is set, the provider must send it via
+// `x-webhook-secret` (configure a reverse-proxy / API-gateway check in front
+// of Daraja if Daraja cannot send custom headers). Rejected calls still ack
+// with ResultCode 0 to avoid provider retries leaking oracle info, but nothing
+// is written to the ledger.
 subscriptionRoutes.post("/mpesa/c2b-confirmation", async (c) => {
+  if (!mpesaWebhookGuard(c)) {
+    console.warn("[DARAJA C2B] rejected callback with bad webhook secret");
+    return c.json({ ResultCode: 0, ResultDesc: "Confirmation received successfully" });
+  }
   try {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
     const normalized = normalizeDarajaConfirmation(body);
@@ -731,7 +762,12 @@ subscriptionRoutes.post("/mpesa/c2b-confirmation", async (c) => {
 // KCB Buni Instant Payment Notification for credits to the collection account.
 // Register this URL in the Buni portal as the IPN / callbackUrl target so
 // direct Paybill/bank credits become redemption truth the same way.
+// Hardening: same MPESA_WEBHOOK_SECRET guard as Daraja above.
 subscriptionRoutes.post("/mpesa/kcb-ipn", async (c) => {
+  if (!mpesaWebhookGuard(c)) {
+    console.warn("[KCB IPN] rejected callback with bad webhook secret");
+    return c.json({ statusCode: "0", statusDescription: "Notification received successfully" });
+  }
   try {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
     const normalized = normalizeKcbIpn(body);
@@ -776,6 +812,29 @@ const activeMpesaCheckouts = new Map<string, MpesaCheckoutSession>();
  * After this TTL an unconfirmed session expires (never auto-completes).
  */
 const STK_SESSION_TTL_MS = 180_000;
+const STK_MAX_SESSIONS = 5000;
+
+/**
+ * NOTE: in-memory sessions are per-isolate and do not survive Worker restarts
+ * or share across instances. This sweep bounds memory; for multi-instance
+ * production move sessions to KV / Durable Objects.
+ */
+function sweepStkSessions(): void {
+  const now = Date.now();
+  for (const [id, s] of activeMpesaCheckouts) {
+    if (now - s.createdAt > STK_SESSION_TTL_MS * 2) activeMpesaCheckouts.delete(id);
+  }
+  // Hard cap: evict oldest first on overflow (DoS backstop).
+  if (activeMpesaCheckouts.size > STK_MAX_SESSIONS) {
+    const overflow = activeMpesaCheckouts.size - STK_MAX_SESSIONS;
+    const ids = activeMpesaCheckouts.keys();
+    for (let i = 0; i < overflow; i++) {
+      const next = ids.next();
+      if (next.done) break;
+      activeMpesaCheckouts.delete(next.value);
+    }
+  }
+}
 
 // KCB Buni M-Pesa STK Push Trigger
 subscriptionRoutes.post(
@@ -824,6 +883,7 @@ subscriptionRoutes.post(
         transactionDescription: "CovenantSeed",
       });
 
+      sweepStkSessions();
       activeMpesaCheckouts.set(result.checkoutRequestId, {
         checkoutRequestId: result.checkoutRequestId,
         merchantRequestId: result.merchantRequestId,
@@ -958,7 +1018,7 @@ async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCh
 // SECURITY: a session completes ONLY via the provider callback below.
 // Pending sessions expire after STK_SESSION_TTL_MS — never auto-complete.
 subscriptionRoutes.get("/mpesa/query/:checkoutRequestId", rateLimit, async (c) => {
-  const checkoutRequestId = c.req.param("checkoutRequestId");
+  const checkoutRequestId = c.req.param("checkoutRequestId").slice(0, 64);
   const checkout = activeMpesaCheckouts.get(checkoutRequestId);
 
   if (!checkout) {
@@ -992,7 +1052,12 @@ subscriptionRoutes.get("/mpesa/query/:checkoutRequestId", rateLimit, async (c) =
 });
 
 // KCB Buni Webhook Callback — the ONLY signal that marks a session completed.
+// Hardening: same MPESA_WEBHOOK_SECRET guard; unknown IDs ack without state change.
 subscriptionRoutes.post("/mpesa/kcb-callback", async (c) => {
+  if (!mpesaWebhookGuard(c)) {
+    console.warn("[KCB CALLBACK] rejected callback with bad webhook secret");
+    return c.json({ statusCode: "0", statusDescription: "Callback received successfully" });
+  }
   try {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
     const response = (body.response || body) as Record<string, unknown>;
@@ -1039,7 +1104,7 @@ subscriptionRoutes.post("/mpesa/kcb-callback", async (c) => {
 
 
 // Pricing calculation endpoint
-subscriptionRoutes.get("/pricing", async (c) => {
+subscriptionRoutes.get("/pricing", rateLimit, async (c) => {
   const wiseToken = getSecret(c, "WISE_API_TOKEN");
   const amountParam = Number(c.req.query("amount")) || 1000;
   const calculation = await computeKesToUsd(amountParam, wiseToken);
@@ -1085,7 +1150,16 @@ subscriptionRoutes.post(
     const wiseToken = getSecret(c, "WISE_API_TOKEN");
     const conversion = await computeKesToUsd(targetKes, wiseToken);
 
-    const callbackUrl = `${c.req.header("origin") || "http://localhost:3000"}/subscribe?paystack_callback=1`;
+    const reqOrigin = c.req.header("origin") || "";
+    const allowedCallbacks = [
+      "https://kingdommissionsnetwork.org",
+      "https://www.kingdommissionsnetwork.org",
+      "https://kingdommissionnetwork.org",
+      "https://www.kingdommissionnetwork.org",
+      "https://heavenlykingdomnetwork.org",
+      "https://www.heavenlykingdomnetwork.org",
+    ];
+    const callbackUrl = `${allowedCallbacks.includes(reqOrigin) ? reqOrigin : "https://kingdommissionsnetwork.org"}/subscribe?paystack_callback=1`;
 
     const chargeAmount = currency === "KES" ? Math.round(targetKes * 100) : Math.round(conversion.usdAmount * 100);
 
@@ -1123,7 +1197,7 @@ subscriptionRoutes.post(
 );
 
 // Paystack Subscription Verification
-subscriptionRoutes.get("/verify/:reference", async (c) => {
+subscriptionRoutes.get("/verify/:reference", rateLimit, async (c) => {
   const secret = getSecret(c, "PAYSTACK_SECRET_KEY");
   if (!secret) return c.json({ error: "Payment gateway not configured" }, 503);
 
@@ -1306,6 +1380,7 @@ subscriptionRoutes.post(
 // PayPal Order Capture & Subscription Activation
 subscriptionRoutes.post(
   "/paypal/capture",
+  rateLimit,
   zValidator(
     "json",
     z.object({
@@ -1407,7 +1482,7 @@ subscriptionRoutes.post(
   }
 );
 
-// Webhook Receiver (Paystack HMAC validated)
+// Webhook Receiver (Paystack HMAC validated, constant-time compare)
 subscriptionRoutes.post("/webhook", async (c) => {
   const secret = getSecret(c, "PAYSTACK_SECRET_KEY");
   if (!secret) return c.json({ error: "Not configured" }, 503);
@@ -1417,7 +1492,7 @@ subscriptionRoutes.post("/webhook", async (c) => {
 
   const rawBody = await c.req.text();
   const expectedSignature = await generateHmacSha512Hex(rawBody, secret);
-  if (signature !== expectedSignature) {
+  if (!timingSafeEqualHex(signature, expectedSignature)) {
     return c.json({ error: "Invalid signature" }, 401);
   }
 
@@ -1482,13 +1557,15 @@ subscriptionRoutes.post("/webhook", async (c) => {
 });
 
 // Check Subscription Status (includes lifecycle + renewal pay-link)
-subscriptionRoutes.get("/status/:email", async (c) => {
+// Rate-limited and redacted: never returns payment references, customer
+// codes, metadata, or PII beyond what the caller already supplied.
+subscriptionRoutes.get("/status/:email", rateLimit, async (c) => {
   const email = c.req.param("email");
   try {
     const supabase = getSupabase();
     const { data, error } = await supabase
       .from("subscriptions")
-      .select("*")
+      .select("status, plan_name, plan_id, amount, currency, interval, current_period_end, payment_provider, created_at")
       .eq("subscriber_email", email)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -1573,7 +1650,7 @@ subscriptionRoutes.post(
     }
     const session = await provisionClaimSession(c, norm);
     if (!session) {
-      return c.json({ error: "No partnership record found for this email.", code: "NO_RECORD" }, 404);
+      return c.json({ error: "No matching partnership record found.", code: "NO_RECORD" }, 404);
     }
     await logBillingEvent(norm, "partner_claim_verified", "user", String(session.user.id), {});
     return c.json({ status: "verified", user: session.user, token: session.token });
@@ -1585,38 +1662,30 @@ subscriptionRoutes.post(
 // Ownership proof = email + the subscription's own payment_reference.
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function findOwnedSubscription(email: string, paymentReference?: string) {
+async function findOwnedSubscription(email: string, paymentReference: string) {
   const supabase = getSupabase();
   const norm = email.trim().toLowerCase();
-  if (paymentReference) {
-    const { data } = await supabase
-      .from("subscriptions")
-      .select("*")
-      .eq("subscriber_email", norm)
-      .eq("payment_reference", paymentReference.trim())
-      .maybeSingle();
-    return data as Record<string, unknown> | null;
-  }
+  // paymentReference is REQUIRED: email alone never authorizes a mutation.
+  // It acts as the possession factor (Paystack ref / M-Pesa code / order id).
   const { data } = await supabase
     .from("subscriptions")
     .select("*")
     .eq("subscriber_email", norm)
-    .order("created_at", { ascending: false })
-    .limit(1)
+    .eq("payment_reference", paymentReference.trim())
     .maybeSingle();
   return data as Record<string, unknown> | null;
 }
 
 const manageSchema = z.object({
   email: z.string().email().max(100),
-  paymentReference: z.string().min(1).max(64).optional(),
+  paymentReference: z.string().min(6).max(64),
   reason: z.string().max(255).optional(),
 });
 
 subscriptionRoutes.post("/manage/cancel", rateLimit, zValidator("json", manageSchema), async (c) => {
   const { email, paymentReference, reason } = c.req.valid("json");
   const sub = await findOwnedSubscription(email, paymentReference);
-  if (!sub) return c.json({ error: "No partnership record found for this email.", code: "NO_RECORD" }, 404);
+  if (!sub) return c.json({ error: "No matching partnership record found.", code: "NO_RECORD" }, 404);
   if (String(sub.status) === "canceled") {
     return c.json({ status: "canceled", subscription: sub });
   }
@@ -1640,7 +1709,7 @@ subscriptionRoutes.post("/manage/cancel", rateLimit, zValidator("json", manageSc
 subscriptionRoutes.post("/manage/pause", rateLimit, zValidator("json", manageSchema), async (c) => {
   const { email, paymentReference } = c.req.valid("json");
   const sub = await findOwnedSubscription(email, paymentReference);
-  if (!sub) return c.json({ error: "No partnership record found for this email.", code: "NO_RECORD" }, 404);
+  if (!sub) return c.json({ error: "No matching partnership record found.", code: "NO_RECORD" }, 404);
   const status = String(sub.status);
   if (!["active", "past_due", "grace"].includes(status)) {
     return c.json({ error: `Only active partnerships can be paused (current: ${status}).`, code: "INVALID_STATE" }, 409);
@@ -1659,7 +1728,7 @@ subscriptionRoutes.post("/manage/pause", rateLimit, zValidator("json", manageSch
 subscriptionRoutes.post("/manage/resume", rateLimit, zValidator("json", manageSchema), async (c) => {
   const { email, paymentReference } = c.req.valid("json");
   const sub = await findOwnedSubscription(email, paymentReference);
-  if (!sub) return c.json({ error: "No partnership record found for this email.", code: "NO_RECORD" }, 404);
+  if (!sub) return c.json({ error: "No matching partnership record found.", code: "NO_RECORD" }, 404);
   const status = String(sub.status);
   if (!["paused", "past_due", "grace", "suspended"].includes(status)) {
     return c.json({ error: `Only paused or overdue partnerships can be resumed (current: ${status}).`, code: "INVALID_STATE" }, 409);
@@ -1695,7 +1764,7 @@ subscriptionRoutes.post(
     "json",
     z.object({
       email: z.string().email().max(100),
-      paymentReference: z.string().min(1).max(64).optional(),
+      paymentReference: z.string().min(6).max(64),
       newPlanId: z.string().min(1).max(32),
       interval: z.enum(["monthly", "yearly"]).default("monthly"),
       apply: z.boolean().default(false),
@@ -1704,7 +1773,7 @@ subscriptionRoutes.post(
   async (c) => {
     const { email, paymentReference, newPlanId, interval, apply } = c.req.valid("json");
     const sub = await findOwnedSubscription(email, paymentReference);
-    if (!sub) return c.json({ error: "No partnership record found for this email.", code: "NO_RECORD" }, 404);
+    if (!sub) return c.json({ error: "No matching partnership record found.", code: "NO_RECORD" }, 404);
     const status = String(sub.status);
     if (["canceled", "suspended"].includes(status)) {
       return c.json({ error: `Partnership is ${status} and cannot change plans. Please renew first.`, code: "INVALID_STATE" }, 409);
@@ -1940,14 +2009,23 @@ function cronGuard(c: import("hono").Context): { ok: boolean; response?: Respons
     return { ok: false, response: c.json({ error: "Dunning is not configured (CRON_SECRET missing).", code: "CRON_NOT_CONFIGURED" }, 503) as unknown as Response };
   }
   const provided = c.req.header("x-cron-secret") || "";
-  if (provided !== secret) {
+  if (!timingSafeEqualHex(provided, secret)) {
     return { ok: false, response: c.json({ error: "Unauthorized.", code: "BAD_CRON_SECRET" }, 401) as unknown as Response };
   }
   return { ok: true };
 }
 
 function frontendBase(c: import("hono").Context): string {
-  return c.req.header("origin") || "https://kingdommissionsnetwork.org";
+  const origin = c.req.header("origin") || "";
+  const allowed = [
+    "https://kingdommissionsnetwork.org",
+    "https://www.kingdommissionsnetwork.org",
+    "https://kingdommissionnetwork.org",
+    "https://www.kingdommissionnetwork.org",
+    "https://heavenlykingdomnetwork.org",
+    "https://www.heavenlykingdomnetwork.org",
+  ];
+  return allowed.includes(origin) ? origin : "https://kingdommissionsnetwork.org";
 }
 
 // Subscriptions renewing within the next `days` days (renewal nudge list).

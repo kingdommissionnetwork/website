@@ -148,9 +148,9 @@ export default function GivePage() {
     reference: string,
     provider: string,
     verifiedUser?: Record<string, unknown> | null,
-    token?: string | null
+    _token?: string | null
   ) => {
-    if (token && verifiedUser) {
+    if (verifiedUser) {
       const authUser = {
         id: (verifiedUser.id as number) || 1,
         name: (verifiedUser.name as string) || donorName || "Kingdom Partner",
@@ -158,7 +158,7 @@ export default function GivePage() {
         role: ((verifiedUser.role === "admin" || verifiedUser.role === "superadmin")
           ? verifiedUser.role : "member") as "member" | "admin" | "superadmin",
       };
-      setSession(authUser, token);
+      setSession(authUser);
     }
     setReceipt({
       reference,

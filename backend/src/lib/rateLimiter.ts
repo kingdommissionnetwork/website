@@ -13,12 +13,20 @@ function cleanup() {
   }
 }
 
+function getClientIp(c: { req: { header: (n: string) => string | undefined } }): string {
+  // Prefer Cloudflare's verified client IP. Do NOT trust X-Forwarded-For
+  // (client-spoofable). NOTE: this in-memory limiter is per-isolate and is a
+  // best-effort backstop — enforce real edge rate limiting in Cloudflare
+  // (WAF / Rate Limiting Rules) for production.
+  return c.req.header("cf-connecting-ip") || c.req.header("x-real-ip") || "unknown";
+}
+
 export const rateLimit = createMiddleware(async (c, next) => {
-  if (process.env.DISABLE_RATE_LIMIT === "1") {
+  if (process.env.DISABLE_RATE_LIMIT === "1" && (process.env.NODE_ENV === "test" || Boolean(process.env.VITEST))) {
     return next();
   }
   cleanup();
-  const ip = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || "unknown";
+  const ip = getClientIp(c);
   const key = `${ip}:${c.req.path}`;
   const now = Date.now();
   const entry = requestCounts.get(key);
@@ -40,12 +48,13 @@ export const rateLimit = createMiddleware(async (c, next) => {
 });
 
 export const strictRateLimit = createMiddleware(async (c, next) => {
-  if (process.env.DISABLE_RATE_LIMIT === "1") {
+  if (process.env.DISABLE_RATE_LIMIT === "1" && (process.env.NODE_ENV === "test" || Boolean(process.env.VITEST))) {
     return next();
   }
   cleanup();
-  const ip = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || "unknown";
-  const key = `strict:${ip}`;
+  const ip = getClientIp(c);
+  // Per-endpoint bucket so one flow (e.g. login) can't starve another (verify).
+  const key = `strict:${ip}:${c.req.path}`;
   const now = Date.now();
   const entry = requestCounts.get(key);
 

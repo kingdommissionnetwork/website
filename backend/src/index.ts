@@ -34,14 +34,27 @@ app.use("*", cors({
       "https://www.heavenlykingdomnetwork.org",
       "https://KingdomMissionNetwork.hkmministries.org",
     ];
-    if (!origin || origin.startsWith("http://localhost:")) return origin || "";
+    const env = (c.env as Record<string, string> | undefined) || {};
+    // Localhost is allowed only outside production. Set ENVIRONMENT=production
+    // in prod to block credentialed localhost origins.
+    const isProd = env.ENVIRONMENT === "production";
+    if (!origin) return "";
+    if (origin.startsWith("http://localhost:")) return isProd ? "" : origin;
     if (allowed.includes(origin)) return origin;
-    const frontendUrl = (c.env as Record<string, string> | undefined)?.FRONTEND_URL;
+    const frontendUrl = env.FRONTEND_URL;
     if (frontendUrl && origin === frontendUrl) return origin;
     return "";
   },
   credentials: true,
 }));
+
+// Minimal API security headers (static assets are covered by public/_headers).
+app.use("*", async (c, next) => {
+  await next();
+  c.res.headers.set("X-Content-Type-Options", "nosniff");
+  c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  c.res.headers.set("X-Frame-Options", "DENY");
+});
 app.use("*", logger());
 
 app.get("/api/health", (c) => c.json({ status: "ok", timestamp: new Date().toISOString() }));

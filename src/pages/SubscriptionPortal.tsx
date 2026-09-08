@@ -213,16 +213,18 @@ export default function SubscriptionPortal() {
   const runOnboardingTransition = async (
     planTitle: string,
     verifiedUser?: Record<string, unknown> | null,
-    token?: string | null,
+    _token?: string | null,
     subscription?: Record<string, unknown> | null,
     refCode?: string | null,
     claimRequired?: boolean
   ) => {
     setIsSubscribed(true);
     setOnboardingStage(1);
-    if (verifiedUser && token) {
+    if (verifiedUser) {
+      // Cookie-only auth: backend sets httpOnly session cookie; token (if any)
+      // is ignored to avoid localStorage theft.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setSession(verifiedUser as any, token);
+      setSession(verifiedUser as any);
     }
     if (claimRequired) {
       showToast("Payment confirmed! A verification code was sent to your email to secure your Partner Hub.", "info");

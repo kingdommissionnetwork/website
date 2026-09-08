@@ -4,6 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { requireAdmin, verifyToken } from "../lib/jwt";
 import { getCookie } from "hono/cookie";
+import { rateLimit } from "../lib/rateLimiter";
 import { sendDonationEmail } from "../lib/email";
 
 export const donationRoutes = new Hono();
@@ -24,14 +25,14 @@ donationRoutes.post("/", requireAdmin, zValidator("json", createDonationSchema),
     donor_name: data.donor_name,
     donor_email: data.donor_email,
   }).select().single();
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) return c.json({ error: "Failed to record donation." }, 500);
 
   await sendDonationEmail(c, data.donor_email, data.donor_name, data.amount, "KES");
 
   return c.json(donation, 201);
 });
 
-donationRoutes.get("/history", async (c) => {
+donationRoutes.get("/history", rateLimit, async (c) => {
   const email = c.req.query("email");
   if (!email) return c.json([]);
 
@@ -48,6 +49,6 @@ donationRoutes.get("/history", async (c) => {
 
   const supabase = getSupabase();
   const { data, error } = await supabase.from("donations").select("*").eq("donor_email", email).order("created_at", { ascending: false });
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) return c.json({ error: "Failed to load history." }, 500);
   return c.json(data);
 });

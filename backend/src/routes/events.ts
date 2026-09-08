@@ -3,6 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { requireAdmin } from "../lib/jwt";
+import { rateLimit } from "../lib/rateLimiter";
 import { sendEventRsvpEmail } from "../lib/email";
 
 export const eventRoutes = new Hono();
@@ -10,7 +11,10 @@ export const eventRoutes = new Hono();
 eventRoutes.get("/", async (c) => {
   const supabase = getSupabase();
   const { data, error } = await supabase.from("events").select("*").order("date", { ascending: false });
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[EVENTS] list error:", error.message);
+    return c.json({ error: "Failed to load events." }, 500);
+  }
   return c.json(data);
 });
 
@@ -66,7 +70,10 @@ eventRoutes.post("/", requireAdmin, zValidator("json", createEventSchema), async
     month: data.month || d.toLocaleString("en-US", { month: "short" }).toUpperCase(),
     day: data.day || String(d.getDate()).padStart(2, "0"),
   })).select().single();
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[EVENTS] create error:", error.message);
+    return c.json({ error: "Failed to create event." }, 500);
+  }
   return c.json(event, 201);
 });
 
@@ -75,7 +82,10 @@ eventRoutes.patch("/:id", requireAdmin, zValidator("json", updateEventSchema), a
   const id = Number(c.req.param("id"));
   const body = c.req.valid("json");
   const { data: event, error } = await supabase.from("events").update(toEventRow({ ...body })).eq("id", id).select().single();
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[EVENTS] update error:", error.message);
+    return c.json({ error: "Failed to update event." }, 500);
+  }
   return c.json(event);
 });
 
@@ -83,11 +93,14 @@ eventRoutes.delete("/:id", requireAdmin, async (c) => {
   const supabase = getSupabase();
   const id = Number(c.req.param("id"));
   const { error } = await supabase.from("events").delete().eq("id", id);
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[EVENTS] delete error:", error.message);
+    return c.json({ error: "Failed to delete event." }, 500);
+  }
   return c.json({ success: true });
 });
 
-eventRoutes.post("/:id/rsvp", zValidator("json", rsvpSchema), async (c) => {
+eventRoutes.post("/:id/rsvp", rateLimit, zValidator("json", rsvpSchema), async (c) => {
   const supabase = getSupabase();
   const eventId = Number(c.req.param("id"));
   const { name, email } = c.req.valid("json");
@@ -96,7 +109,10 @@ eventRoutes.post("/:id/rsvp", zValidator("json", rsvpSchema), async (c) => {
     name,
     email,
   }).select().single();
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[EVENTS] rsvp error:", error.message);
+    return c.json({ error: "Failed to record RSVP." }, 500);
+  }
 
   const { data: event } = await supabase.from("events").select("title, date, location, description").eq("id", eventId).single();
   const eventTitle = event?.title || "Kingdom Missions Event";

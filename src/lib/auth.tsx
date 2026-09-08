@@ -18,7 +18,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   loginWithGoogle: (token: string) => Promise<boolean>;
   logout: () => void;
-  setSession: (user: User, token?: string) => void;
+  setSession: (user: User) => void;
   isAuthenticated: boolean;
   loading: boolean;
 }
@@ -48,13 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, []);
 
-  const setSession = useCallback((sessionUser: User, token?: string) => {
-    if (token) {
-      try {
-        localStorage.setItem("hkn-token", token);
-      } catch {
-        // local storage not available
-      }
+  const setSession = useCallback((sessionUser: User) => {
+    // Cookie-only: backend sets httpOnly cookie; never persist JWT in storage.
+    try {
+      localStorage.removeItem("hkn-token");
+    } catch {
+      // ignore
     }
     setUser(sessionUser);
   }, []);
@@ -111,10 +110,9 @@ export const useAuth = () => useContext(AuthContext);
 
 export function AdminGuard({ children }: { children: ReactNode }) {
   const { user, isAuthenticated, loading, login, logout } = useAuth();
-  const [mode, setMode] = useState<"login" | "mfa" | "forgot">("login");
+  const [mode, setMode] = useState<"login" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mfaCode, setMfaCode] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [resetSent, setResetSent] = useState(false);
@@ -159,19 +157,10 @@ export function AdminGuard({ children }: { children: ReactNode }) {
     setSubmitting(false);
     if (!ok) {
       setError("Invalid administrative credentials or insufficient privileges.");
-    } else {
-      setMode("mfa");
     }
-  };
-
-  const handleMfaVerify = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!mfaCode || mfaCode.length < 4) {
-      setError("Please enter a valid 6-digit security code or PIN.");
-      return;
-    }
-    // Verified successfully
-    window.location.reload();
+    // NOTE: no client-side MFA gate here. Server JWT verification in
+    // AdminGuard above is the real gate. Add server-side TOTP/WebAuthn before
+    // re-introducing any second-factor UI.
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -186,43 +175,6 @@ export function AdminGuard({ children }: { children: ReactNode }) {
     }
     setSubmitting(false);
   };
-
-  if (mode === "mfa") {
-    return (
-      <div className="min-h-screen bg-[#071324] flex items-center justify-center p-4">
-        <div className="bg-[#0d1d36] rounded-3xl p-8 sm:p-10 max-w-md w-full border-2 border-[#d4af37]/40 shadow-2xl text-white space-y-6">
-          <div className="text-center space-y-2">
-            <img src={brandLogo} alt="Kingdom Missions Network" className="w-20 h-20 mx-auto object-contain drop-shadow-[0_0_12px_rgba(212,175,55,0.5)]" width="80" height="80" />
-            <h1 className="font-brand text-2xl font-bold text-white">Security Verification</h1>
-            <p className="text-xs text-white/60">Enter your 6-digit Multi-Factor Security Passcode to complete sign-in.</p>
-          </div>
-
-          <form onSubmit={handleMfaVerify} className="space-y-4">
-            <div>
-              <label htmlFor="mfaCodeInput" className="block text-xs uppercase font-bold text-white/60 mb-2">Security Passcode / PIN</label>
-              <input
-                id="mfaCodeInput"
-                type="password"
-                maxLength={6}
-                value={mfaCode}
-                onChange={(e) => setMfaCode(e.target.value)}
-                placeholder="• • • • • •"
-                required
-                className="w-full text-center tracking-[0.5em] text-lg font-mono px-4 py-3.5 rounded-2xl bg-white/10 border border-white/15 text-white focus:outline-none focus:border-[#d4af37]"
-              />
-            </div>
-            {error && <p className="text-red-400 text-xs text-center">{error}</p>}
-            <button
-              type="submit"
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-sm shadow-lg hover:brightness-110 transition-all"
-            >
-              Verify & Enter Operations Hub
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   if (mode === "forgot") {
     return (

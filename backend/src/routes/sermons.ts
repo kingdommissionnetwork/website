@@ -8,20 +8,27 @@ export const sermonRoutes = new Hono();
 
 sermonRoutes.get("/", async (c) => {
   const supabase = getSupabase();
-  const category = c.req.query("category");
-  const query = c.req.query("q");
+  const category = (c.req.query("category") || "").slice(0, 50);
+  const query = (c.req.query("q") || "").slice(0, 100);
 
   let q = supabase.from("sermons").select("*");
   if (category && category !== "All") {
     q = q.eq("category", category);
   }
   if (query) {
-    const p = `%${query}%`;
-    q = q.or(`title.ilike.${p},speaker.ilike.${p},ministry.ilike.${p}`);
+    // Sanitize for PostgREST or-filter: strip wildcards and delimiters.
+    const safe = query.replace(/[%(),"]/g, "").trim().slice(0, 100);
+    if (safe) {
+      const p = `%${safe}%`;
+      q = q.or(`title.ilike.${p},speaker.ilike.${p},ministry.ilike.${p}`);
+    }
   }
 
   const { data, error } = await q;
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[SERMONS] list error:", error.message);
+    return c.json({ error: "Failed to load sermons." }, 500);
+  }
   return c.json(data);
 });
 
@@ -55,7 +62,10 @@ sermonRoutes.post("/", requireAdmin, zValidator("json", createSermonSchema), asy
   const supabase = getSupabase();
   const data = c.req.valid("json");
   const { data: sermon, error } = await supabase.from("sermons").insert(data).select().single();
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[SERMONS] create error:", error.message);
+    return c.json({ error: "Failed to create sermon." }, 500);
+  }
   return c.json(sermon, 201);
 });
 
@@ -64,7 +74,10 @@ sermonRoutes.patch("/:id", requireAdmin, zValidator("json", updateSermonSchema),
   const id = Number(c.req.param("id"));
   const body = c.req.valid("json");
   const { data: sermon, error } = await supabase.from("sermons").update(body).eq("id", id).select().single();
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[SERMONS] update error:", error.message);
+    return c.json({ error: "Failed to update sermon." }, 500);
+  }
   return c.json(sermon);
 });
 
@@ -72,6 +85,9 @@ sermonRoutes.delete("/:id", requireAdmin, async (c) => {
   const supabase = getSupabase();
   const id = Number(c.req.param("id"));
   const { error } = await supabase.from("sermons").delete().eq("id", id);
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[SERMONS] delete error:", error.message);
+    return c.json({ error: "Failed to delete sermon." }, 500);
+  }
   return c.json({ success: true });
 });

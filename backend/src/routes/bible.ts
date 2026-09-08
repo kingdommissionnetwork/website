@@ -374,7 +374,10 @@ bibleRoutes.post("/notes", zValidator("json", noteSchema), async (c) => {
     verse: body.verse,
     text: body.text,
   }).select().single();
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[BIBLE] note create error:", error.message);
+    return c.json({ error: "Failed to save note." }, 500);
+  }
   return c.json(note, 201);
 });
 
@@ -383,6 +386,9 @@ bibleRoutes.get("/notes", async (c) => {
   const userId = c.req.query("userId");
   if (!userId) return c.json([]);
   const { data, error } = await supabase.from("bible_notes").select("*").eq("user_id", userId);
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[BIBLE] notes error:", error.message);
+    return c.json({ error: "Failed to load notes." }, 500);
+  }
   return c.json(data);
 });

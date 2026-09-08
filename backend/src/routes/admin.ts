@@ -209,7 +209,10 @@ adminRoutes.get("/members", async (c) => {
   }
 
   const { data: users, error } = await q;
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[ADMIN] members error:", error.message);
+    return c.json({ error: "Failed to load members." }, 500);
+  }
 
   // Fetch subscription tier for each member
   const { data: subs } = await supabase.from("subscriptions").select("subscriber_email, plan_name, status, amount, currency");
@@ -250,40 +253,59 @@ adminRoutes.get("/members", async (c) => {
 });
 
 // 4. MEMBER ADMINISTRATIVE ACTION CONTROLLER
+const ADMIN_ROLE_ENUM = z.enum(["member", "admin", "superadmin", "super_admin", "system_admin", "finance_admin", "content_admin", "support_admin", "marketing_admin", "analyst"]);
+
+function getActorEmail(c: { get: unknown }): string {
+  try {
+    const getter = c.get as unknown as (key: string) => { email?: string; userId?: string } | undefined;
+    return getter("user")?.email || "admin";
+  } catch {
+    return "admin";
+  }
+}
+
 adminRoutes.post(
   "/members/:id/action",
   zValidator(
     "json",
     z.object({
       action: z.enum(["change_plan", "suspend", "reactivate", "change_role", "send_notification"]),
-      planName: z.string().optional(),
-      role: z.string().optional(),
-      message: z.string().optional(),
+      planName: z.string().max(100).optional(),
+      role: ADMIN_ROLE_ENUM.optional(),
+      message: z.string().max(500).optional(),
     })
   ),
   async (c) => {
     const supabase = getSupabase();
     const memberId = c.req.param("id");
     const { action, planName, role } = c.req.valid("json");
+    const actor = getActorEmail(c);
 
     if (action === "change_role" && role) {
-      await supabase.from("users").update({ role }).eq("id", memberId);
-      await logAuditEvent("Admin", "USER_ROLE_UPDATED", "user", memberId, { role });
+      // Prevent self-demotion lockout / self-promotion confusion: actor cannot
+      // change their own role via this endpoint.
+      const self = (c.get as unknown as (key: string) => { userId?: string } | undefined)("user");
+      if (self?.userId && String(self.userId) === String(memberId)) {
+        return c.json({ error: "You cannot change your own role." }, 403);
+      }
+      const { error } = await supabase.from("users").update({ role }).eq("id", memberId);
+      if (error) return c.json({ error: "Failed to update role." }, 500);
+      await logAuditEvent(actor, "USER_ROLE_UPDATED", "user", memberId, { role });
       return c.json({ success: true, message: `Member role updated to ${role}` });
     }
 
     if (action === "change_plan" && planName) {
-      await logAuditEvent("Admin", "SUBSCRIPTION_PLAN_CHANGED", "user", memberId, { newPlan: planName });
+      await logAuditEvent(actor, "SUBSCRIPTION_PLAN_CHANGED", "user", memberId, { newPlan: planName });
       return c.json({ success: true, message: `Partnership tier updated to ${planName}` });
     }
 
     if (action === "suspend") {
-      await logAuditEvent("Admin", "MEMBER_SUSPENDED", "user", memberId, {});
+      await logAuditEvent(actor, "MEMBER_SUSPENDED", "user", memberId, {});
       return c.json({ success: true, message: "Member status set to suspended" });
     }
 
     if (action === "reactivate") {
-      await logAuditEvent("Admin", "MEMBER_REACTIVATED", "user", memberId, {});
+      await logAuditEvent(actor, "MEMBER_REACTIVATED", "user", memberId, {});
       return c.json({ success: true, message: "Member reactivated successfully" });
     }
 
@@ -345,7 +367,10 @@ adminRoutes.get("/prayers", async (c) => {
     q = q.eq("status", statusFilter);
   }
   const { data, error } = await q.order("created_at", { ascending: false });
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) {
+    console.error("[ADMIN] prayers error:", error.message);
+    return c.json({ error: "Failed to load prayers." }, 500);
+  }
   return c.json(data);
 });
 
@@ -358,8 +383,8 @@ adminRoutes.patch("/prayers/:id/status", zValidator("json", prayerStatusSchema),
   const id = Number(c.req.param("id"));
   const { status } = c.req.valid("json");
   const { data: prayer, error } = await supabase.from("prayers").update({ status }).eq("id", id).select().single();
-  if (error) return c.json({ error: error.message }, 500);
-  await logAuditEvent("Admin", "PRAYER_STATUS_UPDATED", "prayer", id, { status });
+  if (error) return c.json({ error: "Failed to update prayer." }, 500);
+  await logAuditEvent(getActorEmail(c), "PRAYER_STATUS_UPDATED", "prayer", id, { status });
   return c.json(prayer);
 });
 
@@ -367,8 +392,8 @@ adminRoutes.delete("/prayers/:id", async (c) => {
   const supabase = getSupabase();
   const id = Number(c.req.param("id"));
   const { error } = await supabase.from("prayers").delete().eq("id", id);
-  if (error) return c.json({ error: error.message }, 500);
-  await logAuditEvent("Admin", "PRAYER_DELETED", "prayer", id, {});
+  if (error) return c.json({ error: "Failed to delete prayer." }, 500);
+  await logAuditEvent(getActorEmail(c), "PRAYER_DELETED", "prayer", id, {});
   return c.json({ success: true });
 });
 
@@ -459,6 +484,7 @@ adminRoutes.post(
     const supabase = getSupabase();
     const claimId = c.req.param("id");
     const { action, type, notes, mpesa_receipt } = c.req.valid("json");
+    const actor = getActorEmail(c);
 
     if (action === "reject") {
       if (type === "subscription_claim") {
@@ -466,7 +492,7 @@ adminRoutes.post(
       } else {
         await supabase.from("donations").update({ status: "rejected", notes }).eq("id", claimId);
       }
-      await logAuditEvent("Admin", "MPESA_CLAIM_REJECTED", type, claimId, { notes });
+      await logAuditEvent(actor, "MPESA_CLAIM_REJECTED", type, claimId, { notes });
       return c.json({ success: true, message: "Claim rejected successfully." });
     }
 
@@ -498,12 +524,12 @@ adminRoutes.post(
           await supabase.from("payment_claims").update({ status: "approved", notes }).eq("id", claimId);
         }
 
-        await logAuditEvent("Admin", "MPESA_CLAIM_APPROVED", type, claimId, { receipt, notes });
+        await logAuditEvent(actor, "MPESA_CLAIM_APPROVED", type, claimId, { receipt, notes });
         return c.json({ success: true, message: "Subscription claim approved and activated.", result });
       } else {
         // Donation — just mark as completed
         await supabase.from("donations").update({ status: "completed", notes }).eq("id", claimId);
-        await logAuditEvent("Admin", "MPESA_DONATION_APPROVED", type, claimId, { notes });
+        await logAuditEvent(actor, "MPESA_DONATION_APPROVED", type, claimId, { notes });
         return c.json({ success: true, message: "Donation verified and marked as completed." });
       }
     } catch (err) {
@@ -583,7 +609,14 @@ adminRoutes.post(
   async (c) => {
     const supabase = getSupabase();
     const { name, email, role } = c.req.valid("json");
-    const inviteToken = `inv_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
+    const actor = getActorEmail(c);
+    // Cryptographically secure invite token. NOTE: there is currently no
+    // accept-invite verification table — the link below is informational until
+    // an invites table with hash + expiry + single-use is added. Provisioning
+    // itself happens here, directly, by an already-authenticated admin.
+    const rand = new Uint8Array(24);
+    crypto.getRandomValues(rand);
+    const inviteToken = `inv_${Array.from(rand).map((b) => b.toString(36)).join("").replace(/[^a-z0-9]/gi, "").slice(0, 24)}${Date.now().toString(36)}`;
 
     // Create or update user as invited administrator
     const { data: existingUser } = await supabase.from("users").select("id").eq("email", email).single();
@@ -592,7 +625,7 @@ adminRoutes.post(
       await supabase.from("users").update({ role }).eq("id", existingUser.id);
     } else {
       await supabase.from("users").insert({
-        id: `usr_${Date.now()}`,
+        id: crypto.randomUUID(),
         name,
         email,
         role,
@@ -600,10 +633,11 @@ adminRoutes.post(
       });
     }
 
-    await logAuditEvent("Super Admin", "ADMIN_INVITED", "admin_user", email, { role, token: inviteToken });
+    // Never store the raw token in audit logs — it is a bearer credential.
+    await logAuditEvent(actor, "ADMIN_INVITED", "admin_user", email, { role });
 
     try {
-      await sendAdminInviteEmail(c, email, name, role, `https://admin.kingdommissionsnetwork.org/admin/accept-invite?token=${inviteToken}`, "Super Administrator");
+      await sendAdminInviteEmail(c, email, name, role, `https://admin.kingdommissionsnetwork.org/admin/accept-invite?token=${inviteToken}`, actor);
     } catch (err) {
       console.error("[EMAIL] Failed to dispatch admin invitation email:", err);
     }

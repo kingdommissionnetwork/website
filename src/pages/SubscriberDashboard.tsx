@@ -317,7 +317,7 @@ export default function SubscriberDashboard() {
     setClaimVerifying(true);
     try {
       const res = await api.subscriptions.verifyClaim(claimEmail, claimCode.trim());
-      if (res.user && res.token) {
+      if (res.user) {
         setSession(
           {
             ...res.user,
@@ -325,8 +325,7 @@ export default function SubscriberDashboard() {
               | "member"
               | "admin"
               | "superadmin",
-          },
-          res.token
+          }
         );
         setClaimDone(true);
         showToast("Partner Hub secured! Welcome back.", "success");

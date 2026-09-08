@@ -15,12 +15,13 @@ const createPrayerSchema = z.object({
 prayerRoutes.get("/", async (c) => {
   const supabase = getSupabase();
   const category = c.req.query("category");
-  let q = supabase.from("prayers").select("*");
+  // Public wall shows moderated content only.
+  let q = supabase.from("prayers").select("*").eq("status", "approved");
   if (category && category !== "All Prayers") {
     q = q.eq("category", category);
   }
   const { data, error } = await q.order("created_at", { ascending: false });
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) return c.json({ error: "Failed to load prayers." }, 500);
   return c.json(data);
 });
 
@@ -34,9 +35,10 @@ prayerRoutes.post("/", rateLimit, zValidator("json", createPrayerSchema), async 
     text: data.text,
     prayers: 0,
     comments: 0,
-    status: "approved",
+    // Moderation queue: new submissions are pending until an admin approves.
+    status: "pending",
   }).select().single();
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) return c.json({ error: "Failed to submit prayer." }, 500);
   return c.json(prayer, 201);
 });
 
@@ -44,7 +46,7 @@ prayerRoutes.post("/:id/pray", rateLimit, async (c) => {
   const supabase = getSupabase();
   const id = Number(c.req.param("id"));
   const { data: prayer, error } = await supabase.rpc("increment_prayer_count", { p_id: id }).single();
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) return c.json({ error: "Failed to record prayer." }, 500);
   return c.json(prayer);
 });
 
@@ -56,7 +58,7 @@ prayerRoutes.get("/:id/comments", async (c) => {
     .select("*")
     .eq("prayer_id", prayerId)
     .order("created_at", { ascending: false });
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) return c.json({ error: "Failed to load comments." }, 500);
   return c.json(data);
 });
 
@@ -74,7 +76,7 @@ prayerRoutes.post("/:id/comments", rateLimit, zValidator("json", commentSchema),
     name: name || "Anonymous",
     text,
   }).select().single();
-  if (error) return c.json({ error: error.message }, 500);
+  if (error) return c.json({ error: "Failed to post comment." }, 500);
 
   await supabase.rpc("increment_prayer_comment_count", { p_id: prayerId });
 

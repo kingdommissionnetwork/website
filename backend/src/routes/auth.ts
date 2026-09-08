@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { getSupabase, createAuthClient } from "../lib/supabase";
 import { signToken, verifyToken } from "../lib/jwt";
 import { rateLimit, strictRateLimit } from "../lib/rateLimiter";
-import { setCookie, getCookie } from "hono/cookie";
+import { setCookie, getCookie, deleteCookie } from "hono/cookie";
 
 export const authRoutes = new Hono();
 
@@ -22,6 +22,38 @@ const registerSchema = z.object({
 const googleSchema = z.object({
   token: z.string().min(1).max(5000),
 });
+
+const ALLOWED_RESET_ORIGINS = [
+  "https://kingdommissionsnetwork.org",
+  "https://www.kingdommissionsnetwork.org",
+  "https://kingdommissionnetwork.org",
+  "https://www.kingdommissionnetwork.org",
+  "https://heavenlykingdomnetwork.org",
+  "https://www.heavenlykingdomnetwork.org",
+];
+
+function safeResetBase(c: { req: { header: (n: string) => string | undefined } }): string {
+  const origin = c.req.header("origin") || "";
+  if (ALLOWED_RESET_ORIGINS.includes(origin)) return origin;
+  return "https://kingdommissionsnetwork.org";
+}
+
+function setAuthCookie(c: { req: { url: string } }, token: string) {
+  // Secure only on HTTPS so localhost dev still receives the cookie.
+  let secure = true;
+  try {
+    if (new URL(c.req.url).protocol === "http:") secure = false;
+  } catch {
+    secure = true;
+  }
+  (setCookie as (c: unknown, n: string, v: string, o: Record<string, unknown>) => void)(c, "token", token, {
+    httpOnly: true,
+    secure,
+    sameSite: "Lax",
+    maxAge: 60 * 60 * 24 * 7,
+    path: "/",
+  });
+}
 
 authRoutes.post("/login", rateLimit, zValidator("json", loginSchema), async (c) => {
   const { email, password } = c.req.valid("json");
@@ -41,15 +73,14 @@ authRoutes.post("/login", rateLimit, zValidator("json", loginSchema), async (c) 
     if (userByEmail) {
       user = userByEmail;
     } else {
-      // Auto-provision profile if missing
-      const emailLower = authUser.user.email.toLowerCase();
-      const isSuperAdmin = emailLower === "admin@kingdommissionsnetwork.org" || emailLower === "admin@kingdommissionsnetwork.com";
-      const role = isSuperAdmin ? "superadmin" : "member";
+      // Auto-provision profile if missing. New profiles are ALWAYS member —
+      // elevated roles are granted only by an existing admin via /admin APIs.
+      // (Never derive roles from the email string; that allows self-promotion.)
       const { data: created } = await supabase.from("users").insert({
         id: authUser.user.id,
-        name: isSuperAdmin ? "Executive Super Admin" : (authUser.user.user_metadata?.full_name || authUser.user.email.split("@")[0] || "User"),
+        name: authUser.user.user_metadata?.full_name || authUser.user.email.split("@")[0] || "User",
         email: authUser.user.email,
-        role,
+        role: "member",
       }).select().single();
       user = created;
     }
@@ -60,15 +91,10 @@ authRoutes.post("/login", rateLimit, zValidator("json", loginSchema), async (c) 
   }
 
   const token = await signToken({ userId: user.id, role: user.role || "member", name: user.name, email: user.email || undefined });
-  setCookie(c, "token", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "Lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
+  setAuthCookie(c, token);
+  // NOTE: token is set via httpOnly cookie only. It is intentionally NOT
+  // returned in the body to avoid localStorage theft via XSS.
   return c.json({
-    token,
     user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar: user.avatar },
   });
 });
@@ -82,7 +108,8 @@ authRoutes.post("/register", strictRateLimit, zValidator("json", registerSchema)
     if (error.message.includes("already")) {
       return c.json({ error: "Email already registered" }, 409);
     }
-    return c.json({ error: error.message }, 400);
+    console.error("[AUTH] signup error:", error.message);
+    return c.json({ error: "Registration failed. Please try again." }, 400);
   }
   if (!authUser.user) {
     return c.json({ error: "Registration failed" }, 500);
@@ -95,20 +122,13 @@ authRoutes.post("/register", strictRateLimit, zValidator("json", registerSchema)
   if (!user) return c.json({ error: "Failed to create profile" }, 500);
 
   const token = await signToken({ userId: user.id, role: user.role || "member", name: user.name, email: user.email || undefined });
-  setCookie(c, "token", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "Lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
+  setAuthCookie(c, token);
   return c.json({
-    token,
     user: { id: user.id, name: user.name, email: user.email, role: user.role },
   });
 });
 
-authRoutes.post("/google", zValidator("json", googleSchema), async (c) => {
+authRoutes.post("/google", strictRateLimit, zValidator("json", googleSchema), async (c) => {
   const authClient = createAuthClient();
   const { token: idToken } = c.req.valid("json");
 
@@ -136,32 +156,26 @@ authRoutes.post("/google", zValidator("json", googleSchema), async (c) => {
   if (!user) return c.json({ error: "Failed to create profile" }, 500);
 
   const jwt = await signToken({ userId: user.id, role: user.role || "member", name: user.name, email: user.email || undefined });
-  setCookie(c, "token", jwt, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "Lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
+  setAuthCookie(c, jwt);
   return c.json({
-    token: jwt,
     user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar: user.avatar },
   });
 });
 
-authRoutes.post("/forgot-password", zValidator("json", z.object({ email: z.string().email() })), async (c) => {
+authRoutes.post("/forgot-password", strictRateLimit, zValidator("json", z.object({ email: z.string().email() })), async (c) => {
   const { email } = c.req.valid("json");
   const supabase = getSupabase();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${c.req.header("origin") || "http://localhost:5173"}/reset-password`,
+    redirectTo: `${safeResetBase(c)}/reset-password`,
   });
-  if (error) return c.json({ error: error.message }, 400);
+  // Always return ok to avoid email enumeration; never echo provider errors.
+  if (error) console.error("[AUTH] resetPasswordForEmail error:", error.message);
   return c.json({ ok: true, message: "If that email is registered, a reset link has been sent." });
 });
 
-authRoutes.post("/reset-password", zValidator("json", z.object({
-  password: z.string().min(6),
-  token: z.string().min(1),
+authRoutes.post("/reset-password", strictRateLimit, zValidator("json", z.object({
+  password: z.string().min(6).max(100),
+  token: z.string().min(1).max(5000),
 })), async (c) => {
   const { password, token } = c.req.valid("json");
   const supabase = getSupabase();
@@ -169,8 +183,13 @@ authRoutes.post("/reset-password", zValidator("json", z.object({
   if (userError || !user) return c.json({ error: "Invalid or expired token" }, 400);
 
   const { error } = await supabase.auth.admin.updateUserById(user.id, { password });
-  if (error) return c.json({ error: error.message }, 400);
+  if (error) return c.json({ error: "Failed to update password." }, 400);
   return c.json({ ok: true, message: "Password updated successfully." });
+});
+
+authRoutes.post("/logout", async (c) => {
+  deleteCookie(c, "token", { path: "/" });
+  return c.json({ ok: true });
 });
 
 authRoutes.get("/me", async (c) => {

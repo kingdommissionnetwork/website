@@ -3,12 +3,11 @@ import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 import { getEnv } from "./env";
 
-const DEFAULT_JWT_SECRET = "REDACTED_JWT_SECRET";
-
 function getJwtSecret(): string {
-  const isTest = process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
-  const secret = getEnv("JWT_SECRET") || process.env.JWT_SECRET || (!isTest ? DEFAULT_JWT_SECRET : "");
+  const secret = getEnv("JWT_SECRET") || process.env.JWT_SECRET || "";
   if (!secret) throw new Error("JWT_SECRET is not configured");
+  const isTest = process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
+  if (!isTest && secret.length < 32) throw new Error("JWT_SECRET must be at least 32 characters");
   return secret;
 }
 

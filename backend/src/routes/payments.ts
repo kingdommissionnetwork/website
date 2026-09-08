@@ -5,6 +5,7 @@ import { getSupabase } from "../lib/supabase";
 import { sendDonationEmail } from "../lib/email";
 import { fetchExchangeRate } from "../lib/exchangeRate";
 import { upsertPaymentClaim } from "../lib/paybill";
+import { rateLimit, strictRateLimit } from "../lib/rateLimiter";
 
 function getSecret(c: { env?: unknown }, key: string): string {
   const env = c.env as Record<string, string> | undefined;
@@ -23,6 +24,13 @@ async function generateHmacSha512Hex(text: string, secret: string): Promise<stri
   const signatureBuffer = await crypto.subtle.sign("HMAC", key, enc.encode(text));
   const hashArray = Array.from(new Uint8Array(signatureBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 async function paystackPost(path: string, body: unknown, secret: string) {
@@ -49,7 +57,7 @@ async function paystackGet(path: string, secret: string) {
 
 export const paymentRoutes = new Hono();
 
-paymentRoutes.post("/initialize", zValidator("json", z.object({
+paymentRoutes.post("/initialize", strictRateLimit, zValidator("json", z.object({
   email: z.string().email(),
   amount: z.number().positive().max(1_000_000),
   currency: z.string().default("KES"),
@@ -59,7 +67,17 @@ paymentRoutes.post("/initialize", zValidator("json", z.object({
   if (!secret) return c.json({ error: "Payment gateway not configured" }, 503);
 
   const { email, amount, currency, metadata } = c.req.valid("json");
-  const callbackUrl = `${c.req.header("origin") || "http://localhost:5173"}/give?paystack_callback=1`;
+  const reqOrigin = c.req.header("origin") || "";
+  const allowedCallbacks = [
+    "https://kingdommissionsnetwork.org",
+    "https://www.kingdommissionsnetwork.org",
+    "https://kingdommissionnetwork.org",
+    "https://www.kingdommissionnetwork.org",
+    "https://heavenlykingdomnetwork.org",
+    "https://www.heavenlykingdomnetwork.org",
+  ];
+  const callbackBase = allowedCallbacks.includes(reqOrigin) ? reqOrigin : "https://kingdommissionsnetwork.org";
+  const callbackUrl = `${callbackBase}/give?paystack_callback=1`;
 
   const result: Record<string, unknown> = await paystackPost("/transaction/initialize", {
     email,
@@ -73,7 +91,7 @@ paymentRoutes.post("/initialize", zValidator("json", z.object({
   return c.json(result.data);
 });
 
-paymentRoutes.get("/verify/:reference", async (c) => {
+paymentRoutes.get("/verify/:reference", strictRateLimit, async (c) => {
   const secret = getSecret(c, "PAYSTACK_SECRET_KEY");
   if (!secret) return c.json({ error: "Payment gateway not configured" }, 503);
 
@@ -113,7 +131,7 @@ paymentRoutes.post("/webhook", async (c) => {
 
   const rawBody = await c.req.text();
   const expectedSignature = await generateHmacSha512Hex(rawBody, secret);
-  if (signature !== expectedSignature) {
+  if (!timingSafeEqualHex(signature, expectedSignature)) {
     return c.json({ error: "Invalid signature" }, 401);
   }
 
@@ -152,7 +170,7 @@ async function getPayPalAccessToken(clientId: string, clientSecret: string): Pro
   return data.access_token as string;
 }
 
-paymentRoutes.post("/paypal/create", zValidator("json", z.object({
+paymentRoutes.post("/paypal/create", strictRateLimit, zValidator("json", z.object({
   amount: z.number().positive().max(1_000_000),
   currency: z.string().default("USD"),
 })), async (c) => {
@@ -180,7 +198,7 @@ paymentRoutes.post("/paypal/create", zValidator("json", z.object({
   return c.json({ id: data.id as string });
 });
 
-paymentRoutes.post("/paypal/capture", zValidator("json", z.object({
+paymentRoutes.post("/paypal/capture", rateLimit, zValidator("json", z.object({
   orderId: z.string(),
 })), async (c) => {
   const clientId = getSecret(c, "PAYPAL_CLIENT_ID");
@@ -228,7 +246,7 @@ paymentRoutes.get("/rate", async (c) => {
   return c.json({ rate: result.rate, source, target, provider: result.provider });
 });
 
-paymentRoutes.post("/report-offline", zValidator("json", z.object({
+paymentRoutes.post("/report-offline", strictRateLimit, zValidator("json", z.object({
   amount: z.number().positive().max(1_000_000),
   currency: z.string().default("KES"),
   donor_name: z.string().min(1).max(100),
@@ -258,7 +276,8 @@ paymentRoutes.post("/report-offline", zValidator("json", z.object({
     if (error.code === "23505" || error.message.includes("unique")) {
       return c.json({ status: "already_recorded", message: "This transaction reference has already been submitted." }, 200);
     }
-    return c.json({ error: error.message }, 500);
+    console.error("[PAYMENTS] report-offline error:", error.message);
+    return c.json({ error: "Failed to record donation." }, 500);
   }
 
   // Join the Paybill redemption pipeline: the gift stays pending until a
