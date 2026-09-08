@@ -3,7 +3,6 @@ import ScriptureSection from "./home/ScriptureSection";
 import PrayerPreviewSection from "./home/PrayerPreviewSection";
 import SermonPreviewSection from "./home/SermonPreviewSection";
 import EventsPreviewSection from "./home/EventsPreviewSection";
-import LiveStreamSection from "./home/LiveStreamSection";
 import GiveSection from "./home/GiveSection";
 import SEO from "../components/SEO";
 
@@ -16,7 +15,6 @@ export default function Home() {
       <PrayerPreviewSection />
       <SermonPreviewSection />
       <EventsPreviewSection />
-      <LiveStreamSection />
       <GiveSection />
     </>
   );

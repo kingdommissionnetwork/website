@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Radio, User, Book, Heart, Headphones, Calendar, Gift, DollarSign, Crown, ShieldCheck, LogOut, ChevronDown } from "lucide-react";
+import { Menu, X, User, Book, Heart, Headphones, Calendar, Gift, DollarSign, Crown, ShieldCheck, LogOut, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import brandLogo from "../assets/logo.png";
 import { useAuth } from "../lib/auth";
@@ -102,27 +102,15 @@ export default function Navigation() {
             })}
           </div>
 
-          {/* Right Actions: Standout Give CTA, Live Button, Admin */}
+          {/* Right Actions: Standout Give CTA, Admin */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Standout Gold Give CTA Button */}
             <Link
               to="/give"
-              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm tracking-wide shadow-md hover:shadow-[0_0_15px_rgba(212,175,55,0.4)] hover:scale-105 transition-all whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm tracking-wide shadow-md hover:shadow-[0_0_15px_rgba(212,175,55,0.4)] hover:scale-105 transition-all whitespace-nowrap"
             >
-              <Gift className="w-4 h-4 text-[#0c1b33]" />
+              <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0c1b33]" />
               <span>Give</span>
-            </Link>
-
-            {/* Live Indicator Button */}
-            <Link
-              to="/events"
-              className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#dc2626] text-white text-xs sm:text-sm font-bold hover:bg-[#b91c1c] transition-all shadow-[0_2px_10px_rgba(220,38,38,0.35)] whitespace-nowrap"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-200 opacity-80" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
-              </span>
-              <span>LIVE</span>
             </Link>
 
             {/* User Profile & Portals Dropdown */}
@@ -289,12 +277,6 @@ export default function Navigation() {
                       >
                         <Icon className="w-5 h-5" />
                         {link.label}
-                        {link.label === "Events" && (
-                          <span className="ml-auto flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-600/20 text-red-400 text-xs">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                            Live
-                          </span>
-                        )}
                       </Link>
                     </motion.div>
                   );
@@ -340,21 +322,6 @@ export default function Navigation() {
                     <User className="w-5 h-5" />
                     Admin Dashboard
                   </Link>
-                </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-400"
-                >
-                  <Radio className="w-5 h-5" />
-                  <span className="flex items-center gap-2">
-                    Live Stream
-                    <span className="flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-red-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-                    </span>
-                  </span>
                 </motion.div>
               </div>
             </motion.div>

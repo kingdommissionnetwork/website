@@ -151,7 +151,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link to="/events" className="text-sm text-white/70 hover:text-white transition-colors">
-                  Live Events & Broadcasts
+                  Upcoming Events & Summits
                 </Link>
               </li>
               <li>
