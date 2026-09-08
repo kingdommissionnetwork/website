@@ -90,7 +90,7 @@ authRoutes.post("/login", rateLimit, zValidator("json", loginSchema), async (c) 
     return c.json({ error: "User not found" }, 404);
   }
 
-  const token = await signToken({ userId: user.id, role: user.role || "member", name: user.name, email: user.email || undefined });
+  const token = await signToken({ userId: user.id, role: user.role || "member", name: user.name, email: user.email || undefined }, c.env as Record<string, string>);
   setAuthCookie(c, token);
   // NOTE: token is set via httpOnly cookie only. It is intentionally NOT
   // returned in the body to avoid localStorage theft via XSS.
@@ -121,7 +121,7 @@ authRoutes.post("/register", strictRateLimit, zValidator("json", registerSchema)
 
   if (!user) return c.json({ error: "Failed to create profile" }, 500);
 
-  const token = await signToken({ userId: user.id, role: user.role || "member", name: user.name, email: user.email || undefined });
+  const token = await signToken({ userId: user.id, role: user.role || "member", name: user.name, email: user.email || undefined }, c.env as Record<string, string>);
   setAuthCookie(c, token);
   return c.json({
     user: { id: user.id, name: user.name, email: user.email, role: user.role },
@@ -155,7 +155,7 @@ authRoutes.post("/google", strictRateLimit, zValidator("json", googleSchema), as
   }
   if (!user) return c.json({ error: "Failed to create profile" }, 500);
 
-  const jwt = await signToken({ userId: user.id, role: user.role || "member", name: user.name, email: user.email || undefined });
+  const jwt = await signToken({ userId: user.id, role: user.role || "member", name: user.name, email: user.email || undefined }, c.env as Record<string, string>);
   setAuthCookie(c, jwt);
   return c.json({
     user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar: user.avatar },
@@ -203,7 +203,7 @@ authRoutes.get("/me", async (c) => {
   }
 
   try {
-    const payload = await verifyToken(token);
+    const payload = await verifyToken(token, c.env as Record<string, string>);
     const supabase = getSupabase(c.env as Record<string, string>);
     const { data: user } = await supabase.from("users").select("*").eq("id", payload.userId).single();
     if (!user) {

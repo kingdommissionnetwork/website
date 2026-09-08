@@ -10,8 +10,10 @@ import { fulfillPaybillRedemption } from "./subscriptions";
 export const adminRoutes = new Hono();
 adminRoutes.use("*", rateLimit, requireAdmin);
 
-// Structured audit logging helper
+// Structured audit logging helper.
+// Takes supabase directly — using module-level `c` was a ReferenceError.
 async function logAuditEvent(
+  supabase: ReturnType<typeof getSupabase>,
   actor: string,
   action: string,
   targetType: string,
@@ -19,7 +21,6 @@ async function logAuditEvent(
   details: Record<string, unknown>
 ) {
   try {
-    const supabase = getSupabase(c.env as Record<string, string>);
     await supabase.from("audit_logs").insert({
       actor,
       action,
@@ -290,22 +291,22 @@ adminRoutes.post(
       }
       const { error } = await supabase.from("users").update({ role }).eq("id", memberId);
       if (error) return c.json({ error: "Failed to update role." }, 500);
-      await logAuditEvent(actor, "USER_ROLE_UPDATED", "user", memberId, { role });
+      await logAuditEvent(supabase, actor, "USER_ROLE_UPDATED", "user", memberId, { role });
       return c.json({ success: true, message: `Member role updated to ${role}` });
     }
 
     if (action === "change_plan" && planName) {
-      await logAuditEvent(actor, "SUBSCRIPTION_PLAN_CHANGED", "user", memberId, { newPlan: planName });
+      await logAuditEvent(supabase, actor, "SUBSCRIPTION_PLAN_CHANGED", "user", memberId, { newPlan: planName });
       return c.json({ success: true, message: `Partnership tier updated to ${planName}` });
     }
 
     if (action === "suspend") {
-      await logAuditEvent(actor, "MEMBER_SUSPENDED", "user", memberId, {});
+      await logAuditEvent(supabase, actor, "MEMBER_SUSPENDED", "user", memberId, {});
       return c.json({ success: true, message: "Member status set to suspended" });
     }
 
     if (action === "reactivate") {
-      await logAuditEvent(actor, "MEMBER_REACTIVATED", "user", memberId, {});
+      await logAuditEvent(supabase, actor, "MEMBER_REACTIVATED", "user", memberId, {});
       return c.json({ success: true, message: "Member reactivated successfully" });
     }
 
@@ -384,7 +385,7 @@ adminRoutes.patch("/prayers/:id/status", zValidator("json", prayerStatusSchema),
   const { status } = c.req.valid("json");
   const { data: prayer, error } = await supabase.from("prayers").update({ status }).eq("id", id).select().single();
   if (error) return c.json({ error: "Failed to update prayer." }, 500);
-  await logAuditEvent(getActorEmail(c), "PRAYER_STATUS_UPDATED", "prayer", id, { status });
+  await logAuditEvent(supabase, getActorEmail(c), "PRAYER_STATUS_UPDATED", "prayer", id, { status });
   return c.json(prayer);
 });
 
@@ -393,7 +394,7 @@ adminRoutes.delete("/prayers/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const { error } = await supabase.from("prayers").delete().eq("id", id);
   if (error) return c.json({ error: "Failed to delete prayer." }, 500);
-  await logAuditEvent(getActorEmail(c), "PRAYER_DELETED", "prayer", id, {});
+  await logAuditEvent(supabase, getActorEmail(c), "PRAYER_DELETED", "prayer", id, {});
   return c.json({ success: true });
 });
 
@@ -494,7 +495,7 @@ adminRoutes.post(
       } else {
         await supabase.from("donations").update({ status: "rejected", notes }).eq("id", claimId);
       }
-      await logAuditEvent(actor, "MPESA_CLAIM_REJECTED", type, claimId, { notes });
+      await logAuditEvent(supabase, actor, "MPESA_CLAIM_REJECTED", type, claimId, { notes });
       return c.json({ success: true, message: "Claim rejected successfully." });
     }
 
@@ -526,17 +527,17 @@ adminRoutes.post(
           await supabase.from("payment_claims").update({ status: "approved", notes }).eq("id", claimId);
         }
 
-        await logAuditEvent(actor, "MPESA_CLAIM_APPROVED", type, claimId, { receipt, notes });
+        await logAuditEvent(supabase, actor, "MPESA_CLAIM_APPROVED", type, claimId, { receipt, notes });
         return c.json({ success: true, message: "Subscription claim approved and activated.", result });
       } else {
         // Donation — just mark as completed
         await supabase.from("donations").update({ status: "completed", notes }).eq("id", claimId);
-        await logAuditEvent(actor, "MPESA_DONATION_APPROVED", type, claimId, { notes });
+        await logAuditEvent(supabase, actor, "MPESA_DONATION_APPROVED", type, claimId, { notes });
         return c.json({ success: true, message: "Donation verified and marked as completed." });
       }
     } catch (err) {
       console.error("[ADMIN] mpesa claim resolve error:", err);
-      return c.json({ error: "Failed to process claim. Check logs." }, 500);
+      return c.json({ error: "Failed to process claim. Check logs.", detail: err instanceof Error ? err.message : String(err) }, 500);
     }
   }
 );
@@ -598,6 +599,8 @@ adminRoutes.post(
       name: z.string().min(2),
       email: z.string().email(),
       role: z.enum([
+        "admin",
+        "superadmin",
         "super_admin",
         "system_admin",
         "finance_admin",
@@ -636,7 +639,7 @@ adminRoutes.post(
     }
 
     // Never store the raw token in audit logs — it is a bearer credential.
-    await logAuditEvent(actor, "ADMIN_INVITED", "admin_user", email, { role });
+    await logAuditEvent(supabase, actor, "ADMIN_INVITED", "admin_user", email, { role });
 
     try {
       await sendAdminInviteEmail(c, email, name, role, `https://admin.kingdommissionsnetwork.org/admin/accept-invite?token=${inviteToken}`, actor);
