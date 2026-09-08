@@ -524,12 +524,15 @@ export default function GivePage() {
                       <label className="block text-xs font-bold text-white/80 mb-1">Your Full Name:</label>
                       <input type="text" value={donorName} onChange={(e) => setDonorName(e.target.value)}
                         placeholder="e.g. John Kariuki"
+                        autoComplete="name"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.06] border border-white/15 text-white text-sm focus:outline-none focus:border-[#d4af37]" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-white/80 mb-1">Email (for Receipt):</label>
                       <input type="email" value={donorEmail} onChange={(e) => setDonorEmail(e.target.value)}
                         placeholder="e.g. john@example.com"
+                        autoComplete="email"
+                        inputMode="email"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.06] border border-white/15 text-white text-sm focus:outline-none focus:border-[#d4af37]" />
                     </div>
                   </div>
@@ -567,6 +570,8 @@ export default function GivePage() {
                         <div className="relative">
                           <input type="tel" value={mpesaPhone} onChange={(e) => setMpesaPhone(e.target.value)}
                             placeholder="e.g. 0712345678" disabled={stkPending}
+                            autoComplete="tel"
+                            inputMode="tel"
                             className="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-emerald-400/40 text-white font-bold text-sm focus:outline-none focus:border-emerald-400 pr-32" />
                           <span className="absolute right-3 top-2.5 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase">Instant STK Push</span>
                         </div>
@@ -665,6 +670,11 @@ export default function GivePage() {
                         <div className="flex gap-2">
                           <input type="text" value={manualRefCode} onChange={(e) => setManualRefCode(e.target.value.toUpperCase())}
                             placeholder="e.g. QKJ8921820"
+                            autoComplete="off"
+                            autoCapitalize="characters"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            maxLength={32}
                             className="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white font-mono font-bold text-sm focus:outline-none focus:border-[#d4af37]" />
                           <button type="button" onClick={handleManualVerification} disabled={submitting}
                             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs shrink-0 transition-all hover:brightness-110">

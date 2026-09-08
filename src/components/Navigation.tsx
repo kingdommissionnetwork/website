@@ -213,7 +213,9 @@ export default function Navigation() {
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="lg:hidden p-2 text-[#0c1b33] hover:bg-black/[0.06] border border-black/15 rounded-xl transition-colors"
-              aria-label="Toggle mobile menu"
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-menu-drawer"
             >
               {mobileOpen ? <X className="w-6 h-6 text-[#0c1b33]" /> : <Menu className="w-6 h-6 text-[#0c1b33]" />}
             </button>
@@ -244,7 +246,11 @@ export default function Navigation() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 250 }}
-              className="absolute right-0 top-0 bottom-0 w-[280px] bg-[#0c1b33] shadow-2xl"
+              id="mobile-menu-drawer"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Site menu"
+              className="absolute right-0 top-0 bottom-0 w-[280px] max-w-[85vw] bg-[#0c1b33] shadow-2xl flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]"
             >
               <div className="flex items-center justify-between px-5 pt-6 pb-4 border-b border-white/10">
                 <div className="flex items-center gap-2.5">

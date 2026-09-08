@@ -72,13 +72,48 @@
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    /* Guard against horizontal scroll from wide decorative layers.
+       `clip` (where supported) preserves position:sticky; `hidden` is the fallback. */
+    overflow-x: hidden;
+    overflow-x: clip;
   }
   body {
     @apply bg-[#e6eef7] text-[#0c1b33] antialiased;
     font-family: 'Inter', sans-serif;
     overscroll-behavior-y: none;
+    /* Remove tap delay / double-tap zoom on controls */
+    touch-action: manipulation;
+    /* Notch + gesture safe areas (requires viewport-fit=cover) */
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+  /* Media never overflows narrow viewports or causes layout shift */
+  img, video, canvas, svg {
+    max-width: 100%;
+  }
+  img {
+    height: auto;
+  }
+  /* Prevent iOS Safari auto-zoom on focus: inputs below 16px trigger a
+     disruptive viewport zoom. Keep desktop styling, normalize on touch. */
+  @media (max-width: 768px) {
+    input, select, textarea {
+      font-size: 16px;
+    }
+  }
+  /* Respect users who request reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
   h1, h2, h3, h4 {
     font-family: 'Outfit', sans-serif;

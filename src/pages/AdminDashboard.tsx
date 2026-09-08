@@ -569,7 +569,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Navigation Groups */}
-              <div className="space-y-5 overflow-y-auto max-h-[calc(100vh-220px)]">
+              <div className="space-y-5 overflow-y-auto max-h-[calc(100vh-220px)] supports-[height:100dvh]:max-h-[calc(100dvh-220px)]">
                 {sidebarSections.map((section) => (
                   <div key={section.title}>
                     <span className="text-[10px] uppercase font-bold text-white/40 tracking-[0.2em] block mb-2 px-3">

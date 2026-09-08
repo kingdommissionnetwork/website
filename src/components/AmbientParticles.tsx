@@ -18,11 +18,23 @@ export default function AmbientParticles() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Respect users who request reduced motion: render nothing animated.
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     let animationId: number;
     let particles: Particle[] = [];
+    let running = true;
+    let visible = true;
+
+    const isCoarsePointer =
+      typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+    const isNarrowScreen = () =>
+      typeof window !== "undefined" && window.innerWidth < 768;
 
     const resize = () => {
       canvas.width = canvas.offsetWidth;
@@ -31,7 +43,10 @@ export default function AmbientParticles() {
     };
 
     const initParticles = () => {
-      const count = Math.min(80, Math.floor((canvas.width * canvas.height) / 15000));
+      // Cap density on mobile: fewer particles on small/coarse-pointer screens
+      // to save GPU + battery without visibly changing the effect.
+      const cap = isNarrowScreen() || isCoarsePointer ? 28 : 80;
+      const count = Math.min(cap, Math.floor((canvas.width * canvas.height) / 15000));
       particles = [];
       for (let i = 0; i < count; i++) {
         particles.push({
@@ -48,6 +63,10 @@ export default function AmbientParticles() {
     };
 
     const draw = () => {
+      if (!running || !visible || document.hidden) {
+        animationId = requestAnimationFrame(draw);
+        return;
+      }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       for (const p of particles) {
@@ -79,12 +98,33 @@ export default function AmbientParticles() {
       animationId = requestAnimationFrame(draw);
     };
 
+    const onVisibility = () => {
+      // Skip work while the tab is backgrounded; resume on return.
+      if (!document.hidden) resize();
+    };
+
+    // Pause rendering while the canvas is scrolled off-screen.
+    const observer =
+      typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver(
+            (entries) => {
+              visible = entries[0]?.isIntersecting ?? true;
+            },
+            { threshold: 0 }
+          )
+        : null;
+    observer?.observe(canvas);
+
     resize();
     draw();
 
     window.addEventListener("resize", resize);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      running = false;
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", onVisibility);
+      observer?.disconnect();
       cancelAnimationFrame(animationId);
     };
   }, []);
@@ -92,6 +132,7 @@ export default function AmbientParticles() {
   return (
     <canvas
       ref={canvasRef}
+      aria-hidden="true"
       className="absolute inset-0 w-full h-full pointer-events-none"
     />
   );
