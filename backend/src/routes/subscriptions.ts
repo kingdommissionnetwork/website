@@ -353,6 +353,7 @@ export interface PaybillRedemption {
   interval: "monthly" | "yearly";
   phone?: string | null;
   kind?: string;
+  mpesaMessage?: string | null;
 }
 
 /**
@@ -400,6 +401,7 @@ export async function fulfillPaybillRedemption(
         planId: r.planId,
         phone: r.phone || null,
         kind: r.kind || "subscription",
+        mpesaMessage: (r.mpesaMessage || "").slice(0, 1000) || null,
       },
     })
     .select()
@@ -472,10 +474,11 @@ subscriptionRoutes.post(
       planId: z.string().optional().default("ambassador"),
       interval: z.enum(["monthly", "yearly"]).default("monthly"),
       phone: z.string().optional(),
+      mpesaMessage: z.string().max(1000).optional(),
     })
   ),
   async (c) => {
-    const { reference, name, email, amount, planName, planId, interval, phone } = c.req.valid("json");
+    const { reference, name, email, amount, planName, planId, interval, phone, mpesaMessage } = c.req.valid("json");
     const cleanRef = reference.trim().toUpperCase();
 
     // 1. Strict Safaricom code format verification
@@ -541,6 +544,7 @@ subscriptionRoutes.post(
         planName: canonicalPlanName,
         interval,
         phone: phone || null,
+        mpesaMessage: (mpesaMessage || "").trim().slice(0, 1000) || null,
       });
       await logBillingEvent(email.trim().toLowerCase(), "paybill_claim_awaiting_receipt", "payment_claim", cleanRef, {
         planName: canonicalPlanName,
@@ -574,6 +578,7 @@ subscriptionRoutes.post(
         planName: canonicalPlanName,
         interval,
         phone: phone || null,
+        mpesaMessage: (mpesaMessage || "").trim().slice(0, 1000) || null,
       });
       if (claim) {
         await setClaimStatus(supabase, claim.id, verdict.code === "ALREADY_CONSUMED" ? "rejected" : "amount_mismatch", {
@@ -610,6 +615,7 @@ subscriptionRoutes.post(
         planId: priceCheck.isRecurring ? (planId as string) : ONETIME_PLAN_ID,
         interval,
         phone: phone || null,
+        mpesaMessage: (mpesaMessage || "").trim().slice(0, 1000) || null,
       });
       const claim = await upsertPaymentClaim(supabase, {
         paymentReference: cleanRef,
@@ -620,6 +626,7 @@ subscriptionRoutes.post(
         planName: canonicalPlanName,
         interval,
         phone: phone || null,
+        mpesaMessage: (mpesaMessage || "").trim().slice(0, 1000) || null,
       });
       if (claim) {
         await setClaimStatus(supabase, claim.id, "matched", { receipt_id: receipt.id });

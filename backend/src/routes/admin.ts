@@ -439,15 +439,17 @@ adminRoutes.get("/mpesa/pending", async (c) => {
   const normalizedClaims = (claims || []).map((c: Record<string, unknown>) => ({
     id: c.id,
     type: "subscription_claim" as const,
-    name: c.subscriber_name || c.name || "Unknown",
-    email: c.subscriber_email || c.email || "",
+    name: c.name || c.subscriber_name || "Unknown",
+    email: c.email || c.subscriber_email || "",
     amount: c.amount || 0,
     currency: c.currency || "KES",
-    reference: c.mpesa_reference || c.reference || "",
+    reference: c.payment_reference || c.mpesa_reference || c.reference || "",
     plan: c.plan_name || "",
     status: c.status,
     submittedAt: c.created_at,
-    notes: c.notes || "",
+    notes: (c.note as string) || (c.notes as string) || "",
+    mpesaMessage: (c.mpesa_message as string) || "",
+    phone: (c.phone as string) || "",
   }));
 
   const normalizedDonations = (pendingDonations || []).map((d: Record<string, unknown>) => ({

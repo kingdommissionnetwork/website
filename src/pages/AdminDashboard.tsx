@@ -202,6 +202,8 @@ export default function AdminDashboard() {
     status: string;
     submittedAt: string;
     notes: string;
+    mpesaMessage?: string;
+    phone?: string;
   }[]>([]);
   const [mpesaLoadError, setMpesaLoadError] = useState(false);
 
@@ -1051,6 +1053,37 @@ export default function AdminDashboard() {
                         <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-xs text-white/60">
                           <span className="font-bold text-white/80">User Note: </span>{claim.notes}
                         </div>
+                      )}
+
+                      {/* Pasted M-Pesa SMS for instant verification */}
+                      {claim.mpesaMessage && (
+                        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-bold text-emerald-300">M-Pesa SMS (pasted by partner):</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const txt = claim.mpesaMessage || "";
+                                if (navigator.clipboard && window.isSecureContext) {
+                                  navigator.clipboard.writeText(txt).catch(() => undefined);
+                                }
+                                showToast("M-Pesa SMS copied for statement cross-check", "success");
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-[10px] font-bold transition-colors"
+                            >
+                              <Copy className="w-3 h-3" />
+                              <span>Copy SMS</span>
+                            </button>
+                          </div>
+                          <p className="text-emerald-100/90 leading-relaxed whitespace-pre-wrap break-words font-mono">{claim.mpesaMessage}</p>
+                        </div>
+                      )}
+
+                      {/* Sender phone when provided */}
+                      {claim.phone && (
+                        <p className="text-[11px] text-white/50">
+                          Sender phone: <span className="font-mono text-white/80">{claim.phone}</span>
+                        </p>
                       )}
 
                       {/* Action buttons */}

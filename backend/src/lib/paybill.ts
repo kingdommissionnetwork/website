@@ -178,6 +178,7 @@ export interface ClaimRow {
   receipt_id: number | null;
   attempts: number;
   note: string | null;
+  mpesa_message: string | null;
   created_at: string;
 }
 
@@ -248,6 +249,9 @@ export interface ClaimInput {
   interval?: string;
   phone?: string | null;
   kind?: string;
+  /** Pasted full M-Pesa confirmation SMS — stored for instant admin verification. */
+  mpesaMessage?: string | null;
+  note?: string | null;
 }
 
 /** Create or refresh an open claim for (reference, email). */
@@ -255,6 +259,8 @@ export async function upsertPaymentClaim(db: Db, input: ClaimInput): Promise<Cla
   try {
     const ref = input.paymentReference.trim().toUpperCase();
     const email = input.email.trim().toLowerCase();
+    const mpesaMessage = (input.mpesaMessage || "").slice(0, 1000) || null;
+    const note = (input.note || "").slice(0, 1000) || null;
     const { data: open } = await db
       .from("payment_claims")
       .select("*")
@@ -266,29 +272,7 @@ export async function upsertPaymentClaim(db: Db, input: ClaimInput): Promise<Cla
       .maybeSingle();
     if (open) {
       const row = open as ClaimRow;
-      const { data } = await db
-        .from("payment_claims")
-        .update({
-          name: input.name,
-          amount: input.amount,
-          plan_id: input.planId || null,
-          plan_name: input.planName || null,
-          interval: input.interval || "monthly",
-          phone: input.phone || null,
-          kind: input.kind || "subscription",
-          attempts: (row.attempts || 0) + 1,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", row.id)
-        .select()
-        .maybeSingle();
-      return (data as ClaimRow | null) || row;
-    }
-    const { data } = await db
-      .from("payment_claims")
-      .insert({
-        payment_reference: ref,
-        email,
+      const patch: Record<string, unknown> = {
         name: input.name,
         amount: input.amount,
         plan_id: input.planId || null,
@@ -296,11 +280,55 @@ export async function upsertPaymentClaim(db: Db, input: ClaimInput): Promise<Cla
         interval: input.interval || "monthly",
         phone: input.phone || null,
         kind: input.kind || "subscription",
-        status: "awaiting_receipt",
-        attempts: 1,
-      })
+        attempts: (row.attempts || 0) + 1,
+        updated_at: new Date().toISOString(),
+      };
+      // Best-effort: older DBs without the migration lack these columns.
+      if (mpesaMessage) patch.mpesa_message = mpesaMessage;
+      if (note) patch.note = note;
+      else if (mpesaMessage) patch.note = `M-Pesa SMS: ${mpesaMessage}`.slice(0, 1000);
+      let { data, error } = await db
+        .from("payment_claims")
+        .update(patch)
+        .eq("id", row.id)
+        .select()
+        .maybeSingle();
+      if (error && (patch.mpesa_message || patch.note)) {
+        delete patch.mpesa_message;
+        delete patch.note;
+        const retry = await db.from("payment_claims").update(patch).eq("id", row.id).select().maybeSingle();
+        data = retry.data;
+      }
+      return (data as ClaimRow | null) || row;
+    }
+    const payload: Record<string, unknown> = {
+      payment_reference: ref,
+      email,
+      name: input.name,
+      amount: input.amount,
+      plan_id: input.planId || null,
+      plan_name: input.planName || null,
+      interval: input.interval || "monthly",
+      phone: input.phone || null,
+      kind: input.kind || "subscription",
+      status: "awaiting_receipt",
+      attempts: 1,
+    };
+    if (mpesaMessage) payload.mpesa_message = mpesaMessage;
+    payload.note = note || (mpesaMessage ? `M-Pesa SMS: ${mpesaMessage}`.slice(0, 1000) : null);
+    if (!payload.note) delete payload.note;
+    if (!payload.mpesa_message) delete payload.mpesa_message;
+    let { data, error: insertError } = await db
+      .from("payment_claims")
+      .insert(payload)
       .select()
       .single();
+    if (insertError && (payload.mpesa_message || payload.note)) {
+      delete payload.mpesa_message;
+      delete payload.note;
+      const retry = await db.from("payment_claims").insert(payload).select().single();
+      data = retry.data;
+    }
     return data as ClaimRow | null;
   } catch {
     return null;

@@ -291,6 +291,7 @@ export const api = {
       planId?: string;
       interval?: "monthly" | "yearly";
       phone?: string;
+      mpesaMessage?: string;
     }) => {
       return request<{
         status: string;
@@ -450,6 +451,8 @@ export const api = {
       status: string;
       submittedAt: string;
       notes: string;
+      mpesaMessage?: string;
+      phone?: string;
     }[]> => {
       return await request("/admin/mpesa/pending", { headers: authHeaders() });
     },

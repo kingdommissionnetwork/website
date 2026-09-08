@@ -20,6 +20,7 @@ import {
 import ScrollReveal from "../components/ScrollReveal";
 import AmbientParticles from "../components/AmbientParticles";
 import SEO from "../components/SEO";
+import PartnershipSupportCard from "../components/PartnershipSupportCard";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
@@ -173,6 +174,7 @@ export default function SubscriptionPortal() {
   const [stkStatusMessage, setStkStatusMessage] = useState("");
   const [stkSecondsLeft, setStkSecondsLeft] = useState(60);
   const [mpesaRefCode, setMpesaRefCode] = useState("");
+  const [mpesaMessage, setMpesaMessage] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [claimPolling, setClaimPolling] = useState(false);
 
@@ -442,6 +444,7 @@ export default function SubscriptionPortal() {
         planName: isCustomAmount ? "Custom Covenant Partner" : activePlan.name,
         planId: isCustomAmount ? "custom" : activePlan.id,
         interval: billingCycle,
+        mpesaMessage: mpesaMessage.trim() || undefined,
       });
 
       // Fail-closed: unknown codes return 202 pending until Safaricom/KCB
@@ -871,6 +874,9 @@ export default function SubscriptionPortal() {
                 </button>
               </div>
             </div>
+            <div className="max-w-4xl mx-auto w-full mt-3">
+              <PartnershipSupportCard compact />
+            </div>
           </div>
         </section>
       )}
@@ -1263,6 +1269,24 @@ export default function SubscriptionPortal() {
                         </span>
                       </div>
 
+                      <div>
+                        <label htmlFor="mpesaMessageInput" className="block text-xs uppercase font-bold text-white/70 mb-1.5">
+                          Paste full M-Pesa SMS <span className="text-white/40 normal-case font-semibold">(optional — fastest verification)</span>
+                        </label>
+                        <textarea
+                          id="mpesaMessageInput"
+                          value={mpesaMessage}
+                          onChange={(e) => setMpesaMessage(e.target.value.slice(0, 1000))}
+                          placeholder="e.g. TK78AB12CD Confirmed. Ksh3,000.00 sent to Heavenly God Kingdom Churches…"
+                          rows={3}
+                          maxLength={1000}
+                          className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs leading-relaxed placeholder:text-white/40 focus:outline-none focus:border-[#d4af37] resize-y"
+                        />
+                        <span className="text-[10px] text-white/50 mt-1 block">
+                          Copy the whole confirmation SMS from MPESA here — our team verifies it instantly, no waiting.
+                        </span>
+                      </div>
+
                       <button
                         id="btn-mpesa-verify"
                         type="submit"
@@ -1286,6 +1310,7 @@ export default function SubscriptionPortal() {
                           Your code is saved — we are waiting for the provider confirmation. Please keep this page open.
                         </p>
                       )}
+                      <PartnershipSupportCard className="mt-2" />
                     </form>
                   )}
                 </div>
@@ -1367,6 +1392,8 @@ export default function SubscriptionPortal() {
                   <div id="paypal-subscription-container" className="pt-2" />
                 </div>
               )}
+
+              <PartnershipSupportCard compact className="mt-6" />
 
               <div className="flex items-center justify-center gap-6 pt-6 text-xs text-white/50 border-t border-white/10 mt-6">
                 <span className="flex items-center gap-1">

@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import SEO from "../components/SEO";
 import AmbientParticles from "../components/AmbientParticles";
+import PartnershipSupportCard from "../components/PartnershipSupportCard";
 import brandLogo from "../assets/logo.png";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -1609,6 +1610,9 @@ export default function SubscriberDashboard() {
                     </Link>
                   </div>
                 </div>
+
+                {/* 24/7 subscription help — call or SMS for any query / complaint */}
+                <PartnershipSupportCard />
               </div>
             )}
           </main>
