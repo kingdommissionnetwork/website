@@ -206,7 +206,7 @@ export default function GivePage() {
           const pollRes = await api.subscriptions.queryMpesaStk(checkoutId);
           if (pollRes.status === "completed") {
             clearInterval(pollInterval);
-            completeTransaction(pollRes.receiptCode || checkoutId, "M-Pesa STK Push", pollRes.user as Record<string, unknown>, pollRes.token);
+            completeTransaction(pollRes.receiptCode || checkoutId, "M-Pesa STK Push", pollRes.user as Record<string, unknown>);
           } else if (pollRes.status === "failed") {
             clearInterval(pollInterval);
             setStkPending(false); setSubmitting(false);
@@ -247,8 +247,8 @@ export default function GivePage() {
           callback: async (response: { reference: string }) => {
             try {
               const verifyRes = await api.subscriptions.verify(response.reference);
-              completeTransaction(response.reference, "Card (Paystack)", verifyRes.user as Record<string, unknown>, verifyRes.token);
-            } catch { completeTransaction(response.reference, "Card (Paystack)", null, null); }
+              completeTransaction(response.reference, "Card (Paystack)", verifyRes.user as Record<string, unknown>);
+            } catch { completeTransaction(response.reference, "Card (Paystack)", null); }
           },
           onClose: () => { showToast("Payment window closed.", "info"); setSubmitting(false); },
         });
@@ -276,7 +276,7 @@ export default function GivePage() {
         recurring: false, notes: selectedPurpose,
       });
       if (res.status === "matched") {
-        completeTransaction(cleanRef, "M-Pesa Paybill 522522", null, null);
+        completeTransaction(cleanRef, "M-Pesa Paybill 522522", null);
         return;
       }
       // Fail-closed: receipt is issued only after provider confirmation.
@@ -289,7 +289,7 @@ export default function GivePage() {
           const s = await api.subscriptions.getClaimStatus(cleanRef, email);
           if (s.status === "matched") {
             setPaybillPending(null);
-            completeTransaction(cleanRef, "M-Pesa Paybill 522522", null, null);
+            completeTransaction(cleanRef, "M-Pesa Paybill 522522", null);
             return;
           }
           if (s.status === "amount_mismatch" || s.status === "rejected" || s.status === "expired") {
@@ -322,8 +322,8 @@ export default function GivePage() {
           onApprove: async (data: { orderID: string }) => {
             try {
               const capture = await api.subscriptions.paypalCapture({ orderId: data.orderID, subscriberName: donorName || "Kingdom Partner" });
-              completeTransaction(capture.id || data.orderID, "PayPal", capture.user as Record<string, unknown>, capture.token);
-            } catch { completeTransaction(data.orderID, "PayPal", null, null); }
+              completeTransaction(capture.id || data.orderID, "PayPal", capture.user as Record<string, unknown>);
+            } catch { completeTransaction(data.orderID, "PayPal", null); }
           },
           onError: () => { showToast("PayPal transaction was not completed.", "error"); setSubmitting(false); },
         }).render("#paypal-button-mount");
