@@ -58,13 +58,13 @@ function setAuthCookie(c: { req: { url: string } }, token: string) {
 authRoutes.post("/login", rateLimit, zValidator("json", loginSchema), async (c) => {
   const { email, password } = c.req.valid("json");
 
-  const authClient = createAuthClient();
+  const authClient = createAuthClient(c.env as Record<string, string>);
   const { data: authUser, error } = await authClient.auth.signInWithPassword({ email, password });
   if (error || !authUser.user) {
     return c.json({ error: "Invalid credentials" }, 401);
   }
 
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   let { data: user } = await supabase.from("users").select("*").eq("id", authUser.user.id).single();
   
   if (!user && authUser.user.email) {
@@ -102,7 +102,7 @@ authRoutes.post("/login", rateLimit, zValidator("json", loginSchema), async (c) 
 authRoutes.post("/register", strictRateLimit, zValidator("json", registerSchema), async (c) => {
   const { name, email, password } = c.req.valid("json");
 
-  const authClient = createAuthClient();
+  const authClient = createAuthClient(c.env as Record<string, string>);
   const { data: authUser, error } = await authClient.auth.signUp({ email, password });
   if (error) {
     if (error.message.includes("already")) {
@@ -115,7 +115,7 @@ authRoutes.post("/register", strictRateLimit, zValidator("json", registerSchema)
     return c.json({ error: "Registration failed" }, 500);
   }
 
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   await supabase.from("users").insert({ id: authUser.user.id, name, email, role: "member" });
   const { data: user } = await supabase.from("users").select("*").eq("id", authUser.user.id).single();
 
@@ -129,7 +129,7 @@ authRoutes.post("/register", strictRateLimit, zValidator("json", registerSchema)
 });
 
 authRoutes.post("/google", strictRateLimit, zValidator("json", googleSchema), async (c) => {
-  const authClient = createAuthClient();
+  const authClient = createAuthClient(c.env as Record<string, string>);
   const { token: idToken } = c.req.valid("json");
 
   const { data, error } = await authClient.auth.signInWithIdToken({
@@ -140,7 +140,7 @@ authRoutes.post("/google", strictRateLimit, zValidator("json", googleSchema), as
     return c.json({ error: "Google authentication failed" }, 401);
   }
 
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const authUser = data.user;
   let { data: user } = await supabase.from("users").select("*").eq("id", authUser.id).single();
   if (!user) {
@@ -165,7 +165,7 @@ authRoutes.post("/google", strictRateLimit, zValidator("json", googleSchema), as
 authRoutes.post("/forgot-password", strictRateLimit, zValidator("json", z.object({ email: z.string().email() })), async (c) => {
   const { email } = c.req.valid("json");
   // User-context flow: must use the publishable client, never service-role.
-  const authClient = createAuthClient();
+  const authClient = createAuthClient(c.env as Record<string, string>);
   const { error } = await authClient.auth.resetPasswordForEmail(email, {
     redirectTo: `${safeResetBase(c)}/reset-password`,
   });
@@ -179,11 +179,11 @@ authRoutes.post("/reset-password", strictRateLimit, zValidator("json", z.object(
   token: z.string().min(1).max(5000),
 })), async (c) => {
   const { password, token } = c.req.valid("json");
-  const authClient = createAuthClient();
+  const authClient = createAuthClient(c.env as Record<string, string>);
   const { data: { user }, error: userError } = await authClient.auth.getUser(token);
   if (userError || !user) return c.json({ error: "Invalid or expired token" }, 400);
 
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const { error } = await supabase.auth.admin.updateUserById(user.id, { password });
   if (error) return c.json({ error: "Failed to update password." }, 400);
   return c.json({ ok: true, message: "Password updated successfully." });
@@ -204,7 +204,7 @@ authRoutes.get("/me", async (c) => {
 
   try {
     const payload = await verifyToken(token);
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const { data: user } = await supabase.from("users").select("*").eq("id", payload.userId).single();
     if (!user) {
       return c.json({ error: "User not found" }, 404);

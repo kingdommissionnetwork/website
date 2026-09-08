@@ -4,7 +4,7 @@ import { getSupabase } from "../lib/supabase";
 export const streamRoutes = new Hono();
 
 streamRoutes.get("/upcoming", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const { data, error } = await supabase
     .from("events")
     .select("id, title, location, date, time")

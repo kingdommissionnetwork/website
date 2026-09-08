@@ -17,7 +17,7 @@ const createDonationSchema = z.object({
 });
 
 donationRoutes.post("/", requireAdmin, zValidator("json", createDonationSchema), async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const data = c.req.valid("json");
   const { data: donation, error } = await supabase.from("donations").insert({
     amount: data.amount,
@@ -47,7 +47,7 @@ donationRoutes.get("/history", rateLimit, async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const { data, error } = await supabase.from("donations").select("*").eq("donor_email", email).order("created_at", { ascending: false });
   if (error) return c.json({ error: "Failed to load history." }, 500);
   return c.json(data);

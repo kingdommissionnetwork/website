@@ -9,7 +9,7 @@ import { sendEventRsvpEmail } from "../lib/email";
 export const eventRoutes = new Hono();
 
 eventRoutes.get("/", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const { data, error } = await supabase.from("events").select("*").order("date", { ascending: false });
   if (error) {
     console.error("[EVENTS] list error:", error.message);
@@ -62,7 +62,7 @@ const rsvpSchema = z.object({
 });
 
 eventRoutes.post("/", requireAdmin, zValidator("json", createEventSchema), async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const data = c.req.valid("json");
   const d = new Date(data.date);
   const { data: event, error } = await supabase.from("events").insert(toEventRow({
@@ -78,7 +78,7 @@ eventRoutes.post("/", requireAdmin, zValidator("json", createEventSchema), async
 });
 
 eventRoutes.patch("/:id", requireAdmin, zValidator("json", updateEventSchema), async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const id = Number(c.req.param("id"));
   const body = c.req.valid("json");
   const { data: event, error } = await supabase.from("events").update(toEventRow({ ...body })).eq("id", id).select().single();
@@ -90,7 +90,7 @@ eventRoutes.patch("/:id", requireAdmin, zValidator("json", updateEventSchema), a
 });
 
 eventRoutes.delete("/:id", requireAdmin, async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const id = Number(c.req.param("id"));
   const { error } = await supabase.from("events").delete().eq("id", id);
   if (error) {
@@ -101,7 +101,7 @@ eventRoutes.delete("/:id", requireAdmin, async (c) => {
 });
 
 eventRoutes.post("/:id/rsvp", rateLimit, zValidator("json", rsvpSchema), async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const eventId = Number(c.req.param("id"));
   const { name, email } = c.req.valid("json");
   const { data: rsvp, error } = await supabase.from("event_rsvps").insert({

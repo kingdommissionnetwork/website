@@ -115,7 +115,7 @@ async function logBillingEvent(
   details: Record<string, unknown> = {}
 ) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     await supabase.from("audit_logs").insert({
       actor,
       action,
@@ -164,7 +164,7 @@ async function mintSubscriberSession(
 // Issue a single-use email-ownership code (stores only the hash, never the code)
 async function issueClaimOtp(email: string): Promise<string | null> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const code = generateOtpCode();
     const codeHash = await hashOtpCode(code);
     const { error } = await supabase.from("subscriber_otps").insert({
@@ -183,7 +183,7 @@ async function issueClaimOtp(email: string): Promise<string | null> {
 
 async function checkClaimOtp(email: string, code: string): Promise<{ ok: boolean; reason?: string }> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const norm = email.trim().toLowerCase();
     const { data } = await supabase
       .from("subscriber_otps")
@@ -223,7 +223,7 @@ async function provisionSubscriberUser(
   email: string
 ): Promise<ProvisionedSession | null> {
   if (!email) return null;
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const normEmail = email.trim().toLowerCase();
   const displayName = name.trim() || "Kingdom Partner";
   let user: { id: string | number; name: string; email: string; role: string } | null = null;
@@ -284,7 +284,7 @@ async function provisionClaimSession(
   email: string
 ): Promise<ProvisionedSession | null> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const normEmail = email.trim().toLowerCase();
     const { data: existingUser } = await supabase
       .from("users")
@@ -367,7 +367,7 @@ export async function fulfillPaybillRedemption(
   cleanRef: string,
   r: PaybillRedemption
 ) {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const normEmail = r.email.trim().toLowerCase();
   const displayName = r.name.trim() || "Kingdom Partner";
 
@@ -495,7 +495,7 @@ subscriptionRoutes.post(
     const canonicalAmount = priceCheck.expectedKes;
     const canonicalPlanName = priceCheck.isRecurring ? priceCheck.planName : planName;
 
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
 
     // 3. Anti-Replay: Prevent duplicate redemption of the same M-Pesa code
     const { data: existingSub } = await supabase
@@ -685,7 +685,7 @@ subscriptionRoutes.post("/mpesa/c2b-validation", async (c) => {
  */
 async function tryAutoFulfillClaim(c: import("hono").Context, transId: string): Promise<void> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const claim: ClaimRow | null = await findOpenClaimForReference(supabase, transId);
     if (!claim) return;
 
@@ -750,7 +750,7 @@ subscriptionRoutes.post("/mpesa/c2b-confirmation", async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
     const normalized = normalizeDarajaConfirmation(body);
     if (normalized) {
-      const supabase = getSupabase();
+      const supabase = getSupabase(c.env as Record<string, string>);
       await recordPaybillReceipt(supabase, normalized);
       await logBillingEvent("daraja-c2b", "paybill_receipt_recorded", "mpesa_receipt", normalized.transId, {
         amount: normalized.amount,
@@ -779,7 +779,7 @@ subscriptionRoutes.post("/mpesa/kcb-ipn", async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
     const normalized = normalizeKcbIpn(body);
     if (normalized) {
-      const supabase = getSupabase();
+      const supabase = getSupabase(c.env as Record<string, string>);
       await recordPaybillReceipt(supabase, normalized);
       await logBillingEvent("kcb-ipn", "paybill_receipt_recorded", "mpesa_receipt", normalized.transId, {
         amount: normalized.amount,
@@ -929,7 +929,7 @@ async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCh
     return checkout.fulfilledResult;
   }
   const receiptCode = checkout.receiptCode || `KCB${Date.now().toString().slice(-7)}`;
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
 
   const periodEnd = new Date();
   periodEnd.setMonth(periodEnd.getMonth() + (checkout.interval === "yearly" ? 12 : 1));
@@ -1218,7 +1218,7 @@ subscriptionRoutes.get("/verify/:reference", rateLimit, async (c) => {
   const data = result.data as Record<string, unknown>;
 
   if (data.status === "success") {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const customer = (data.customer as Record<string, unknown>) || {};
     const metadata = (data.metadata as Record<string, unknown>) || {};
     const subscriberEmail = (customer.email as string) || (metadata.email as string) || "";
@@ -1414,7 +1414,7 @@ subscriptionRoutes.post(
     const data = (await res.json()) as Record<string, unknown>;
 
     if (data.status === "COMPLETED") {
-      const supabase = getSupabase();
+      const supabase = getSupabase(c.env as Record<string, string>);
       const payer = (data.payer as Record<string, unknown>) || {};
       const payerName = (payer.name as Record<string, unknown>) || {};
       const fullName =
@@ -1506,7 +1506,7 @@ subscriptionRoutes.post("/webhook", async (c) => {
   const body = JSON.parse(rawBody) as Record<string, unknown>;
   const event = body.event as string;
   const data = (body.data as Record<string, unknown>) || {};
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
 
   if (event === "charge.success" || event === "subscription.create") {
     const customer = (data.customer as Record<string, unknown>) || {};
@@ -1569,7 +1569,7 @@ subscriptionRoutes.post("/webhook", async (c) => {
 subscriptionRoutes.get("/status/:email", rateLimit, async (c) => {
   const email = c.req.param("email");
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const { data, error } = await supabase
       .from("subscriptions")
       .select("status, plan_name, plan_id, amount, currency, interval, current_period_end, payment_provider, created_at")
@@ -1615,7 +1615,7 @@ subscriptionRoutes.post(
     const { email } = c.req.valid("json");
     const norm = email.trim().toLowerCase();
     try {
-      const supabase = getSupabase();
+      const supabase = getSupabase(c.env as Record<string, string>);
       const [{ data: user }, { data: subs }] = await Promise.all([
         supabase.from("users").select("id,name").eq("email", norm).maybeSingle(),
         supabase.from("subscriptions").select("id,subscriber_name").eq("subscriber_email", norm).limit(1),
@@ -1670,7 +1670,7 @@ subscriptionRoutes.post(
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function findOwnedSubscription(email: string, paymentReference: string) {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const norm = email.trim().toLowerCase();
   // paymentReference is REQUIRED: email alone never authorizes a mutation.
   // It acts as the possession factor (Paystack ref / M-Pesa code / order id).
@@ -1696,7 +1696,7 @@ subscriptionRoutes.post("/manage/cancel", rateLimit, zValidator("json", manageSc
   if (String(sub.status) === "canceled") {
     return c.json({ status: "canceled", subscription: sub });
   }
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const { data } = await supabase
     .from("subscriptions")
     .update({
@@ -1721,7 +1721,7 @@ subscriptionRoutes.post("/manage/pause", rateLimit, zValidator("json", manageSch
   if (!["active", "past_due", "grace"].includes(status)) {
     return c.json({ error: `Only active partnerships can be paused (current: ${status}).`, code: "INVALID_STATE" }, 409);
   }
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const { data } = await supabase
     .from("subscriptions")
     .update({ status: "paused", paused_at: new Date().toISOString(), next_retry_at: null, updated_at: new Date().toISOString() })
@@ -1740,7 +1740,7 @@ subscriptionRoutes.post("/manage/resume", rateLimit, zValidator("json", manageSc
   if (!["paused", "past_due", "grace", "suspended"].includes(status)) {
     return c.json({ error: `Only paused or overdue partnerships can be resumed (current: ${status}).`, code: "INVALID_STATE" }, 409);
   }
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const periodEnd = new Date();
   periodEnd.setMonth(periodEnd.getMonth() + (String(sub.interval) === "yearly" ? 12 : 1));
   const { data } = await supabase
@@ -1813,7 +1813,7 @@ subscriptionRoutes.post(
       return c.json({ preview });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const { data } = await supabase
       .from("subscriptions")
       .update({
@@ -1841,7 +1841,7 @@ subscriptionRoutes.get("/mpesa/claim/:reference", rateLimit, async (c) => {
   const cleanRef = c.req.param("reference").trim().toUpperCase();
   const email = (c.req.query("email") || "").trim().toLowerCase();
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     let q = supabase
       .from("payment_claims")
       .select("*")
@@ -1876,7 +1876,7 @@ subscriptionRoutes.get("/mpesa/claim/:reference", rateLimit, async (c) => {
 subscriptionRoutes.get("/mpesa/receipts/unmatched", requireAdmin, async (c) => {
   try {
     const limit = Math.min(100, Math.max(1, Number(c.req.query("limit")) || 50));
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const { data } = await supabase
       .from("mpesa_paybill_receipts")
       .select("*")
@@ -1892,7 +1892,7 @@ subscriptionRoutes.get("/mpesa/receipts/unmatched", requireAdmin, async (c) => {
 subscriptionRoutes.get("/mpesa/claims/pending", requireAdmin, async (c) => {
   try {
     const limit = Math.min(100, Math.max(1, Number(c.req.query("limit")) || 50));
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const { data } = await supabase
       .from("payment_claims")
       .select("*")
@@ -1914,7 +1914,7 @@ subscriptionRoutes.post(
     const { decision, note } = c.req.valid("json");
     if (!Number.isFinite(id)) return c.json({ error: "Invalid claim id." }, 400);
     try {
-      const supabase = getSupabase();
+      const supabase = getSupabase(c.env as Record<string, string>);
       const { data: row } = await supabase.from("payment_claims").select("*").eq("id", id).maybeSingle();
       const claim = row as ClaimRow | null;
       if (!claim) return c.json({ error: "Claim not found." }, 404);
@@ -1982,7 +1982,7 @@ subscriptionRoutes.post(
     const { transId, amount, billRef, phone } = c.req.valid("json");
     const cleanId = transId.trim().toUpperCase();
     try {
-      const supabase = getSupabase();
+      const supabase = getSupabase(c.env as Record<string, string>);
       const receipt = await recordPaybillReceipt(supabase, {
         transId: cleanId,
         amount: Math.round(amount),
@@ -2043,7 +2043,7 @@ subscriptionRoutes.get("/billing/due", async (c) => {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() + days);
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const { data } = await supabase
       .from("subscriptions")
       .select("id,subscriber_name,subscriber_email,plan_name,plan_id,amount,currency,interval,current_period_end,status")
@@ -2072,7 +2072,7 @@ subscriptionRoutes.post("/billing/retry-due", async (c) => {
     errors: 0,
   };
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const { data } = await supabase
       .from("subscriptions")
       .select("*")

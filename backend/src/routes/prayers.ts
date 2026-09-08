@@ -13,7 +13,7 @@ const createPrayerSchema = z.object({
 });
 
 prayerRoutes.get("/", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const category = c.req.query("category");
   // Public wall shows moderated content only.
   let q = supabase.from("prayers").select("*").eq("status", "approved");
@@ -26,7 +26,7 @@ prayerRoutes.get("/", async (c) => {
 });
 
 prayerRoutes.post("/", rateLimit, zValidator("json", createPrayerSchema), async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const data = c.req.valid("json");
   const { data: prayer, error } = await supabase.from("prayers").insert({
     name: data.name || "Anonymous",
@@ -43,7 +43,7 @@ prayerRoutes.post("/", rateLimit, zValidator("json", createPrayerSchema), async 
 });
 
 prayerRoutes.post("/:id/pray", rateLimit, async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const id = Number(c.req.param("id"));
   const { data: prayer, error } = await supabase.rpc("increment_prayer_count", { p_id: id }).single();
   if (error) return c.json({ error: "Failed to record prayer." }, 500);
@@ -51,7 +51,7 @@ prayerRoutes.post("/:id/pray", rateLimit, async (c) => {
 });
 
 prayerRoutes.get("/:id/comments", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const prayerId = Number(c.req.param("id"));
   const { data, error } = await supabase
     .from("prayer_comments")
@@ -68,7 +68,7 @@ const commentSchema = z.object({
 });
 
 prayerRoutes.post("/:id/comments", rateLimit, zValidator("json", commentSchema), async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const prayerId = Number(c.req.param("id"));
   const { name, text } = c.req.valid("json");
   const { data: comment, error } = await supabase.from("prayer_comments").insert({

@@ -103,7 +103,7 @@ paymentRoutes.get("/verify/:reference", strictRateLimit, async (c) => {
   const data = result.data as Record<string, unknown>;
 
   if (data.status === "success") {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const donorEmail = data.customer ? (data.customer as Record<string, unknown>).email as string : "";
     const donorName = data.metadata ? (data.metadata as Record<string, unknown>).name as string : "";
     const { error: upsertErr } = await supabase.from("donations").upsert({
@@ -140,7 +140,7 @@ paymentRoutes.post("/webhook", async (c) => {
   const data = body.data as Record<string, unknown>;
 
   if (event === "charge.success" && (data.status as string) === "success") {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const donorEmail = data.customer ? (data.customer as Record<string, unknown>).email as string : "";
     const donorName = data.metadata ? (data.metadata as Record<string, unknown>).name as string : "";
     const { error: upsertErr } = await supabase.from("donations").upsert({
@@ -214,7 +214,7 @@ paymentRoutes.post("/paypal/capture", rateLimit, zValidator("json", z.object({
   const data: Record<string, unknown> = await res.json();
 
   if (data.status === "COMPLETED") {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const pu = (data.purchase_units as Record<string, unknown>[])?.[0];
     const amount = pu?.amount as Record<string, unknown>;
     const paypalData = data.payer as Record<string, unknown>;
@@ -258,7 +258,7 @@ paymentRoutes.post("/report-offline", strictRateLimit, zValidator("json", z.obje
 })), async (c) => {
   const { amount, currency, donor_name, donor_email, payment_provider, payment_reference, recurring } = c.req.valid("json");
   const cleanRef = payment_reference.trim().toUpperCase();
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
 
   const { data, error } = await supabase.from("donations").insert({
     amount,

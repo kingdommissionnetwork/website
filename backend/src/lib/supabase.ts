@@ -2,52 +2,50 @@ import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getEnv } from "./env";
 
-let _supabase: SupabaseClient | null = null;
+/**
+ * Resolve SUPABASE_URL from the per-request env store (populated by setEnv
+ * middleware) with a fallback to process.env for local non-Worker runtimes.
+ * Fail-closed: throws if the value is missing so misconfiguration is loud.
+ */
+function requireUrl(env?: Record<string, string>): string {
+  const val = (env && env["SUPABASE_URL"]) || getEnv("SUPABASE_URL") || process.env.SUPABASE_URL || "";
+  if (!val) throw new Error("SUPABASE_URL must be set in Worker bindings or .dev.vars");
+  return val;
+}
+
+function requireSecretKey(env?: Record<string, string>): string {
+  const val = (env && env["SUPABASE_SECRET_KEY"]) || getEnv("SUPABASE_SECRET_KEY") || process.env.SUPABASE_SECRET_KEY || "";
+  if (!val) throw new Error("SUPABASE_SECRET_KEY must be set in Worker bindings or .dev.vars");
+  return val;
+}
+
+function requirePublishableKey(env?: Record<string, string>): string {
+  const val = (env && env["SUPABASE_PUBLISHABLE_KEY"]) || getEnv("SUPABASE_PUBLISHABLE_KEY") || process.env.SUPABASE_PUBLISHABLE_KEY || "";
+  if (!val) throw new Error("SUPABASE_PUBLISHABLE_KEY must be set in Worker bindings or .dev.vars");
+  return val;
+}
 
 /**
- * Fail-closed env access: no hardcoded defaults. Service keys must come
- * from the Worker bindings / process env. Throwing here prevents silently
- * running against the wrong project or with a leaked key baked into source.
+ * Returns a Supabase service-role client for the current request.
+ * Pass `c.env` from the Hono context to guarantee the live Worker
+ * bindings are used — this avoids stale module-level singletons that
+ * could be built before env is injected.
  */
-function requireSupabaseUrl(): string {
-  const rawUrl = getEnv("SUPABASE_URL") || process.env.SUPABASE_URL || "";
-  if (!rawUrl) throw new Error("SUPABASE_URL must be set");
-  return rawUrl;
-}
-
-function requireSecretKey(): string {
-  const rawKey = getEnv("SUPABASE_SECRET_KEY") || process.env.SUPABASE_SECRET_KEY || "";
-  if (!rawKey) throw new Error("SUPABASE_SECRET_KEY must be set");
-  return rawKey;
-}
-
-export function getSupabase() {
-  if (!_supabase) {
-    const url = requireSupabaseUrl();
-    const key = requireSecretKey();
-    _supabase = createClient(url, key, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-  }
-  return _supabase;
-}
-
-function requirePublishableKey(): string {
-  const rawKey = getEnv("SUPABASE_PUBLISHABLE_KEY") || process.env.SUPABASE_PUBLISHABLE_KEY || "";
-  if (!rawKey) throw new Error("SUPABASE_PUBLISHABLE_KEY must be set");
-  return rawKey;
-}
-
-export function createAuthClient() {
-  const url = requireSupabaseUrl();
-  // User-facing auth must run in anon/publishable context — never fall back
-  // to the secret key, which would execute user flows as service-role.
-  const key = requirePublishableKey();
-  return createClient(url, key, {
+export function getSupabase(env?: Record<string, string>): SupabaseClient {
+  return createClient(requireUrl(env), requireSecretKey(env), {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
 
-export function resetSupabase() {
-  _supabase = null;
+/**
+ * Returns a Supabase publishable-key client for user-facing auth flows.
+ * Never falls back to the secret key.
+ */
+export function createAuthClient(env?: Record<string, string>): SupabaseClient {
+  return createClient(requireUrl(env), requirePublishableKey(env), {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
+
+/** @deprecated No-op — kept for test compatibility only. */
+export function resetSupabase() {}

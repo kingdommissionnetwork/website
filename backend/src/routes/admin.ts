@@ -19,7 +19,7 @@ async function logAuditEvent(
   details: Record<string, unknown>
 ) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     await supabase.from("audit_logs").insert({
       actor,
       action,
@@ -36,7 +36,7 @@ async function logAuditEvent(
 
 // 1. EXECUTIVE DASHBOARD & OPERATIONAL STATS
 adminRoutes.get("/stats", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
 
   const { count: allPrayers } = await supabase.from("prayers").select("*", { count: "exact", head: true });
   const { count: pendingPrayers } = await supabase.from("prayers").select("*", { count: "exact", head: true }).eq("status", "pending");
@@ -133,7 +133,7 @@ adminRoutes.get("/stats", async (c) => {
 
 // 2. ATTENTION CENTER ALERTS
 adminRoutes.get("/attention", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const { count: pendingPrayers } = await supabase.from("prayers").select("*", { count: "exact", head: true }).eq("status", "pending");
   const { count: flaggedPrayers } = await supabase.from("prayers").select("*", { count: "exact", head: true }).eq("status", "flagged");
 
@@ -197,7 +197,7 @@ adminRoutes.get("/attention", async (c) => {
 
 // 3. MEMBERS & PARTNERS LIST WITH SEARCH & FILTERING
 adminRoutes.get("/members", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const search = c.req.query("search")?.toLowerCase();
   const statusFilter = c.req.query("status");
   const roleFilter = c.req.query("role");
@@ -276,7 +276,7 @@ adminRoutes.post(
     })
   ),
   async (c) => {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const memberId = c.req.param("id");
     const { action, planName, role } = c.req.valid("json");
     const actor = getActorEmail(c);
@@ -315,7 +315,7 @@ adminRoutes.post(
 
 // 5. UNIFIED SUBSCRIPTIONS LIST
 adminRoutes.get("/subscriptions", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const { data, error } = await supabase
     .from("subscriptions")
     .select("*")
@@ -328,7 +328,7 @@ adminRoutes.get("/subscriptions", async (c) => {
 
 // 6. TRANSACTIONS & DONATIONS LEDGER
 adminRoutes.get("/donations", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const { data, error } = await supabase
     .from("donations")
     .select("*")
@@ -360,7 +360,7 @@ adminRoutes.get("/donations", async (c) => {
 
 // 7. PRAYER MODERATION
 adminRoutes.get("/prayers", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const statusFilter = c.req.query("status");
   let q = supabase.from("prayers").select("*");
   if (statusFilter && statusFilter !== "all") {
@@ -379,7 +379,7 @@ const prayerStatusSchema = z.object({
 });
 
 adminRoutes.patch("/prayers/:id/status", zValidator("json", prayerStatusSchema), async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const id = Number(c.req.param("id"));
   const { status } = c.req.valid("json");
   const { data: prayer, error } = await supabase.from("prayers").update({ status }).eq("id", id).select().single();
@@ -389,7 +389,7 @@ adminRoutes.patch("/prayers/:id/status", zValidator("json", prayerStatusSchema),
 });
 
 adminRoutes.delete("/prayers/:id", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const id = Number(c.req.param("id"));
   const { error } = await supabase.from("prayers").delete().eq("id", id);
   if (error) return c.json({ error: "Failed to delete prayer." }, 500);
@@ -399,7 +399,7 @@ adminRoutes.delete("/prayers/:id", async (c) => {
 
 // 8. AUDIT LOGS RETRIEVAL
 adminRoutes.get("/audit-logs", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const { data, error } = await supabase
     .from("audit_logs")
     .select("*")
@@ -416,7 +416,7 @@ adminRoutes.get("/audit-logs", async (c) => {
 
 // 9. PENDING M-PESA VERIFICATION QUEUE
 adminRoutes.get("/mpesa/pending", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
 
   // Fetch pending subscription claims from payment_claims table
   const { data: claims, error: claimsError } = await supabase
@@ -483,7 +483,7 @@ adminRoutes.post(
     })
   ),
   async (c) => {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const claimId = c.req.param("id");
     const { action, type, notes, mpesa_receipt } = c.req.valid("json");
     const actor = getActorEmail(c);
@@ -544,7 +544,7 @@ adminRoutes.post(
 // 10. SYSTEM HEALTH STATUS — live checks only, no canned latencies.
 adminRoutes.get("/health", async (c) => {
   const started = Date.now();
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const env = (c.env || {}) as Record<string, string>;
   const configured = (key: string) => Boolean(env[key]);
 
@@ -609,7 +609,7 @@ adminRoutes.post(
     })
   ),
   async (c) => {
-    const supabase = getSupabase();
+    const supabase = getSupabase(c.env as Record<string, string>);
     const { name, email, role } = c.req.valid("json");
     const actor = getActorEmail(c);
     // Cryptographically secure invite token. NOTE: there is currently no

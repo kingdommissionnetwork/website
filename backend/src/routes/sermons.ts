@@ -7,7 +7,7 @@ import { requireAdmin } from "../lib/jwt";
 export const sermonRoutes = new Hono();
 
 sermonRoutes.get("/", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const category = (c.req.query("category") || "").slice(0, 50);
   const query = (c.req.query("q") || "").slice(0, 100);
 
@@ -59,7 +59,7 @@ const updateSermonSchema = z.object({
 });
 
 sermonRoutes.post("/", requireAdmin, zValidator("json", createSermonSchema), async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const data = c.req.valid("json");
   const { data: sermon, error } = await supabase.from("sermons").insert(data).select().single();
   if (error) {
@@ -70,7 +70,7 @@ sermonRoutes.post("/", requireAdmin, zValidator("json", createSermonSchema), asy
 });
 
 sermonRoutes.patch("/:id", requireAdmin, zValidator("json", updateSermonSchema), async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const id = Number(c.req.param("id"));
   const body = c.req.valid("json");
   const { data: sermon, error } = await supabase.from("sermons").update(body).eq("id", id).select().single();
@@ -82,7 +82,7 @@ sermonRoutes.patch("/:id", requireAdmin, zValidator("json", updateSermonSchema),
 });
 
 sermonRoutes.delete("/:id", requireAdmin, async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const id = Number(c.req.param("id"));
   const { error } = await supabase.from("sermons").delete().eq("id", id);
   if (error) {

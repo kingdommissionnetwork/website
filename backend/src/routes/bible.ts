@@ -366,7 +366,7 @@ const noteSchema = z.object({
 });
 
 bibleRoutes.post("/notes", zValidator("json", noteSchema), async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const body = c.req.valid("json");
   const { data: note, error } = await supabase.from("bible_notes").insert({
     user_id: body.userId,
@@ -382,7 +382,7 @@ bibleRoutes.post("/notes", zValidator("json", noteSchema), async (c) => {
 });
 
 bibleRoutes.get("/notes", async (c) => {
-  const supabase = getSupabase();
+  const supabase = getSupabase(c.env as Record<string, string>);
   const userId = c.req.query("userId");
   if (!userId) return c.json([]);
   const { data, error } = await supabase.from("bible_notes").select("*").eq("user_id", userId);
