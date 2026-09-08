@@ -24,6 +24,7 @@ const AboutUs = lazy(() => import("./pages/AboutUs"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const Accessibility = lazy(() => import("./pages/Accessibility"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoader() {
@@ -78,6 +79,7 @@ export default function App() {
                   <Route path="/subscribe" element={<SubscriptionPortal />} />
                   <Route path="/subscriber-dashboard" element={<SubscriberDashboard />} />
                   <Route path="/partner-portal" element={<SubscriberDashboard />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   <Route
                     path="/admin"
                     element={

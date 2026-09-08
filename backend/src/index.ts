@@ -71,6 +71,7 @@ app.route("/api/payments", paymentRoutes);
 app.route("/api/subscriptions", subscriptionRoutes);
 
 app.onError((err, c) => {
+  console.error("[Worker Error]", err, { url: c.req.url, method: c.req.method });
   Sentry.captureException(err, {
     extra: { url: c.req.url, method: c.req.method },
   });
