@@ -49,4 +49,16 @@ describe('Supabase Client', () => {
     resetSupabase();
     expect(() => getSupabase()).toThrow('SUPABASE_SERVICE_KEY');
   });
+
+  test('getSupabase accepts modern SUPABASE_SECRET_KEY', () => {
+    vi.mocked(getEnv).mockImplementation((key: string) => {
+      if (key === 'SUPABASE_URL') return 'https://test.supabase.co';
+      if (key === 'SUPABASE_SECRET_KEY') return 'test-secret-key';
+      return '';
+    });
+    resetSupabase();
+    const client = getSupabase();
+    expect(client).toBeDefined();
+  });
 });
+
