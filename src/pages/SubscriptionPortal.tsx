@@ -721,13 +721,39 @@ export default function SubscriptionPortal() {
               </ScrollReveal>
             </div>
 
-            {/* 4 Cards Grid — Occupies full space cleanly */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 items-stretch mb-6">
+            {/* 4 Cards Grid — Enhanced contrast & clear separation on mobile */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-5 items-stretch mb-6">
               {PARTNER_PLANS.map((plan) => {
                 const isSelected = selectedPlanId === plan.id && !isCustomAmount;
                 const billedKes = billingCycle === "yearly" ? Math.round(plan.kesMonthly * 12 * 0.85) : plan.kesMonthly;
                 const kesDisplay = billedKes.toLocaleString();
                 const usdDisplay = (billedKes * exchangeRate).toFixed(2);
+
+                // Tier-specific subtle accent colors for high-definition mobile contrast
+                const tierAccent =
+                  plan.id === "ambassador"
+                    ? {
+                        badge: "bg-[#d4af37]/25 text-[#fbf5b7] border-[#d4af37]/60",
+                        glow: "via-[#d4af37]/60",
+                        border: "border-2 border-[#d4af37]/60",
+                      }
+                    : plan.id === "pillar"
+                    ? {
+                        badge: "bg-purple-500/25 text-purple-200 border-purple-400/50",
+                        glow: "via-purple-400/50",
+                        border: "border-2 border-purple-500/30 sm:border-white/20",
+                      }
+                    : plan.id === "harvest"
+                    ? {
+                        badge: "bg-sky-500/25 text-sky-200 border-sky-400/50",
+                        glow: "via-sky-400/50",
+                        border: "border-2 border-sky-500/30 sm:border-white/20",
+                      }
+                    : {
+                        badge: "bg-emerald-500/25 text-emerald-200 border-emerald-400/50",
+                        glow: "via-emerald-400/50",
+                        border: "border-2 border-emerald-500/30 sm:border-white/20",
+                      };
 
                 return (
                   <div
@@ -741,15 +767,20 @@ export default function SubscriptionPortal() {
                         handleSelectPlanAndProceed(plan.id);
                       }
                     }}
-                    className={`relative rounded-3xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer transition-all duration-300 ${
+                    className={`relative rounded-3xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer transition-all duration-300 overflow-hidden ${
                       isSelected
-                        ? "bg-gradient-to-b from-[#132c52] to-[#0d1d36] border-2 border-[#d4af37] shadow-[0_0_30px_rgba(212,175,55,0.3)] scale-[1.02]"
-                        : "bg-white/[0.04] border border-white/10 hover:border-white/25 hover:bg-white/[0.06]"
+                        ? "bg-gradient-to-b from-[#163560] via-[#102747] to-[#0a182d] border-2 border-[#d4af37] shadow-[0_0_35px_rgba(212,175,55,0.45)] scale-[1.01] ring-2 ring-[#d4af37]/50 ring-offset-2 ring-offset-[#071324]"
+                        : plan.isPopular
+                        ? `bg-gradient-to-b from-[#11294a] via-[#0d203a] to-[#081526] ${tierAccent.border} shadow-[0_8px_32px_rgba(0,0,0,0.6)] hover:border-[#d4af37] hover:shadow-[0_8px_35px_rgba(212,175,55,0.25)]`
+                        : `bg-gradient-to-b from-[#0d223f] via-[#091a30] to-[#071424] ${tierAccent.border} shadow-[0_8px_28px_rgba(0,0,0,0.55)] hover:border-white/40 hover:bg-[#0f2747]`
                     }`}
                   >
+                    {/* Top ambient highlight line for unmistakable card definition */}
+                    <div className={`absolute top-0 left-6 right-6 h-[2px] bg-gradient-to-r from-transparent ${tierAccent.glow} to-transparent pointer-events-none`} />
+
                     {/* Popular Tag */}
                     {plan.isPopular && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-0.5 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] text-[9px] font-extrabold uppercase tracking-wider shadow-md whitespace-nowrap">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-0.5 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] text-[9px] font-extrabold uppercase tracking-wider shadow-md whitespace-nowrap z-10">
                         Most Popular Tier
                       </div>
                     )}
@@ -757,25 +788,25 @@ export default function SubscriptionPortal() {
                     <div>
                       {/* Header */}
                       <div className="mb-3">
-                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-white/10 text-[11px] font-semibold text-[#fbf5b7] mb-1.5">
+                        <span className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold tracking-wide mb-2 shadow-sm border ${tierAccent.badge}`}>
                           {plan.badge}
                         </span>
                         <h4 className="font-brand text-xl font-bold text-white mb-0.5">{plan.name}</h4>
                         <p className="font-outfit text-[11px] text-[#d4af37] font-semibold mb-1.5">{plan.tagline}</p>
-                        <p className="font-outfit text-xs text-white/70 leading-relaxed min-h-[32px]">{plan.description}</p>
+                        <p className="font-outfit text-xs text-white/75 leading-relaxed min-h-[32px]">{plan.description}</p>
                       </div>
 
-                      {/* Price */}
-                      <div className="mb-4 pb-3 border-b border-white/10">
+                      {/* Price Box with distinct elevated surface */}
+                      <div className="mb-4 p-3.5 rounded-2xl bg-black/30 border border-white/10 shadow-inner">
                         <div className="flex items-baseline gap-1.5">
                           <span className="font-brand text-2xl sm:text-3xl font-extrabold text-white">
                             {currencyView === "KES" ? `KES ${kesDisplay}` : `$${usdDisplay}`}
                           </span>
-                          <span className="text-white/60 text-xs">
+                          <span className="text-white/70 text-xs font-semibold">
                             / {billingCycle === "yearly" ? "year" : "month"}
                           </span>
                         </div>
-                        <p className="text-[11px] text-white/50 mt-0.5">
+                        <p className="text-[11px] text-white/60 mt-0.5 font-medium">
                           {currencyView === "KES" ? `≈ $${usdDisplay} USD / mo` : `≈ ${kesDisplay} KES / mo`}
                           {billingCycle === "yearly" && " · 15% discount included"}
                         </p>
@@ -815,7 +846,7 @@ export default function SubscriptionPortal() {
                       </div>
 
                       {/* Impact Note */}
-                      <div className="p-3 rounded-xl bg-white/[0.05] border border-white/10 text-[11px] text-[#fbf5b7] mb-4 leading-relaxed flex items-start gap-2">
+                      <div className="p-3 rounded-xl bg-white/[0.06] border border-white/15 text-[11px] text-[#fbf5b7] mb-4 leading-relaxed flex items-start gap-2 shadow-sm">
                         <Sparkles className="w-3.5 h-3.5 text-[#d4af37] shrink-0 mt-0.5" />
                         <span>{plan.impactHighlight}</span>
                       </div>
@@ -828,7 +859,7 @@ export default function SubscriptionPortal() {
                       {/* Perks List */}
                       <ul className="space-y-2">
                         {plan.perks.map((perk, i) => (
-                          <li key={i} className="flex items-start gap-2 text-xs text-white/80 leading-snug">
+                          <li key={i} className="flex items-start gap-2 text-xs text-white/90 leading-snug">
                             <Check className="w-3.5 h-3.5 text-[#d4af37] shrink-0 mt-0.5" />
                             <span>{perk}</span>
                           </li>
@@ -841,7 +872,7 @@ export default function SubscriptionPortal() {
             </div>
 
             {/* Bottom Action Bar — Direct Proceed + Custom Giving */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-white/[0.04] border border-white/10 max-w-4xl mx-auto w-full">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-[#0c1f38] border-2 border-white/15 shadow-[0_8px_25px_rgba(0,0,0,0.5)] max-w-4xl mx-auto w-full">
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/60">Selected Plan:</span>
                 <span className="text-xs sm:text-sm font-bold text-[#fbf5b7] bg-white/10 px-3 py-1 rounded-xl">
