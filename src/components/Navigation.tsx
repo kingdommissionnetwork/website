@@ -107,7 +107,7 @@ export default function Navigation() {
             {/* Standout Gold Give CTA Button */}
             <Link
               to="/give"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm tracking-wide shadow-md hover:shadow-[0_0_15px_rgba(212,175,55,0.4)] hover:scale-105 transition-all whitespace-nowrap"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm tracking-wide shadow-md hover:shadow-[0_0_15px_rgba(212,175,55,0.4)] hover:scale-105 transition-all whitespace-nowrap"
             >
               <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0c1b33]" />
               <span>Give</span>
