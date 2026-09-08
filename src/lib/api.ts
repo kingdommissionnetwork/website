@@ -425,8 +425,39 @@ export const api = {
       activeEvents: number;
       totalYtd: number;
       donorCount: number;
+      pendingMpesaCount: number;
     }> => {
       return await request("/admin/stats", { headers: authHeaders() });
+    },
+    pendingMpesa: async (): Promise<{
+      id: string | number;
+      type: "subscription_claim" | "donation";
+      name: string;
+      email: string;
+      amount: number;
+      currency: string;
+      reference: string;
+      plan: string;
+      status: string;
+      submittedAt: string;
+      notes: string;
+    }[]> => {
+      return await request("/admin/mpesa/pending", { headers: authHeaders() });
+    },
+    resolveMpesaClaim: async (
+      id: string | number,
+      data: {
+        action: "approve" | "reject";
+        type: "subscription_claim" | "donation";
+        notes?: string;
+        mpesa_receipt?: string;
+      }
+    ): Promise<{ success: boolean; message: string }> => {
+      return await request(`/admin/mpesa/claims/${id}/resolve`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+      });
     },
     attention: async (): Promise<{
       alerts: { id: string; type: "warning" | "danger" | "success" | "info"; title: string; description: string; actionLabel: string; tab: string }[];

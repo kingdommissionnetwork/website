@@ -29,6 +29,9 @@ import {
   ExternalLink,
   LogOut,
   ChevronRight,
+  Smartphone,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import SEO from "../components/SEO";
 import { api } from "../lib/api";
@@ -46,7 +49,8 @@ type Tab =
   | "communications"
   | "prayers"
   | "security"
-  | "settings";
+  | "settings"
+  | "mpesa";
 
 interface AdminMember {
   id: string | number;
@@ -111,6 +115,7 @@ const sidebarSections = [
       { id: "subscriptions" as Tab, label: "Subscriptions", icon: Crown },
       { id: "billing" as Tab, label: "Billing & Invoices", icon: CreditCard },
       { id: "plans" as Tab, label: "Plans & Pricing", icon: Award },
+      { id: "mpesa" as Tab, label: "M-Pesa Approvals", icon: Smartphone },
     ],
   },
   {
@@ -181,7 +186,33 @@ export default function AdminDashboard() {
     activeEvents: 0,
     totalYtd: 0,
     donorCount: 0,
+    pendingMpesaCount: 0,
   });
+
+  // M-Pesa pending state
+  const [pendingMpesa, setPendingMpesa] = useState<{
+    id: string | number;
+    type: "subscription_claim" | "donation";
+    name: string;
+    email: string;
+    amount: number;
+    currency: string;
+    reference: string;
+    plan: string;
+    status: string;
+    submittedAt: string;
+    notes: string;
+  }[]>([]);
+  const [mpesaLoadError, setMpesaLoadError] = useState(false);
+
+  // Resolve modal state
+  const [resolveModal, setResolveModal] = useState<{
+    claim: (typeof pendingMpesa)[0];
+    action: "approve" | "reject";
+  } | null>(null);
+  const [resolveReceipt, setResolveReceipt] = useState("");
+  const [resolveNotes, setResolveNotes] = useState("");
+  const [resolving, setResolving] = useState(false);
   const [attentionAlerts, setAttentionAlerts] = useState<AttentionAlert[]>([]);
   const [members, setMembers] = useState<AdminMember[]>([]);
   const [subscriptions, setSubscriptions] = useState<Record<string, unknown>[]>([]);
@@ -215,7 +246,7 @@ export default function AdminDashboard() {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [statsData, attentionData, membersData, subsData, donData, prData, evData, auditData, hlData] = await Promise.all([
+      const [statsData, attentionData, membersData, subsData, donData, prData, evData, auditData, hlData, mpesaData] = await Promise.all([
         api.admin.stats().catch(() => stats),
         api.admin.attention().catch(() => ({ alerts: [] })),
         api.admin.members().catch(() => []),
@@ -225,6 +256,7 @@ export default function AdminDashboard() {
         api.events.list().catch(() => []),
         api.admin.auditLogs().catch(() => []),
         api.admin.health().catch(() => null),
+        api.admin.pendingMpesa().catch(() => { setMpesaLoadError(true); return []; }),
       ]);
 
       setStats(statsData as typeof stats);
@@ -236,10 +268,35 @@ export default function AdminDashboard() {
       setEvents(evData);
       setAuditLogs(auditData);
       setHealthData(hlData);
+      setPendingMpesa(mpesaData);
+      setMpesaLoadError(false);
     } catch {
       showToast("Error loading operational data", "error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // M-Pesa claim resolution handler
+  const handleResolveClaim = async () => {
+    if (!resolveModal) return;
+    setResolving(true);
+    try {
+      const res = await api.admin.resolveMpesaClaim(resolveModal.claim.id, {
+        action: resolveModal.action,
+        type: resolveModal.claim.type,
+        notes: resolveNotes || undefined,
+        mpesa_receipt: resolveReceipt || undefined,
+      });
+      showToast(res.message, "success");
+      setResolveModal(null);
+      setResolveReceipt("");
+      setResolveNotes("");
+      loadAllData();
+    } catch {
+      showToast("Failed to process claim — check connection and try again.", "error");
+    } finally {
+      setResolving(false);
     }
   };
 
@@ -543,6 +600,11 @@ export default function AdminDashboard() {
                                 {stats.pendingPrayers}
                               </span>
                             )}
+                            {item.id === "mpesa" && stats.pendingMpesaCount > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-extrabold animate-pulse">
+                                {stats.pendingMpesaCount}
+                              </span>
+                            )}
                           </button>
                         );
                       })}
@@ -636,6 +698,11 @@ export default function AdminDashboard() {
                           {!isSidebarCollapsed && item.id === "prayers" && stats.pendingPrayers > 0 && (
                             <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-[#0c1b33] text-[10px] font-extrabold">
                               {stats.pendingPrayers}
+                            </span>
+                          )}
+                          {!isSidebarCollapsed && item.id === "mpesa" && stats.pendingMpesaCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-extrabold animate-pulse">
+                              {stats.pendingMpesaCount}
                             </span>
                           )}
                         </button>
@@ -850,6 +917,173 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB: M-PESA PENDING VERIFICATION */}
+          {activeTab === "mpesa" && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-brand text-2xl sm:text-4xl font-bold text-white">
+                    M-Pesa Paybill Verification Queue
+                  </h1>
+                  <p className="font-outfit text-white/70 text-xs sm:text-sm mt-1">
+                    Manually review and approve/reject Paybill 522522 payment claims from subscribers and donors.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadAllData}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all shrink-0 self-start sm:self-auto"
+                >
+                  <RefreshCw className={`w-4 h-4 text-[#d4af37] ${loading ? "animate-spin" : ""}`} />
+                  Refresh Queue
+                </button>
+              </div>
+
+              {/* Info Banner */}
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-200 space-y-1">
+                  <p className="font-bold text-amber-300">Manual Verification Required</p>
+                  <p>Before approving, cross-check the M-Pesa confirmation SMS on your Safaricom Paybill portal (Business No. 522522). Confirm the amount, date, and donor name match. Enter the official M-Pesa receipt code (e.g. <span className="font-mono">RI12ABC789</span>) when approving.</p>
+                </div>
+              </div>
+
+              {/* Load error */}
+              {mpesaLoadError && (
+                <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-semibold">
+                  ⚠ Could not load pending M-Pesa data. The <code className="font-mono">payment_claims</code> table may not exist yet — run your database migrations. Backend connection and auth are working for other tabs.
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!mpesaLoadError && pendingMpesa.length === 0 && !loading && (
+                <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white text-lg">All Clear!</p>
+                    <p className="text-white/50 text-sm mt-1">No pending M-Pesa payments awaiting your approval.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Pending Claims List */}
+              {pendingMpesa.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs uppercase tracking-wider font-bold text-[#d4af37]">
+                      {pendingMpesa.length} Pending Record{pendingMpesa.length !== 1 ? "s" : ""}
+                    </span>
+                    <div className="flex-1 h-px bg-white/10" />
+                  </div>
+
+                  {pendingMpesa.map((claim) => (
+                    <div
+                      key={`${claim.type}-${claim.id}`}
+                      className="p-6 rounded-3xl bg-white/[0.04] border border-white/10 space-y-4"
+                    >
+                      {/* Claim header */}
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center shrink-0">
+                            <Smartphone className="w-6 h-6 text-[#d4af37]" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-white text-sm">{claim.name}</p>
+                            <p className="text-xs text-white/50 font-mono">{claim.email || "No email on record"}</p>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                claim.status === "awaiting_receipt"
+                                  ? "bg-amber-500/20 text-amber-300"
+                                  : claim.status === "amount_mismatch"
+                                  ? "bg-red-500/20 text-red-300"
+                                  : "bg-blue-500/20 text-blue-300"
+                              }`}>
+                                {claim.status.replace(/_/g, " ").toUpperCase()}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] font-semibold text-white/60">
+                                {claim.type === "subscription_claim" ? "Subscription" : "One-Time Donation"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Amount */}
+                        <div className="text-right shrink-0">
+                          <p className="font-brand text-2xl font-bold text-emerald-400">
+                            {claim.currency} {Number(claim.amount).toLocaleString()}
+                          </p>
+                          {claim.plan && (
+                            <p className="text-xs text-[#fbf5b7] font-semibold">{claim.plan}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Reference & timestamp */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/5">
+                        <div>
+                          <p className="text-[10px] uppercase text-white/40 font-bold mb-0.5">M-Pesa Reference</p>
+                          <p className="font-mono text-xs text-[#fbf5b7] font-bold">
+                            {claim.reference || <span className="text-white/40 italic">Not provided</span>}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase text-white/40 font-bold mb-0.5">Submitted</p>
+                          <p className="text-xs text-white/70">
+                            {claim.submittedAt
+                              ? new Date(claim.submittedAt).toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short" })
+                              : "–"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase text-white/40 font-bold mb-0.5">Record ID</p>
+                          <p className="font-mono text-xs text-white/50">{String(claim.id).slice(0, 16)}</p>
+                        </div>
+                      </div>
+
+                      {/* Notes from user */}
+                      {claim.notes && (
+                        <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-xs text-white/60">
+                          <span className="font-bold text-white/80">User Note: </span>{claim.notes}
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResolveModal({ claim, action: "approve" });
+                            setResolveReceipt(claim.reference || "");
+                            setResolveNotes("");
+                          }}
+                          className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md hover:brightness-110 transition-all"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          Approve & Activate
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResolveModal({ claim, action: "reject" });
+                            setResolveReceipt("");
+                            setResolveNotes("");
+                          }}
+                          className="flex-1 py-3 rounded-2xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 font-bold text-xs flex items-center justify-center gap-2 transition-all"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Reject Claim
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1487,6 +1721,118 @@ export default function AdminDashboard() {
                   className="p-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs shadow-md"
                 >
                   Print Partner ID
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* M-PESA RESOLVE CONFIRMATION MODAL */}
+      {resolveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-lg p-8 rounded-3xl bg-[#0d1d36] border-2 border-white/20 text-white shadow-2xl space-y-6">
+            <button
+              type="button"
+              onClick={() => setResolveModal(null)}
+              className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Modal header */}
+            <div>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${
+                resolveModal.action === "approve"
+                  ? "bg-emerald-500/20 border border-emerald-500/40"
+                  : "bg-red-500/20 border border-red-500/40"
+              }`}>
+                {resolveModal.action === "approve"
+                  ? <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                  : <XCircle className="w-6 h-6 text-red-400" />}
+              </div>
+              <span className="text-[10px] uppercase font-bold text-[#d4af37] tracking-widest block">
+                M-Pesa Claim {resolveModal.action === "approve" ? "Approval" : "Rejection"}
+              </span>
+              <h3 className="font-brand text-xl font-bold text-white mt-1">
+                {resolveModal.action === "approve" ? "Approve & Activate" : "Reject Claim"}
+              </h3>
+              <p className="text-xs text-white/60 mt-1">
+                {resolveModal.claim.name} — {resolveModal.claim.currency} {Number(resolveModal.claim.amount).toLocaleString()}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Receipt field (approvals only) */}
+              {resolveModal.action === "approve" && (
+                <div>
+                  <label htmlFor="resolveReceiptInput" className="block text-xs uppercase font-bold text-white/60 mb-1.5">
+                    Official M-Pesa Receipt Code <span className="text-amber-400">*</span>
+                  </label>
+                  <input
+                    id="resolveReceiptInput"
+                    type="text"
+                    value={resolveReceipt}
+                    onChange={(e) => setResolveReceipt(e.target.value.toUpperCase())}
+                    placeholder="e.g. RI12ABC789"
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-mono text-sm font-bold focus:outline-none focus:border-emerald-400 placeholder:text-white/30"
+                  />
+                  <p className="text-[11px] text-white/50 mt-1">Enter the M-Pesa receipt number from your Safaricom Paybill dashboard for this transaction.</p>
+                </div>
+              )}
+
+              {/* Notes field */}
+              <div>
+                <label htmlFor="resolveNotesInput" className="block text-xs uppercase font-bold text-white/60 mb-1.5">
+                  Admin Notes <span className="text-white/30">(optional)</span>
+                </label>
+                <textarea
+                  id="resolveNotesInput"
+                  value={resolveNotes}
+                  onChange={(e) => setResolveNotes(e.target.value)}
+                  rows={2}
+                  placeholder={resolveModal.action === "approve" ? "Verified against Safaricom portal..." : "Reason for rejection..."}
+                  className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-[#d4af37] resize-none placeholder:text-white/30"
+                />
+              </div>
+
+              {/* Disclaimer for approve */}
+              {resolveModal.action === "approve" && (
+                <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs text-emerald-300">
+                  ✓ This will immediately activate the {resolveModal.claim.type === "subscription_claim" ? "subscription" : "donation"} record and notify the partner.
+                </div>
+              )}
+              {resolveModal.action === "reject" && (
+                <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/20 text-xs text-red-300">
+                  ✗ This claim will be marked as rejected. The subscriber will need to re-submit their payment details.
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={resolving || (resolveModal.action === "approve" && !resolveReceipt.trim())}
+                  onClick={handleResolveClaim}
+                  className={`flex-1 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    resolveModal.action === "approve"
+                      ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:brightness-110"
+                      : "bg-gradient-to-r from-red-500 to-red-600 text-white hover:brightness-110"
+                  }`}
+                >
+                  {resolving ? (
+                    <><RefreshCw className="w-4 h-4 animate-spin" /><span>Processing...</span></>
+                  ) : resolveModal.action === "approve" ? (
+                    <><CheckCircle2 className="w-4 h-4" /><span>Confirm Approval</span></>
+                  ) : (
+                    <><XCircle className="w-4 h-4" /><span>Confirm Rejection</span></>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setResolveModal(null)}
+                  className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-colors"
+                >
+                  Cancel
                 </button>
               </div>
             </div>

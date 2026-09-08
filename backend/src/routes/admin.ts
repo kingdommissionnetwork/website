@@ -5,6 +5,7 @@ import { getSupabase } from "../lib/supabase";
 import { requireAdmin } from "../lib/jwt";
 import { rateLimit } from "../lib/rateLimiter";
 import { sendAdminInviteEmail } from "../lib/email";
+import { fulfillPaybillRedemption } from "./subscriptions";
 
 export const adminRoutes = new Hono();
 adminRoutes.use("*", rateLimit, requireAdmin);
@@ -97,6 +98,18 @@ adminRoutes.get("/stats", async (c) => {
     ).length;
   }
 
+  // Pending M-Pesa claims & donations
+  const { count: pendingClaimsCount } = await supabase
+    .from("payment_claims")
+    .select("*", { count: "exact", head: true })
+    .in("status", ["awaiting_receipt", "amount_mismatch"]);
+  const { count: pendingDonationsCount } = await supabase
+    .from("donations")
+    .select("*", { count: "exact", head: true })
+    .eq("payment_provider", "mpesa_paybill")
+    .eq("status", "pending_verification");
+  const pendingMpesaCount = (pendingClaimsCount || 0) + (pendingDonationsCount || 0);
+
   return c.json({
     totalUsers: totalUsers || 0,
     activeSubscriptions: activeSubscriptionsCount || 0,
@@ -114,6 +127,7 @@ adminRoutes.get("/stats", async (c) => {
     activeEvents,
     totalYtd,
     donorCount: donorNames.size,
+    pendingMpesaCount,
   });
 });
 
@@ -123,11 +137,34 @@ adminRoutes.get("/attention", async (c) => {
   const { count: pendingPrayers } = await supabase.from("prayers").select("*", { count: "exact", head: true }).eq("status", "pending");
   const { count: flaggedPrayers } = await supabase.from("prayers").select("*", { count: "exact", head: true }).eq("status", "flagged");
 
+  // Pending M-Pesa claims & donations
+  const { count: pendingClaims } = await supabase
+    .from("payment_claims")
+    .select("*", { count: "exact", head: true })
+    .in("status", ["awaiting_receipt", "amount_mismatch"]);
+  const { count: pendingDonations } = await supabase
+    .from("donations")
+    .select("*", { count: "exact", head: true })
+    .eq("payment_provider", "mpesa_paybill")
+    .eq("status", "pending_verification");
+  const totalPendingMpesa = (pendingClaims || 0) + (pendingDonations || 0);
+
   const alerts = [];
+  if (totalPendingMpesa > 0) {
+    alerts.push({
+      id: "pending_mpesa",
+      type: "warning" as const,
+      title: `${totalPendingMpesa} M-Pesa Payment${totalPendingMpesa > 1 ? "s" : ""} Pending Approval`,
+      description: "Subscribers and donors submitted Paybill 522522 confirmation codes waiting for manual verification.",
+      actionLabel: "Review M-Pesa",
+      tab: "mpesa",
+    });
+  }
+
   if (pendingPrayers && pendingPrayers > 0) {
     alerts.push({
       id: "pending_prayers",
-      type: "warning",
+      type: "warning" as const,
       title: `${pendingPrayers} Prayer Requests Pending Moderation`,
       description: "Review and approve prayer submissions for the 24/7 Global Prayer Wall.",
       actionLabel: "Review Prayers",
@@ -138,7 +175,7 @@ adminRoutes.get("/attention", async (c) => {
   if (flaggedPrayers && flaggedPrayers > 0) {
     alerts.push({
       id: "flagged_prayers",
-      type: "danger",
+      type: "danger" as const,
       title: `${flaggedPrayers} Flagged Content Items`,
       description: "Urgent moderation required on flagged prayer posts.",
       actionLabel: "Moderate",
@@ -148,9 +185,9 @@ adminRoutes.get("/attention", async (c) => {
 
   alerts.push({
     id: "system_health",
-    type: "success",
-    title: "No Urgent Items",
-    description: "All monitored queues are clear. Open the Security tab for live per-service status.",
+    type: "success" as const,
+    title: totalPendingMpesa > 0 ? "Queues Monitored" : "No Urgent Items",
+    description: totalPendingMpesa > 0 ? "Check M-Pesa Approvals tab to review pending transactions." : "All monitored queues are clear. Open the Security tab for live per-service status.",
     actionLabel: "View Health",
     tab: "security",
   });
@@ -352,7 +389,131 @@ adminRoutes.get("/audit-logs", async (c) => {
   return c.json(data);
 });
 
-// 9. SYSTEM HEALTH STATUS — live checks only, no canned latencies.
+// 9. PENDING M-PESA VERIFICATION QUEUE
+adminRoutes.get("/mpesa/pending", async (c) => {
+  const supabase = getSupabase();
+
+  // Fetch pending subscription claims from payment_claims table
+  const { data: claims, error: claimsError } = await supabase
+    .from("payment_claims")
+    .select("*")
+    .in("status", ["awaiting_receipt", "amount_mismatch"])
+    .order("created_at", { ascending: false });
+
+  // Fetch pending one-off donations via Paybill (not yet verified)
+  const { data: pendingDonations, error: donationsError } = await supabase
+    .from("donations")
+    .select("*")
+    .eq("payment_provider", "mpesa_paybill")
+    .eq("status", "pending_verification")
+    .order("created_at", { ascending: false });
+
+  if (claimsError) console.error("[ADMIN] mpesa/pending claims error:", claimsError.message);
+  if (donationsError) console.error("[ADMIN] mpesa/pending donations error:", donationsError.message);
+
+  const normalizedClaims = (claims || []).map((c: Record<string, unknown>) => ({
+    id: c.id,
+    type: "subscription_claim" as const,
+    name: c.subscriber_name || c.name || "Unknown",
+    email: c.subscriber_email || c.email || "",
+    amount: c.amount || 0,
+    currency: c.currency || "KES",
+    reference: c.mpesa_reference || c.reference || "",
+    plan: c.plan_name || "",
+    status: c.status,
+    submittedAt: c.created_at,
+    notes: c.notes || "",
+  }));
+
+  const normalizedDonations = (pendingDonations || []).map((d: Record<string, unknown>) => ({
+    id: d.id,
+    type: "donation" as const,
+    name: d.donor_name || "Anonymous",
+    email: d.donor_email || "",
+    amount: d.amount || 0,
+    currency: d.currency || "KES",
+    reference: d.payment_reference || "",
+    plan: "One-Time Donation",
+    status: d.status,
+    submittedAt: d.created_at,
+    notes: d.notes || "",
+  }));
+
+  return c.json([...normalizedClaims, ...normalizedDonations]);
+});
+
+// 9b. RESOLVE A PENDING M-PESA CLAIM (APPROVE / REJECT)
+adminRoutes.post(
+  "/mpesa/claims/:id/resolve",
+  zValidator(
+    "json",
+    z.object({
+      action: z.enum(["approve", "reject"]),
+      type: z.enum(["subscription_claim", "donation"]),
+      notes: z.string().optional(),
+      // For approvals — pass the M-Pesa receipt if admin is manually verifying
+      mpesa_receipt: z.string().optional(),
+    })
+  ),
+  async (c) => {
+    const supabase = getSupabase();
+    const claimId = c.req.param("id");
+    const { action, type, notes, mpesa_receipt } = c.req.valid("json");
+
+    if (action === "reject") {
+      if (type === "subscription_claim") {
+        await supabase.from("payment_claims").update({ status: "rejected", notes }).eq("id", claimId);
+      } else {
+        await supabase.from("donations").update({ status: "rejected", notes }).eq("id", claimId);
+      }
+      await logAuditEvent("Admin", "MPESA_CLAIM_REJECTED", type, claimId, { notes });
+      return c.json({ success: true, message: "Claim rejected successfully." });
+    }
+
+    // APPROVE — use the unified fulfillPaybillRedemption function
+    try {
+      if (type === "subscription_claim") {
+        // Fetch claim details to pass into fulfillPaybillRedemption
+        const { data: claim, error: claimError } = await supabase
+          .from("payment_claims")
+          .select("*")
+          .eq("id", claimId)
+          .single();
+
+        if (claimError || !claim) {
+          return c.json({ error: "Claim not found" }, 404);
+        }
+
+        const receipt = mpesa_receipt || claim.mpesa_reference || `ADMIN-APPROVED-${Date.now()}`;
+        const result = await fulfillPaybillRedemption(c, receipt, {
+          name: claim.subscriber_name || claim.name || "Partner",
+          email: claim.subscriber_email || claim.email,
+          amount: Number(claim.amount),
+          planName: claim.plan_name || "Kingdom Partner",
+          planId: claim.plan_id || "ambassador",
+          interval: (claim.interval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly",
+        });
+
+        if (result.subData) {
+          await supabase.from("payment_claims").update({ status: "approved", notes }).eq("id", claimId);
+        }
+
+        await logAuditEvent("Admin", "MPESA_CLAIM_APPROVED", type, claimId, { receipt, notes });
+        return c.json({ success: true, message: "Subscription claim approved and activated.", result });
+      } else {
+        // Donation — just mark as completed
+        await supabase.from("donations").update({ status: "completed", notes }).eq("id", claimId);
+        await logAuditEvent("Admin", "MPESA_DONATION_APPROVED", type, claimId, { notes });
+        return c.json({ success: true, message: "Donation verified and marked as completed." });
+      }
+    } catch (err) {
+      console.error("[ADMIN] mpesa claim resolve error:", err);
+      return c.json({ error: "Failed to process claim. Check logs." }, 500);
+    }
+  }
+);
+
+// 10. SYSTEM HEALTH STATUS — live checks only, no canned latencies.
 adminRoutes.get("/health", async (c) => {
   const started = Date.now();
   const supabase = getSupabase();

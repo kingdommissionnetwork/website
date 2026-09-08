@@ -339,7 +339,7 @@ export interface PaybillRedemption {
  *  - an admin manually approved against the M-Pesa statement.
  * Never call this on format checks alone.
  */
-async function fulfillPaybillRedemption(
+export async function fulfillPaybillRedemption(
   c: import("hono").Context,
   cleanRef: string,
   r: PaybillRedemption
