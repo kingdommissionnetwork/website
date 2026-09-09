@@ -956,9 +956,21 @@ adminRoutes.post(
       });
     }
 
+    const env = c.env as Record<string, string> | undefined;
+    const resendKey = env?.RESEND_API_KEY || (process.env as Record<string, string>)?.RESEND_API_KEY || "";
+    if (!resendKey) {
+      return c.json(
+        {
+          error: "Email Dispatcher is offline: RESEND_API_KEY is not configured on Cloudflare Worker. Please add the RESEND_API_KEY secret in Cloudflare to enable live email delivery.",
+        },
+        503
+      );
+    }
+
     // Fan-out dispatch in batches of 10 to protect Resend rate limits
     let sent = 0;
     let failed = 0;
+    let lastError: string | null = null;
     const BATCH = 10;
     for (let i = 0; i < uniqueRecipients.length; i += BATCH) {
       const batch = uniqueRecipients.slice(i, i + BATCH);
@@ -974,8 +986,9 @@ adminRoutes.post(
               audience
             );
             sent++;
-          } catch (e) {
+          } catch (e: unknown) {
             failed++;
+            lastError = e instanceof Error ? e.message : String(e);
             console.error("[BROADCAST] Failed dispatching to", recipient.email, e);
           }
         })
@@ -988,14 +1001,27 @@ adminRoutes.post(
       sent,
       failed,
       total: uniqueRecipients.length,
+      lastError,
     });
+
+    if (sent === 0 && failed > 0) {
+      return c.json(
+        {
+          error: `Email delivery failed for all ${failed} recipients: ${lastError || "Resend rejected transmission"}. Check domain verification in Resend dashboard.`,
+          sent: 0,
+          failed,
+          total: uniqueRecipients.length,
+        },
+        502
+      );
+    }
 
     return c.json({
       success: true,
       sent,
       failed,
       total: uniqueRecipients.length,
-      message: `Broadcast delivered to ${sent} of ${uniqueRecipients.length} recipients${failed > 0 ? ` (${failed} failed)` : ""}.`,
+      message: `Broadcast delivered to ${sent} recipient${sent === 1 ? "" : "s"}${failed > 0 ? ` (${failed} failed: ${lastError})` : ""}.`,
     });
   }
 );

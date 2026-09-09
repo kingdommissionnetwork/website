@@ -1591,6 +1591,21 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
+              {healthData && healthData.services.some(s => s.name.includes("Email") && s.status !== "operational") && (
+                <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/15 border-2 border-amber-500/40 text-amber-200 text-xs sm:text-sm flex items-start gap-3.5 shadow-lg">
+                  <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-amber-300 text-sm sm:text-base">Email Dispatcher Offline — Action Required</h4>
+                    <p className="text-amber-200/90 leading-relaxed text-xs">
+                      The Cloudflare Worker currently has <strong className="text-white">no RESEND_API_KEY configured</strong>. Broadcasts and notification emails cannot be delivered to recipient inboxes until this secret key is configured.
+                    </p>
+                    <p className="text-white/70 text-[11px] font-mono pt-1">
+                      Configure via terminal: <code className="px-2 py-0.5 rounded bg-black/40 text-[#d4af37]">npx wrangler secret put RESEND_API_KEY</code>
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="p-8 rounded-3xl bg-white/[0.03] border border-white/10 text-center max-w-xl mx-auto space-y-4">
                 <div className="w-14 h-14 rounded-2xl bg-[#d4af37]/20 text-[#d4af37] flex items-center justify-center mx-auto">
                   <Mail className="w-7 h-7" />
@@ -2101,6 +2116,18 @@ export default function AdminDashboard() {
               </span>
               <h3 className="font-brand text-2xl font-bold text-white mt-1">Compose Pastoral Campaign</h3>
             </div>
+
+            {healthData && healthData.services.some(s => s.name.includes("Email") && s.status !== "operational") && (
+              <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-bold text-amber-300">Email Dispatcher Offline</p>
+                  <p className="text-amber-200/80 leading-relaxed text-[11px]">
+                    RESEND_API_KEY is not configured on Cloudflare. Live messages cannot reach recipient inboxes until this secret is added.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSendBroadcast} className="space-y-4">
               <div>

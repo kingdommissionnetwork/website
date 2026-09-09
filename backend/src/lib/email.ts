@@ -142,7 +142,8 @@ export async function sendPartnerWelcomeEmail(
   }
 }
 
-export async function sendPastoralBroadcastEmail(  c: { env?: unknown },
+export async function sendPastoralBroadcastEmail(
+  c: { env?: unknown },
   email: string,
   recipientName: string,
   subject: string,
@@ -151,23 +152,29 @@ export async function sendPastoralBroadcastEmail(  c: { env?: unknown },
 ) {
   if (!email) return;
   const resend = getResendClient(c);
-  if (resend) {
-    const fromAddress =
-      getSecret(c, "RESEND_FROM_EMAIL") ||
-      "Kingdom Missions Network <bishop@kingdommissionsnetwork.org>";
-    const template = pastoralBroadcastEmail({
-      recipientName,
-      subject,
-      body,
-      audience,
-    });
-    await resend.emails.send({
-      from: fromAddress,
-      to: email,
-      subject: template.subject,
-      html: template.html,
-    });
+  if (!resend) {
+    throw new Error("Email dispatcher is not configured: Missing RESEND_API_KEY in Cloudflare Worker secrets.");
   }
+  const fromAddress =
+    getSecret(c, "RESEND_FROM_EMAIL") ||
+    "Kingdom Missions Network <bishop@kingdommissionsnetwork.org>";
+  const template = pastoralBroadcastEmail({
+    recipientName,
+    subject,
+    body,
+    audience,
+  });
+  const res = await resend.emails.send({
+    from: fromAddress,
+    to: email,
+    subject: template.subject,
+    html: template.html,
+  });
+  if (res.error) {
+    console.error(`[EMAIL] Resend broadcast delivery error for ${email}:`, res.error);
+    throw new Error(res.error.message || "Resend email delivery failed");
+  }
+  return res.data;
 }
 
 export async function sendClaimOtpEmail(
