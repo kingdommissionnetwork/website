@@ -567,6 +567,13 @@ export const api = {
         body: JSON.stringify(data),
       });
     },
+    broadcast: async (data: { subject: string; body: string; audience: string }): Promise<{ success: boolean; message: string; sent: number; failed: number; total: number }> => {
+      return await request("/admin/broadcast", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+      });
+    },
   },
 
 };

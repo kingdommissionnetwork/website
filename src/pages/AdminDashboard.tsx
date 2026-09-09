@@ -360,13 +360,22 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!broadcastSubject || !broadcastBody) return;
     setSendingBroadcast(true);
-    setTimeout(() => {
-      setSendingBroadcast(false);
+    try {
+      const res = await api.admin.broadcast({
+        subject: broadcastSubject,
+        body: broadcastBody,
+        audience: broadcastAudience,
+      });
       setShowBroadcastModal(false);
       setBroadcastSubject("");
       setBroadcastBody("");
-      showToast(`Pastoral Campaign sent to ${broadcastAudience.replace("_", " ")}!`, "success");
-    }, 1200);
+      showToast(res.message, "success");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to send broadcast. Check connection and try again.";
+      showToast(msg, "error");
+    } finally {
+      setSendingBroadcast(false);
+    }
   };
 
   // Administrator Invitation Handler

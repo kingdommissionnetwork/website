@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { requireAdmin } from "../lib/jwt";
 import { rateLimit } from "../lib/rateLimiter";
-import { sendAdminInviteEmail } from "../lib/email";
+import { sendAdminInviteEmail, sendPastoralBroadcastEmail } from "../lib/email";
 import { fulfillPaybillRedemption } from "./subscriptions";
 
 export const adminRoutes = new Hono();
@@ -682,3 +682,87 @@ adminRoutes.post(
   }
 );
 
+// 12. PASTORAL BROADCAST — fan-out email to all partners (or a segment)
+adminRoutes.post(
+  "/broadcast",
+  zValidator(
+    "json",
+    z.object({
+      subject: z.string().min(1).max(200),
+      body: z.string().min(1).max(10000),
+      audience: z.enum(["all_partners", "active_subscribers", "monthly_partners", "annual_partners"]).default("all_partners"),
+    })
+  ),
+  async (c) => {
+    const supabase = getSupabase(c.env as Record<string, string>);
+    const { subject, body, audience } = c.req.valid("json");
+    const actor = getActorEmail(c);
+
+    // Build recipient query based on audience segment
+    let q = supabase.from("subscriptions").select("subscriber_email, subscriber_name, interval").eq("status", "active");
+    if (audience === "monthly_partners") q = q.eq("interval", "monthly");
+    if (audience === "annual_partners") q = q.eq("interval", "yearly");
+
+    const { data: subs, error } = await q;
+    if (error) {
+      console.error("[BROADCAST] Failed to fetch recipients:", error.message);
+      return c.json({ error: "Failed to fetch subscriber list: " + error.message }, 500);
+    }
+
+    const recipients = (subs || []).filter((s: Record<string, unknown>) => s.subscriber_email);
+    if (recipients.length === 0) {
+      return c.json({ success: true, sent: 0, message: "No active partners found for the selected audience." });
+    }
+
+    // De-duplicate by email
+    const seen = new Set<string>();
+    const unique = recipients.filter((s: Record<string, unknown>) => {
+      const email = String(s.subscriber_email).toLowerCase();
+      if (seen.has(email)) return false;
+      seen.add(email);
+      return true;
+    });
+
+    // Fan-out — send in batches of 10 to avoid overwhelming Resend rate limits
+    let sent = 0;
+    let failed = 0;
+    const BATCH = 10;
+    for (let i = 0; i < unique.length; i += BATCH) {
+      const batch = unique.slice(i, i + BATCH);
+      await Promise.allSettled(
+        batch.map(async (s: Record<string, unknown>) => {
+          try {
+            await sendPastoralBroadcastEmail(
+              c,
+              String(s.subscriber_email),
+              String(s.subscriber_name || "Kingdom Partner"),
+              subject,
+              body,
+              audience
+            );
+            sent++;
+          } catch (e) {
+            failed++;
+            console.error("[BROADCAST] Failed to send to", s.subscriber_email, e);
+          }
+        })
+      );
+    }
+
+    await logAuditEvent(supabase, actor, "PASTORAL_BROADCAST_SENT", "broadcast", audience, {
+      subject,
+      audience,
+      sent,
+      failed,
+      total: unique.length,
+    });
+
+    return c.json({
+      success: true,
+      sent,
+      failed,
+      total: unique.length,
+      message: `Broadcast sent to ${sent} of ${unique.length} partners${failed > 0 ? ` (${failed} failed)` : ""}.`,
+    });
+  }
+);
