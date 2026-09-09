@@ -42,6 +42,8 @@ import { useToast } from "../lib/toast";
 import { PARTNER_PLANS, kesToUsd } from "../data/plans";
 import brandLogo from "../assets/logo.png";
 import ThemeToggle from "../components/ThemeToggle";
+import OfficialInvoiceModal from "../components/OfficialInvoiceModal";
+import PartnerIdCard from "../components/PartnerIdCard";
 
 type Tab =
   | "overview"
@@ -1859,8 +1861,8 @@ export default function AdminDashboard() {
 
       {/* PARTNER ID CREDENTIAL PASS MODAL */}
       {showIdCardModal && selectedMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-[#0d1d36] border-2 border-[#d4af37] text-white shadow-2xl space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+          <div className="relative w-full max-w-xl my-auto p-6 sm:p-8 rounded-3xl bg-[#0d1d36] border-2 border-[#d4af37] text-white shadow-2xl space-y-6">
             <button
               type="button"
               onClick={() => setShowIdCardModal(false)}
@@ -1877,111 +1879,24 @@ export default function AdminDashboard() {
                 Partner Identification Card
               </h3>
               <p className="text-xs text-white/60">
-                Official identity credential for Kingdom Missions Network global covenant partners.
+                Official high-security identity credential for Kingdom Missions Network global covenant partners.
               </p>
             </div>
 
-            {/* THE PRINTABLE CARD */}
-            <div
-              id="printable-partner-id-card"
-              className="relative w-full rounded-2xl overflow-hidden bg-gradient-to-br from-[#081225] via-[#0c1b33] to-[#162a4a] border-2 border-[#d4af37] p-6 shadow-2xl text-white font-sans select-none"
-            >
-              {/* Background watermark/crest */}
-              <div className="absolute right-3 -bottom-6 opacity-10 pointer-events-none">
-                <ShieldCheck className="w-48 h-48 text-[#d4af37]" />
-              </div>
-
-              {/* Card Header */}
-              <div className="flex items-center justify-between border-b border-[#d4af37]/30 pb-3 mb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/50 flex items-center justify-center">
-                    <Award className="w-5 h-5 text-[#d4af37]" />
-                  </div>
-                  <div>
-                    <h4 className="font-brand font-bold text-xs sm:text-sm tracking-wider text-[#fbf5b7] uppercase leading-tight">
-                      Kingdom Missions Network
-                    </h4>
-                    <span className="text-[9px] uppercase tracking-widest text-white/60 font-semibold block">
-                      Global Partner Pass
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-[8px] uppercase tracking-widest text-[#d4af37] font-bold block">
-                    ID No.
-                  </span>
-                  <span className="font-mono text-xs font-bold text-white tracking-wider">
-                    HKN-{String(selectedMember.id).slice(0, 8).toUpperCase()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Card Body */}
-              <div className="flex items-start gap-4 mb-4">
-                {/* Avatar / Seal */}
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#d4af37]/30 to-black/50 border border-[#d4af37] flex items-center justify-center shrink-0 shadow-inner">
-                  <span className="text-2xl font-bold font-brand text-[#fbf5b7]">
-                    {selectedMember.name.slice(0, 2).toUpperCase()}
-                  </span>
-                </div>
-
-                {/* Details */}
-                <div className="flex-1 min-w-0 space-y-1">
-                  <h5 className="font-brand font-bold text-base sm:text-lg text-white truncate leading-tight">
-                    {selectedMember.name}
-                  </h5>
-                  <p className="text-[11px] font-mono text-white/70 truncate">
-                    {selectedMember.email}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <span className="px-2 py-0.5 rounded-md bg-[#d4af37]/25 text-[#fbf5b7] text-[10px] font-bold border border-[#d4af37]/40">
-                      {selectedMember.planName}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                      selectedMember.subscriptionStatus === "active"
-                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                        : "bg-red-500/20 text-red-400 border border-red-500/40"
-                    }`}>
-                      ● {selectedMember.subscriptionStatus}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Footer */}
-              <div className="border-t border-white/10 pt-3 flex items-center justify-between text-[9px] text-white/50">
-                <div>
-                  <span className="block text-[8px] uppercase tracking-widest text-white/40">Member Since</span>
-                  <span className="font-semibold text-white/80">{selectedMember.joinedAt}</span>
-                </div>
-                <div className="text-center font-mono text-[8px] text-[#d4af37] tracking-widest">
-                  ★ OFFICIAL COVENANT CREDENTIAL ★
-                </div>
-                <div className="text-right">
-                  <span className="block text-[8px] uppercase tracking-widest text-white/40">Authorized By</span>
-                  <span className="font-brand font-bold text-[#fbf5b7]">Presiding Bishop</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowIdCardModal(false)}
-                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs shadow-md hover:brightness-110 transition-all flex items-center gap-2"
-              >
-                <Printer className="w-4 h-4 text-[#0c1b33]" />
-                Print Partner Badge
-              </button>
-            </div>
+            <PartnerIdCard
+              card={{
+                id: selectedMember.id,
+                name: selectedMember.name,
+                email: selectedMember.email,
+                role: selectedMember.role || "Covenant Partner",
+                planName: selectedMember.planName,
+                subscriptionStatus: selectedMember.subscriptionStatus,
+                amount: selectedMember.amount,
+                currency: selectedMember.currency,
+                joinedAt: selectedMember.joinedAt,
+              }}
+              onClose={() => setShowIdCardModal(false)}
+            />
           </div>
         </div>
       )}
@@ -2327,111 +2242,21 @@ export default function AdminDashboard() {
       )}
       {/* Official Tax Invoice & Donation Receipt Modal */}
       {selectedInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="relative w-full max-w-xl p-8 rounded-3xl bg-gradient-to-br from-[#0c1b33] via-[#112440] to-[#1a1208] border-2 border-[#d4af37] shadow-[0_0_50px_rgba(212,175,55,0.3)] text-white">
-            <button
-              type="button"
-              onClick={() => setSelectedInvoice(null)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {/* Document Header with Logo */}
-            <div className="flex items-center gap-4 pb-6 border-b border-white/15 mb-6">
-              <img
-                src={brandLogo}
-                alt="Kingdom Missions Network"
-                className="w-16 h-16 rounded-2xl object-contain border-2 border-[#d4af37] p-1.5 bg-[#0c1b33] drop-shadow-[0_0_12px_rgba(212,175,55,0.5)]"
-                width="64"
-                height="64"
-              />
-              <div>
-                <span className="font-brand text-xl font-bold text-white tracking-wider block">
-                  KINGDOM MISSIONS NETWORK
-                </span>
-                <span className="text-xs text-[#d4af37] uppercase tracking-[0.2em] font-bold block">
-                  Official Giving Receipt & Tax Invoice
-                </span>
-                <span className="text-[11px] text-white/50 block mt-0.5">
-                  Registered Faith-Based Global Missions Network
-                </span>
-              </div>
-            </div>
-
-            {/* Receipt Summary Card */}
-            <div className="p-6 rounded-2xl bg-white/[0.05] border border-white/10 space-y-4 mb-6 relative overflow-hidden">
-              <div className="absolute -right-6 -bottom-6 opacity-10 pointer-events-none">
-                <img src={brandLogo} alt="" className="w-40 h-40 object-contain" />
-              </div>
-
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 relative z-10">
-                <div>
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Total Contribution</span>
-                  <span className="font-brand text-2xl font-bold text-emerald-400">
-                    {selectedInvoice.currency || "KES"} {selectedInvoice.amount.toLocaleString()}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Status</span>
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold inline-block mt-0.5">
-                    ✓ Verified Official Record
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-xs relative z-10">
-                <div>
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Donor / Partner</span>
-                  <span className="font-bold text-white">{selectedInvoice.name || "Kingdom Covenant Partner"}</span>
-                  <span className="text-white/60 block text-[11px]">{selectedInvoice.email || "N/A"}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Receipt Number</span>
-                  <span className="font-mono font-bold text-[#fbf5b7]">
-                    {selectedInvoice.reference || `KMN-REC-${selectedInvoice.id || "001"}`}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Gift Type</span>
-                  <span className="text-white/80">{selectedInvoice.recurring ? "Monthly Recurring Covenant Gift" : "One-Time Kingdom Seed"}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Payment Channel</span>
-                  <span className="font-bold text-white uppercase">{selectedInvoice.provider || "PAYSTACK SECURE"}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Contribution Date</span>
-                  <span className="text-white/80">
-                    {new Date(selectedInvoice.date || Date.now()).toLocaleDateString("en-KE", { dateStyle: "long" })}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Spiritual Oversight</span>
-                  <span className="text-white/80">Bishop Dr. George Githinji</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition-all"
-              >
-                <Download className="w-4 h-4" />
-                <span>Print Official Invoice / PDF</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedInvoice(null)}
-                className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <OfficialInvoiceModal
+          invoice={{
+            id: selectedInvoice.id,
+            reference: selectedInvoice.reference,
+            name: selectedInvoice.name,
+            email: selectedInvoice.email,
+            amount: selectedInvoice.amount,
+            currency: selectedInvoice.currency || "KES",
+            provider: selectedInvoice.provider,
+            status: selectedInvoice.status,
+            date: selectedInvoice.date,
+            recurring: selectedInvoice.recurring,
+          }}
+          onClose={() => setSelectedInvoice(null)}
+        />
       )}
     </div>
   );

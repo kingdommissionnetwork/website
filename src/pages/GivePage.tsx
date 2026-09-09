@@ -25,6 +25,7 @@ import { api, normalizeAuthUser } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
 import brandLogo from "../assets/logo.png";
+import { printInvoice } from "../lib/printEngine";
 
 const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "";
 
@@ -756,9 +757,25 @@ export default function GivePage() {
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button type="button" onClick={() => window.print()}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
-                  <Printer className="w-3.5 h-3.5" /><span>Print Receipt</span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await printInvoice({
+                      reference: receipt.reference,
+                      name: receipt.donorName,
+                      email: receipt.donorEmail,
+                      amount: receipt.amountKes,
+                      currency: "KES",
+                      purpose: receipt.purpose,
+                      provider: receipt.paymentMethod,
+                      date: receipt.date,
+                      recurring: false,
+                    });
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Official Receipt</span>
                 </button>
                 <Link to="/"
                   className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm hover:scale-105 transition-all flex items-center justify-center gap-1.5 shadow-lg">

@@ -33,7 +33,10 @@ describe('Auth Routes', () => {
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        ilike: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
         single: vi.fn().mockResolvedValue({ data: { id: '1', name: 'Test', email: 'test@test.com', role: 'member' }, error: null }),
       }),
     } as unknown as SupabaseClient;

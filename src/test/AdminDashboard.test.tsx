@@ -11,22 +11,27 @@ vi.mock("../lib/auth", () => ({
 
 
 import { MemoryRouter } from "react-router-dom";
+import { ThemeProvider } from "../lib/theme";
 
 describe("AdminDashboard", () => {
   it("renders without crashing and displays command center", () => {
     render(
-      <MemoryRouter>
-        <AdminDashboard />
-      </MemoryRouter>
+      <ThemeProvider>
+        <MemoryRouter>
+          <AdminDashboard />
+        </MemoryRouter>
+      </ThemeProvider>
     );
     expect(screen.getAllByText(/Command Center|KMN OPERATIONS/i).length).toBeGreaterThan(0);
   });
 
   it("displays key statistics and attention center", () => {
     render(
-      <MemoryRouter>
-        <AdminDashboard />
-      </MemoryRouter>
+      <ThemeProvider>
+        <MemoryRouter>
+          <AdminDashboard />
+        </MemoryRouter>
+      </ThemeProvider>
     );
     expect(screen.getAllByText(/TOTAL REGISTERED MEMBERS|ACTIVE PARTNERS/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Command Center/i).length).toBeGreaterThan(0);

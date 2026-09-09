@@ -5,7 +5,6 @@ import {
   Heart,
   Calendar,
   Download,
-  Printer,
   Sparkles,
   Award,
   CreditCard,
@@ -16,14 +15,12 @@ import {
   FileText,
   ChevronRight,
   ShieldCheck,
-  CheckCircle2,
   Send,
   Loader2,
   LogOut,
   BookOpen,
   Headphones,
   Check,
-  Copy,
   X,
   KeyRound,
   Pause,
@@ -37,6 +34,9 @@ import brandLogo from "../assets/logo.png";
 import { api, normalizeAuthUser } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
+import PartnerIdCard from "../components/PartnerIdCard";
+import OfficialInvoiceModal from "../components/OfficialInvoiceModal";
+import { printAnnualStatement, type InvoiceDetails } from "../lib/printEngine";
 
 type SubscriberTab =
   | "overview"
@@ -368,6 +368,36 @@ export default function SubscriberDashboard() {
   // Delegation Modal State
   const [selectedDelegation, setSelectedDelegation] = useState<(typeof UPCOMING_DELEGATIONS)[0] | null>(null);
   const [applyingDelegation, setApplyingDelegation] = useState(false);
+
+  // Invoice & Statement Print State
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetails | null>(null);
+  const [printingStatement, setPrintingStatement] = useState(false);
+
+  const handleDownloadAnnualStatement = async () => {
+    setPrintingStatement(true);
+    try {
+      await printAnnualStatement({
+        partnerName,
+        partnerEmail,
+        partnerId: partnerIdNumber,
+        year: new Date().getFullYear(),
+        donations: donations.map((d) => ({
+          date: d.created_at,
+          description: d.recurring ? "Covenant Monthly Partnership Seed" : "Kingdom Mission Offering",
+          reference: d.id || `REC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+          amount: Number(d.amount),
+          currency: d.currency || "KES",
+          recurring: Boolean(d.recurring),
+        })),
+      });
+      showToast("Annual Tax Statement sent to printer / PDF!", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Could not generate statement. Please try again.", "error");
+    } finally {
+      setPrintingStatement(false);
+    }
+  };
 
   // Load subscriber details
   const loadSubscriberData = async () => {
@@ -874,112 +904,20 @@ export default function SubscriberDashboard() {
                   </p>
                 </div>
 
-                {/* Interactive ID Card Display */}
-                <div className="max-w-xl mx-auto">
-                  <div
-                    id="partner-id-card-element"
-                    className="p-8 rounded-3xl bg-gradient-to-br from-[#0b172a] via-[#102340] to-[#1c1308] border-2 border-[#d4af37] shadow-[0_0_40px_rgba(212,175,55,0.25)] space-y-6 relative overflow-hidden text-white"
-                  >
-                    {/* Watermark Logo */}
-                    <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
-                      <img src={brandLogo} alt="" className="w-56 h-56 object-contain" />
-                    </div>
-
-                    {/* Top Gold Header */}
-                    <div className="flex items-center justify-between border-b border-white/15 pb-4 relative z-10">
-                      <div className="flex items-center gap-3">
-                        <img src={brandLogo} alt="" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]" />
-                        <div>
-                          <span className="font-brand text-sm font-bold tracking-wider block text-white">
-                            KINGDOM MISSIONS NETWORK
-                          </span>
-                          <span className="text-[9px] uppercase font-bold tracking-[0.25em] text-[#d4af37]">
-                            Global Apostolic Deployment
-                          </span>
-                        </div>
-                      </div>
-                      <span className="px-2.5 py-1 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/50 text-[#fbf5b7] text-[10px] font-extrabold uppercase tracking-wide">
-                        {currentTier.badge}
-                      </span>
-                    </div>
-
-                    {/* Middle Card Content */}
-                    <div className="relative z-10 space-y-4">
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider block">
-                          Verified Covenant Partner
-                        </span>
-                        <span className="font-brand text-2xl font-bold text-white tracking-wide">
-                          {partnerName}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 text-xs">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider block">
-                            Partner Credential ID
-                          </span>
-                          <span className="font-mono font-bold text-[#d4af37] text-sm">{partnerIdNumber}</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider block">
-                            Covenant Status
-                          </span>
-                          <span className="font-bold text-emerald-400">Verified & Active</span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 text-xs pt-2 border-t border-white/10">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider block">
-                            Deployment Tier
-                          </span>
-                          <span className="font-semibold text-white/90">{currentTier.name}</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider block">
-                            General Oversight
-                          </span>
-                          <span className="font-semibold text-white/90">Bishop Dr. George Githinji</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Validation Bar */}
-                    <div className="pt-3 border-t border-white/10 flex items-center justify-between text-[10px] text-white/50 relative z-10">
-                      <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Authenticated Global Digital Credential</span>
-                      </div>
-                      <span>Valid: 2026 – 2027</span>
-                    </div>
-                  </div>
-
-                  {/* Print & Download Controls */}
-                  <div className="mt-6 flex flex-wrap gap-4 justify-center">
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg hover:brightness-110 transition-all"
-                    >
-                      <Printer className="w-4 h-4" />
-                      <span>Print Official Credential Card</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(
-                          `Kingdom Missions Network Partner Credential | ID: ${partnerIdNumber} | Partner: ${partnerName} | Status: Verified Active`
-                        );
-                        showToast("Credential verification details copied to clipboard!", "success");
-                      }}
-                      className="px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs sm:text-sm border border-white/15 transition-all flex items-center gap-2"
-                    >
-                      <Copy className="w-4 h-4" />
-                      <span>Copy ID Verification Code</span>
-                    </button>
-                  </div>
-                </div>
+                {/* Interactive High-Security ID Card Display */}
+                <PartnerIdCard
+                  card={{
+                    id: partnerIdNumber,
+                    name: partnerName,
+                    email: partnerEmail,
+                    role: currentTier.name,
+                    planName: currentTier.name,
+                    subscriptionStatus: subscriptionData?.status || "active",
+                    amount: subscriptionData?.amount,
+                    currency: subscriptionData?.currency,
+                    joinedAt: "2026",
+                  }}
+                />
               </div>
             )}
 
@@ -995,13 +933,12 @@ export default function SubscriberDashboard() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      window.print();
-                    }}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:brightness-110 transition-all"
+                    onClick={handleDownloadAnnualStatement}
+                    disabled={printingStatement}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:brightness-110 transition-all disabled:opacity-60"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Download Annual Tax Statement</span>
+                    <span>{printingStatement ? "Generating Statement..." : "Download Annual Tax Statement"}</span>
                   </button>
                 </div>
 
@@ -1037,7 +974,22 @@ export default function SubscriberDashboard() {
                           </div>
                           <button
                             type="button"
-                            onClick={() => window.print()}
+                            onClick={() => {
+                              setSelectedInvoice({
+                                id: d.id,
+                                reference: d.id || `REC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+                                name: partnerName,
+                                email: partnerEmail,
+                                partnerId: partnerIdNumber,
+                                planName: currentTier.name,
+                                amount: Number(d.amount),
+                                currency: d.currency || "KES",
+                                date: d.created_at,
+                                recurring: Boolean(d.recurring),
+                                provider: "PAYSTACK SECURE / M-PESA",
+                                status: "completed",
+                              });
+                            }}
                             className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -1087,7 +1039,20 @@ export default function SubscriberDashboard() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  window.print();
+                                  setSelectedInvoice({
+                                    id: d.id,
+                                    reference: d.id || `REC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+                                    name: partnerName,
+                                    email: partnerEmail,
+                                    partnerId: partnerIdNumber,
+                                    planName: currentTier.name,
+                                    amount: Number(d.amount),
+                                    currency: d.currency || "KES",
+                                    date: d.created_at,
+                                    recurring: Boolean(d.recurring),
+                                    provider: "PAYSTACK SECURE / M-PESA",
+                                    status: "completed",
+                                  });
                                 }}
                                 className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors"
                               >
@@ -1692,6 +1657,14 @@ export default function SubscriberDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Official Tax Invoice & Giving Receipt Modal */}
+      {selectedInvoice && (
+        <OfficialInvoiceModal
+          invoice={selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+        />
       )}
     </div>
   );

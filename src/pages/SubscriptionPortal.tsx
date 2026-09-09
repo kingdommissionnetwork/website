@@ -7,7 +7,6 @@ import {
   Loader2,
   RefreshCw,
   ShieldCheck,
-  Download,
   X,
   Copy,
   Smartphone,
@@ -24,7 +23,7 @@ import PartnershipSupportCard from "../components/PartnershipSupportCard";
 import { api, normalizeAuthUser } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
-import brandLogo from "../assets/logo.png";
+import PartnerIdCard from "../components/PartnerIdCard";
 
 const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "";
 
@@ -1406,81 +1405,47 @@ export default function SubscriptionPortal() {
 
       {/* Verified Partner ID Card Modal */}
       {showIdCardModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#0c1b33] via-[#112440] to-[#1a1208] border-2 border-[#d4af37] shadow-[0_0_50px_rgba(212,175,55,0.3)] text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+          <div className="relative w-full max-w-xl my-auto p-6 sm:p-8 rounded-3xl bg-[#0d1d36] border-2 border-[#d4af37] text-white shadow-2xl space-y-6">
             <button
               type="button"
               onClick={() => setShowIdCardModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+              className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="text-center mb-6">
-              <img
-                src={brandLogo}
-                alt="Kingdom Missions Network"
-                className="w-16 h-16 rounded-2xl mx-auto mb-3 object-contain border-2 border-[#d4af37] p-1.5 bg-[#0c1b33] drop-shadow-[0_0_16px_rgba(212,175,55,0.5)]"
-                width="64"
-                height="64"
-              />
-              <h3 className="font-brand text-2xl font-bold text-white">Official Partner Credential</h3>
+            <div className="text-center mb-2">
+              <span className="text-[10px] uppercase font-bold text-[#d4af37] tracking-widest block">
+                Official Covenant Credential Pass
+              </span>
+              <h3 className="font-brand text-xl sm:text-2xl font-bold text-white mt-1">
+                Partner Identification Card
+              </h3>
               <p className="text-xs text-emerald-400 font-semibold mt-1">
                 {isSubscribed ? "✓ Covenant Partnership Activated" : "Official Verification Ready"}
               </p>
             </div>
 
-            {/* Credential Card Display */}
-            <div className="p-6 rounded-2xl bg-white/[0.05] border border-white/15 space-y-4 mb-6 relative overflow-hidden">
-              <div className="absolute -right-6 -bottom-6 opacity-10 pointer-events-none">
-                <img src={brandLogo} alt="" className="w-36 h-36 object-contain" />
-              </div>
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 relative z-10">
-                <div className="flex items-center gap-2.5">
-                  <img src={brandLogo} alt="" className="w-6 h-6 object-contain" width="24" height="24" />
-                  <span className="font-brand text-sm font-bold text-white">KINGDOM MISSIONS NETWORK</span>
-                </div>
-                <span className="text-[10px] font-bold text-[#d4af37] tracking-wider uppercase">{activePlan.badge}</span>
-              </div>
-              <div>
-                <span className="text-[10px] uppercase text-white/50 block font-semibold">Partner Name</span>
-                <span className="font-outfit text-base font-bold text-white">{subscriberName || user?.name || "Partner"}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Deployment Level</span>
-                  <span className="font-bold text-[#fbf5b7]">{isCustomAmount ? "Custom Partner" : activePlan.name}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase text-white/50 block font-semibold">Oversight</span>
-                  <span className="font-bold text-white/90">Bishop Dr. George Githinji</span>
-                </div>
-              </div>
-            </div>
+            <PartnerIdCard
+              card={{
+                id: mpesaRefCode || `KMN-${Math.floor(10000 + Math.random() * 90000)}`,
+                name: subscriberName || user?.name || "Covenant Partner",
+                email: subscriberEmail || user?.email || "",
+                role: isCustomAmount ? "Custom Covenant Partner" : activePlan.name,
+                planName: isCustomAmount ? "Custom Covenant Partner" : activePlan.name,
+                subscriptionStatus: "active",
+                amount: activeAmountKes,
+                currency: "KES",
+                joinedAt: "2026",
+              }}
+              onClose={() => setShowIdCardModal(false)}
+            />
 
-            <div className="space-y-3">
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.print();
-                  }}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Print / Save Credential</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowIdCardModal(false)}
-                  className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm transition-colors"
-                >
-                  Done
-                </button>
-              </div>
+            <div className="pt-2 text-center">
               <Link
                 to="/partner-portal"
-                className="block text-center text-xs text-[#d4af37] hover:underline font-semibold"
+                className="inline-block text-xs text-[#d4af37] hover:underline font-semibold"
               >
                 Go to Partner Covenant Dashboard →
               </Link>

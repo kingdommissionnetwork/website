@@ -248,29 +248,58 @@
   color: var(--midnight);
 }
 
-/* Partner ID Card Print Isolation */
+/* ==========================================================================
+   UNIVERSAL SYSTEM-WIDE PRINT STYLESHEET (INVOICES, ID CARDS & STATEMENTS)
+   ========================================================================== */
 @media print {
-  body * {
-    visibility: hidden !important;
-  }
-  #printable-partner-id-card,
-  #printable-partner-id-card * {
-    visibility: visible !important;
-  }
-  #printable-partner-id-card {
-    position: fixed !important;
-    left: 50% !important;
-    top: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    margin: 0 !important;
-    box-shadow: none !important;
-    border: 2px solid #d4af37 !important;
+  /* Color fidelity & background retention */
+  * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  @page {
-    size: landscape;
-    margin: 1cm;
+
+  /* Hide interactive web UI components during any print action */
+  nav,
+  header,
+  aside,
+  footer,
+  button,
+  .no-print,
+  [role="dialog"] button,
+  .fixed.inset-0.bg-black\/80,
+  .fixed.inset-0.bg-black\/85 {
+    display: none !important;
+  }
+
+  /* Remove backgrounds & shadows from page wrappers when printing */
+  html, body {
+    background: #ffffff !important;
+    color: #0c1b33 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Partner ID Card Isolation if printed directly from window.print */
+  #printable-partner-id-card {
+    position: relative !important;
+    margin: 10mm auto !important;
+    box-shadow: none !important;
+    border: 1.5mm solid #d4af37 !important;
+    page-break-inside: avoid !important;
+    width: 85.6mm !important;
+    max-width: 85.6mm !important;
+  }
+
+  /* Invoice Print Area if printed directly */
+  .printable-document,
+  #printable-invoice {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 800px !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #0c1b33 !important;
   }
 }
 
