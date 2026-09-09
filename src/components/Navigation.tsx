@@ -4,6 +4,7 @@ import { Menu, X, User, Book, Heart, Headphones, Calendar, Gift, DollarSign, Cro
 import { motion, AnimatePresence } from "framer-motion";
 import brandLogo from "../assets/logo.png";
 import { useAuth } from "../lib/auth";
+import ThemeToggle from "./ThemeToggle";
 
 const navLinks = [
   { label: "About Us", path: "/about", icon: ShieldCheck },
@@ -50,8 +51,7 @@ export default function Navigation() {
   return (
     <>
       <nav
-        style={{ backgroundColor: '#FAF7F2' }}
-        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 bg-[#FAF7F2] border-b border-[#d4af37] shadow-[0_2px_16px_rgba(0,0,0,0.1)] h-[64px] md:h-[92px] lg:h-[108px] ${
+        className={`fixed top-0 left-0 right-0 z-[1000] transition-colors duration-300 bg-[#FAF7F2] dark:bg-[#081225] border-b border-[#d4af37] dark:border-[#d4af37]/40 shadow-[0_2px_16px_rgba(0,0,0,0.1)] h-[64px] md:h-[92px] lg:h-[108px] ${
           scrolled ? "shadow-[0_4px_24px_rgba(0,0,0,0.15)]" : ""
         }`}
       >
@@ -69,10 +69,10 @@ export default function Navigation() {
               height="80"
             />
             <div className="flex flex-col">
-              <span className="font-outfit text-[11px] sm:text-[12.5px] md:text-[14px] lg:text-[15.5px] font-extrabold text-[#0c1b33] tracking-[0.08em] md:tracking-[0.095em] leading-tight uppercase group-hover:text-[#996515] transition-colors whitespace-nowrap">
+              <span className="font-outfit text-[11px] sm:text-[12.5px] md:text-[14px] lg:text-[15.5px] font-extrabold text-[#0c1b33] dark:text-[#f8f6f3] tracking-[0.08em] md:tracking-[0.095em] leading-tight uppercase group-hover:text-[#996515] dark:group-hover:text-[#fbf5b7] transition-colors whitespace-nowrap">
                 Kingdom Missions Network
               </span>
-              <span className="font-outfit text-[8px] sm:text-[9px] md:text-[10px] lg:text-[11px] font-bold tracking-[0.25em] md:tracking-[0.32em] text-[#996515] uppercase leading-none mt-0.5">
+              <span className="font-outfit text-[8px] sm:text-[9px] md:text-[10px] lg:text-[11px] font-bold tracking-[0.25em] md:tracking-[0.32em] text-[#996515] dark:text-[#d4af37] uppercase leading-none mt-0.5">
                 Global Christian Community
               </span>
             </div>
@@ -88,8 +88,8 @@ export default function Navigation() {
                   to={link.path}
                   className={`relative px-3.5 py-2 rounded-xl text-xs xl:text-sm font-semibold tracking-wide whitespace-nowrap transition-all duration-200 ${
                     active
-                      ? "text-[#0c1b33] font-bold bg-[#d4af37]/20 shadow-sm border border-[#d4af37]/40"
-                      : "text-[#0c1b33]/85 hover:text-[#996515] hover:bg-black/[0.04]"
+                      ? "text-[#0c1b33] dark:text-white font-bold bg-[#d4af37]/20 shadow-sm border border-[#d4af37]/40"
+                      : "text-[#0c1b33]/85 dark:text-white/80 hover:text-[#996515] dark:hover:text-[#fbf5b7] hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
                   }`}
                 >
                   {link.label}
@@ -103,6 +103,9 @@ export default function Navigation() {
 
           {/* Right Actions: Standout Give CTA, Admin */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* System Dark / Light Mode Toggle */}
+            <ThemeToggle size="sm" />
+
             {/* Standout Gold Give CTA Button */}
             <Link
               to="/give"
@@ -281,7 +284,10 @@ export default function Navigation() {
                   );
                 })}
               </nav>
-              <div className="p-4 pt-2 border-t border-white/10 space-y-1">
+              <div className="p-4 pt-2 border-t border-white/10 space-y-2">
+                <div className="py-1">
+                  <ThemeToggle showLabel className="w-full justify-start py-2.5 px-3 rounded-xl bg-white/5 text-white" />
+                </div>
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}

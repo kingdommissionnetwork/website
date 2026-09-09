@@ -90,6 +90,21 @@ authRoutes.post("/login", rateLimit, zValidator("json", loginSchema), async (c) 
     return c.json({ error: "User not found" }, 404);
   }
 
+  // Check if account has been suspended
+  if (user.email) {
+    const { data: suspendedSub } = await supabase
+      .from("subscriptions")
+      .select("status")
+      .ilike("subscriber_email", user.email)
+      .eq("status", "suspended")
+      .limit(1)
+      .maybeSingle();
+
+    if (suspendedSub) {
+      return c.json({ error: "Your account has been suspended. Please contact administration for assistance." }, 403);
+    }
+  }
+
   const token = await signToken({ userId: user.id, role: user.role || "member", name: user.name, email: user.email || undefined }, c.env as Record<string, string>);
   setAuthCookie(c, token);
   // NOTE: token is set via httpOnly cookie only. It is intentionally NOT

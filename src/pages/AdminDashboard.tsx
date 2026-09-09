@@ -32,6 +32,8 @@ import {
   Smartphone,
   CheckCircle2,
   XCircle,
+  Printer,
+  Loader2,
 } from "lucide-react";
 import SEO from "../components/SEO";
 import { api } from "../lib/api";
@@ -39,6 +41,7 @@ import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
 import { PARTNER_PLANS, kesToUsd } from "../data/plans";
 import brandLogo from "../assets/logo.png";
+import ThemeToggle from "../components/ThemeToggle";
 
 type Tab =
   | "overview"
@@ -181,6 +184,8 @@ export default function AdminDashboard() {
   // Modals
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [showIdCardModal, setShowIdCardModal] = useState(false);
+  const [processingMemberAction, setProcessingMemberAction] = useState(false);
 
   // Data states
   const [stats, setStats] = useState({
@@ -324,13 +329,37 @@ export default function AdminDashboard() {
 
   // Member Action Handler
   const handleMemberAction = async (id: string | number, action: string, planName?: string, role?: string) => {
+    setProcessingMemberAction(true);
     try {
-      await api.admin.memberAction(id, { action, planName, role });
-      showToast(`Action ${action} executed successfully`, "success");
-      setShowMemberModal(false);
-      loadAllData();
-    } catch {
-      showToast("Failed to perform member action", "error");
+      const res = await api.admin.memberAction(id, { action, planName, role });
+      showToast(res.message || `Action ${action} executed successfully`, "success");
+
+      // Synchronize local selectedMember and members list immediately
+      if (selectedMember && String(selectedMember.id) === String(id)) {
+        let nextStatus = selectedMember.subscriptionStatus;
+        let nextRole = selectedMember.role;
+        let nextPlan = selectedMember.planName;
+        if (action === "suspend") nextStatus = "suspended";
+        if (action === "reactivate") nextStatus = "active";
+        if (action === "change_plan" && planName) nextPlan = planName;
+        if (action === "change_role" && role) nextRole = role;
+
+        const updated: AdminMember = {
+          ...selectedMember,
+          subscriptionStatus: nextStatus,
+          role: nextRole,
+          planName: nextPlan,
+        };
+        setSelectedMember(updated);
+        setMembers((prev) => prev.map((m) => (String(m.id) === String(id) ? updated : m)));
+      }
+
+      await loadAllData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to perform member action";
+      showToast(msg, "error");
+    } finally {
+      setProcessingMemberAction(false);
     }
   };
 
@@ -461,11 +490,11 @@ export default function AdminDashboard() {
   const currentTabLabel = sidebarSections.flatMap((s) => s.items).find((i) => i.id === activeTab)?.label || "Command Center";
 
   return (
-    <div className="min-h-screen bg-[#071324] text-white flex flex-col font-outfit">
+    <div className="min-h-screen bg-[#f4f7fb] dark:bg-[#071324] text-[#0c1b33] dark:text-white flex flex-col font-outfit transition-colors duration-300">
       <SEO title="Enterprise Operations Hub — Kingdom Missions Network" description="Operational Command Center, Members, Subscriptions, and Governance." />
 
       {/* Sticky Command Top Bar */}
-      <header className="sticky top-0 z-40 bg-[#09182d]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#09182d]/95 backdrop-blur-md border-b border-gray-200 dark:border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* Mobile Drawer Toggle */}
           <button
@@ -497,6 +526,9 @@ export default function AdminDashboard() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Dark / Light Mode Toggle */}
+          <ThemeToggle size="sm" />
+
           {/* Live Status Pill */}
           <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -1739,7 +1771,15 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <span className="text-white/50 block">Status</span>
-                <span className="font-bold text-emerald-400 text-sm uppercase">● {selectedMember.subscriptionStatus}</span>
+                <span className={`font-bold text-sm uppercase ${
+                  selectedMember.subscriptionStatus === "active"
+                    ? "text-emerald-400"
+                    : selectedMember.subscriptionStatus === "suspended"
+                    ? "text-red-400 font-extrabold"
+                    : "text-amber-400"
+                }`}>
+                  ● {selectedMember.subscriptionStatus}
+                </span>
               </div>
               <div>
                 <span className="text-white/50 block">Joined</span>
@@ -1753,35 +1793,179 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => handleMemberAction(selectedMember.id, "change_plan", "Kingdom Ambassador")}
-                  className="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors"
+                  disabled={processingMemberAction}
+                  onClick={() => {
+                    const targetPlan = selectedMember.planName === "Kingdom Ambassador" ? "Global Harvest Partner" : "Kingdom Ambassador";
+                    handleMemberAction(selectedMember.id, "change_plan", targetPlan);
+                  }}
+                  className="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Promote to Ambassador
+                  {processingMemberAction ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  {selectedMember.planName === "Kingdom Ambassador" ? "Promote to Global Harvest" : "Promote to Ambassador"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleMemberAction(selectedMember.id, "change_role", undefined, selectedMember.role === "admin" ? "member" : "admin")}
-                  className="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors"
+                  disabled={processingMemberAction}
+                  onClick={() => {
+                    const nextRole = (selectedMember.role === "admin" || selectedMember.role === "superadmin") ? "member" : "admin";
+                    handleMemberAction(selectedMember.id, "change_role", undefined, nextRole);
+                  }}
+                  className="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {selectedMember.role === "admin" ? "Demote from Admin" : "Make Admin"}
+                  {processingMemberAction ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  {(selectedMember.role === "admin" || selectedMember.role === "superadmin") ? "Demote to Member" : "Make Admin"}
                 </button>
                 <button
                   type="button"
+                  disabled={processingMemberAction}
                   onClick={() => handleMemberAction(selectedMember.id, selectedMember.subscriptionStatus === "suspended" ? "reactivate" : "suspend")}
-                  className="p-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold text-xs transition-colors"
+                  className={`p-3 rounded-xl font-bold text-xs transition-colors disabled:opacity-50 flex items-center justify-center gap-2 ${
+                    selectedMember.subscriptionStatus === "suspended"
+                      ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40"
+                      : "bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+                  }`}
                 >
+                  {processingMemberAction ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                   {selectedMember.subscriptionStatus === "suspended" ? "Reactivate Member" : "Suspend Account"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    window.print();
-                  }}
-                  className="p-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs shadow-md"
+                  onClick={() => setShowIdCardModal(true)}
+                  className="p-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs shadow-md hover:brightness-110 transition-all flex items-center justify-center gap-2"
                 >
+                  <Printer className="w-3.5 h-3.5 text-[#0c1b33]" />
                   Print Partner ID
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PARTNER ID CREDENTIAL PASS MODAL */}
+      {showIdCardModal && selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-[#0d1d36] border-2 border-[#d4af37] text-white shadow-2xl space-y-6">
+            <button
+              type="button"
+              onClick={() => setShowIdCardModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div>
+              <span className="text-[10px] uppercase font-bold text-[#d4af37] tracking-widest block">
+                Official Covenant Credential Pass
+              </span>
+              <h3 className="font-brand text-xl sm:text-2xl font-bold text-white mt-1">
+                Partner Identification Card
+              </h3>
+              <p className="text-xs text-white/60">
+                Official identity credential for Kingdom Missions Network global covenant partners.
+              </p>
+            </div>
+
+            {/* THE PRINTABLE CARD */}
+            <div
+              id="printable-partner-id-card"
+              className="relative w-full rounded-2xl overflow-hidden bg-gradient-to-br from-[#081225] via-[#0c1b33] to-[#162a4a] border-2 border-[#d4af37] p-6 shadow-2xl text-white font-sans select-none"
+            >
+              {/* Background watermark/crest */}
+              <div className="absolute right-3 -bottom-6 opacity-10 pointer-events-none">
+                <ShieldCheck className="w-48 h-48 text-[#d4af37]" />
+              </div>
+
+              {/* Card Header */}
+              <div className="flex items-center justify-between border-b border-[#d4af37]/30 pb-3 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/50 flex items-center justify-center">
+                    <Award className="w-5 h-5 text-[#d4af37]" />
+                  </div>
+                  <div>
+                    <h4 className="font-brand font-bold text-xs sm:text-sm tracking-wider text-[#fbf5b7] uppercase leading-tight">
+                      Kingdom Missions Network
+                    </h4>
+                    <span className="text-[9px] uppercase tracking-widest text-white/60 font-semibold block">
+                      Global Partner Pass
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[8px] uppercase tracking-widest text-[#d4af37] font-bold block">
+                    ID No.
+                  </span>
+                  <span className="font-mono text-xs font-bold text-white tracking-wider">
+                    HKN-{String(selectedMember.id).slice(0, 8).toUpperCase()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Card Body */}
+              <div className="flex items-start gap-4 mb-4">
+                {/* Avatar / Seal */}
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#d4af37]/30 to-black/50 border border-[#d4af37] flex items-center justify-center shrink-0 shadow-inner">
+                  <span className="text-2xl font-bold font-brand text-[#fbf5b7]">
+                    {selectedMember.name.slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Details */}
+                <div className="flex-1 min-w-0 space-y-1">
+                  <h5 className="font-brand font-bold text-base sm:text-lg text-white truncate leading-tight">
+                    {selectedMember.name}
+                  </h5>
+                  <p className="text-[11px] font-mono text-white/70 truncate">
+                    {selectedMember.email}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="px-2 py-0.5 rounded-md bg-[#d4af37]/25 text-[#fbf5b7] text-[10px] font-bold border border-[#d4af37]/40">
+                      {selectedMember.planName}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                      selectedMember.subscriptionStatus === "active"
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                        : "bg-red-500/20 text-red-400 border border-red-500/40"
+                    }`}>
+                      ● {selectedMember.subscriptionStatus}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Footer */}
+              <div className="border-t border-white/10 pt-3 flex items-center justify-between text-[9px] text-white/50">
+                <div>
+                  <span className="block text-[8px] uppercase tracking-widest text-white/40">Member Since</span>
+                  <span className="font-semibold text-white/80">{selectedMember.joinedAt}</span>
+                </div>
+                <div className="text-center font-mono text-[8px] text-[#d4af37] tracking-widest">
+                  ★ OFFICIAL COVENANT CREDENTIAL ★
+                </div>
+                <div className="text-right">
+                  <span className="block text-[8px] uppercase tracking-widest text-white/40">Authorized By</span>
+                  <span className="font-brand font-bold text-[#fbf5b7]">Presiding Bishop</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowIdCardModal(false)}
+                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs shadow-md hover:brightness-110 transition-all flex items-center gap-2"
+              >
+                <Printer className="w-4 h-4 text-[#0c1b33]" />
+                Print Partner Badge
+              </button>
             </div>
           </div>
         </div>

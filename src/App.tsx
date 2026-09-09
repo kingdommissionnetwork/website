@@ -8,6 +8,7 @@ import Toast from "./components/Toast";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider, AdminGuard } from "./lib/auth";
 import { ToastContext } from "./lib/toast";
+import { ThemeProvider } from "./lib/theme";
 
 const Home = lazy(() => import("./pages/Home"));
 const PrayerWall = lazy(() => import("./pages/PrayerWall"));
@@ -53,12 +54,13 @@ export default function App() {
   };
 
   return (
-    <AuthProvider>
-      <ToastContext.Provider value={{ showToast }}>
-        <div className="min-h-screen bg-cloud-blue">
-          <ScrollToTop />
-          {!isAdminRoute && <ScrollProgress />}
-          {!isAdminRoute && <Navigation />}
+    <ThemeProvider>
+      <AuthProvider>
+        <ToastContext.Provider value={{ showToast }}>
+          <div className="min-h-screen bg-cloud-blue dark:bg-[#071324] text-[#0c1b33] dark:text-[#f8f6f3] transition-colors duration-300">
+            <ScrollToTop />
+            {!isAdminRoute && <ScrollProgress />}
+            {!isAdminRoute && <Navigation />}
           <main>
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
@@ -106,5 +108,6 @@ export default function App() {
         </div>
       </ToastContext.Provider>
     </AuthProvider>
+  </ThemeProvider>
   );
 }

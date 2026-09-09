@@ -226,12 +226,19 @@ adminRoutes.get("/members", async (c) => {
   const { data: subs } = pageEmails.length
     ? await supabase
         .from("subscriptions")
-        .select("subscriber_email, plan_name, status, amount, currency")
+        .select("subscriber_email, plan_name, status, amount, currency, created_at")
         .in("subscriber_email", pageEmails)
+        .order("created_at", { ascending: false })
     : { data: [] as { subscriber_email?: string }[] };
   const subsByEmail = new Map<string, Record<string, unknown>>();
   (subs || []).forEach((s: { subscriber_email?: string }) => {
-    if (s.subscriber_email) subsByEmail.set(s.subscriber_email.toLowerCase(), s);
+    if (s.subscriber_email) {
+      const emailLower = s.subscriber_email.toLowerCase();
+      // Keep newest subscription for this email
+      if (!subsByEmail.has(emailLower)) {
+        subsByEmail.set(emailLower, s);
+      }
+    }
   });
 
   let enriched = (users || []).map((u: Record<string, unknown>) => {
@@ -242,7 +249,7 @@ adminRoutes.get("/members", async (c) => {
       name: u.name || "Member",
       email: u.email,
       role: u.role || "member",
-      planName: userSub?.plan_name || (u.role === "admin" ? "Leadership Council" : "Registered Member"),
+      planName: userSub?.plan_name || (u.role === "admin" || u.role === "superadmin" ? "Leadership Council" : "Registered Member"),
       subscriptionStatus: userSub?.status || "active",
       amount: userSub?.amount || 0,
       currency: userSub?.currency || "KES",
@@ -294,32 +301,181 @@ adminRoutes.post(
     const { action, planName, role } = c.req.valid("json");
     const actor = getActorEmail(c);
 
-    if (action === "change_role" && role) {
-      // Prevent self-demotion lockout / self-promotion confusion: actor cannot
-      // change their own role via this endpoint.
-      const self = (c.get as unknown as (key: string) => { userId?: string } | undefined)("user");
-      if (self?.userId && String(self.userId) === String(memberId)) {
-        return c.json({ error: "You cannot change your own role." }, 403);
-      }
-      const { error } = await supabase.from("users").update({ role }).eq("id", memberId);
-      if (error) return c.json({ error: "Failed to update role." }, 500);
-      await logAuditEvent(supabase, actor, "USER_ROLE_UPDATED", "user", memberId, { role });
-      return c.json({ success: true, message: `Member role updated to ${role}` });
+    // Verify target user exists
+    const { data: targetUser, error: userErr } = await supabase
+      .from("users")
+      .select("id, name, email, role")
+      .eq("id", memberId)
+      .single();
+
+    if (userErr || !targetUser) {
+      return c.json({ error: "Target member not found." }, 404);
     }
 
+    const targetEmail = String(targetUser.email || "").toLowerCase();
+
+    // 1. CHANGE ROLE
+    if (action === "change_role" && role) {
+      const self = (c.get as unknown as (key: string) => { userId?: string } | undefined)("user");
+      if (self?.userId && String(self.userId) === String(memberId)) {
+        return c.json({ error: "Security restriction: You cannot modify your own administrative role." }, 403);
+      }
+      const { error: roleUpdErr } = await supabase.from("users").update({ role }).eq("id", memberId);
+      if (roleUpdErr) {
+        console.error("[MEMBER ACTION] Failed to update role:", roleUpdErr.message);
+        return c.json({ error: "Failed to update role: " + roleUpdErr.message }, 500);
+      }
+      await logAuditEvent(supabase, actor, "USER_ROLE_UPDATED", "user", memberId, { role, previousRole: targetUser.role });
+      return c.json({ success: true, message: `Member role updated to ${role.toUpperCase()}` });
+    }
+
+    // 2. CHANGE PLAN / TIER
     if (action === "change_plan" && planName) {
+      const { data: existingSubs } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .ilike("subscriber_email", targetEmail)
+        .order("created_at", { ascending: false });
+
+      if (existingSubs && existingSubs.length > 0) {
+        const { error: planUpdErr } = await supabase
+          .from("subscriptions")
+          .update({
+            plan_name: planName,
+            status: "active",
+            updated_at: new Date().toISOString(),
+          })
+          .ilike("subscriber_email", targetEmail);
+
+        if (planUpdErr) {
+          console.error("[MEMBER ACTION] Failed to update plan:", planUpdErr.message);
+          return c.json({ error: "Failed to update plan: " + planUpdErr.message }, 500);
+        }
+      } else {
+        const amount = planName === "Kingdom Ambassador" ? 3000 : planName === "Global Harvest Partner" ? 7500 : planName === "Seed Partner" ? 1000 : 20000;
+        const { error: planInsErr } = await supabase
+          .from("subscriptions")
+          .insert({
+            subscriber_name: targetUser.name || "Member",
+            subscriber_email: targetEmail,
+            plan_name: planName,
+            status: "active",
+            amount,
+            currency: "KES",
+            interval: "monthly",
+            payment_provider: "admin_override",
+            payment_reference: `ADMIN-PLAN-${Date.now()}`,
+            metadata: { promoted_by: actor, promoted_at: new Date().toISOString() },
+          });
+
+        if (planInsErr) {
+          console.error("[MEMBER ACTION] Failed to insert plan:", planInsErr.message);
+          return c.json({ error: "Failed to create subscription record: " + planInsErr.message }, 500);
+        }
+      }
+
       await logAuditEvent(supabase, actor, "SUBSCRIPTION_PLAN_CHANGED", "user", memberId, { newPlan: planName });
       return c.json({ success: true, message: `Partnership tier updated to ${planName}` });
     }
 
+    // 3. SUSPEND ACCOUNT
     if (action === "suspend") {
+      const { data: existingSubs } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .ilike("subscriber_email", targetEmail)
+        .order("created_at", { ascending: false });
+
+      if (existingSubs && existingSubs.length > 0) {
+        const { error: suspUpdErr } = await supabase
+          .from("subscriptions")
+          .update({
+            status: "suspended",
+            updated_at: new Date().toISOString(),
+          })
+          .ilike("subscriber_email", targetEmail);
+
+        if (suspUpdErr) {
+          console.error("[MEMBER ACTION] Failed to suspend subscription:", suspUpdErr.message);
+          return c.json({ error: "Failed to suspend account: " + suspUpdErr.message }, 500);
+        }
+      } else {
+        const fallbackPlan = targetUser.role === "admin" || targetUser.role === "superadmin"
+          ? "Leadership Council"
+          : "Registered Member";
+        const { error: suspInsErr } = await supabase
+          .from("subscriptions")
+          .insert({
+            subscriber_name: targetUser.name || "Member",
+            subscriber_email: targetEmail,
+            plan_name: fallbackPlan,
+            status: "suspended",
+            amount: 0,
+            currency: "KES",
+            interval: "monthly",
+            payment_provider: "admin_override",
+            payment_reference: `ADMIN-SUSPEND-${Date.now()}`,
+            metadata: { suspended_by: actor, suspended_at: new Date().toISOString() },
+          });
+
+        if (suspInsErr) {
+          console.error("[MEMBER ACTION] Failed to insert suspended sub:", suspInsErr.message);
+          return c.json({ error: "Failed to suspend account: " + suspInsErr.message }, 500);
+        }
+      }
+
       await logAuditEvent(supabase, actor, "MEMBER_SUSPENDED", "user", memberId, {});
-      return c.json({ success: true, message: "Member status set to suspended" });
+      return c.json({ success: true, message: `Account for ${targetUser.name || targetEmail} set to SUSPENDED` });
     }
 
+    // 4. REACTIVATE ACCOUNT
     if (action === "reactivate") {
+      const { data: existingSubs } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .ilike("subscriber_email", targetEmail)
+        .order("created_at", { ascending: false });
+
+      if (existingSubs && existingSubs.length > 0) {
+        const { error: reactUpdErr } = await supabase
+          .from("subscriptions")
+          .update({
+            status: "active",
+            updated_at: new Date().toISOString(),
+          })
+          .ilike("subscriber_email", targetEmail);
+
+        if (reactUpdErr) {
+          console.error("[MEMBER ACTION] Failed to reactivate subscription:", reactUpdErr.message);
+          return c.json({ error: "Failed to reactivate account: " + reactUpdErr.message }, 500);
+        }
+      } else {
+        const fallbackPlan = targetUser.role === "admin" || targetUser.role === "superadmin"
+          ? "Leadership Council"
+          : "Registered Member";
+        const { error: reactInsErr } = await supabase
+          .from("subscriptions")
+          .insert({
+            subscriber_name: targetUser.name || "Member",
+            subscriber_email: targetEmail,
+            plan_name: fallbackPlan,
+            status: "active",
+            amount: 0,
+            currency: "KES",
+            interval: "monthly",
+            payment_provider: "admin_override",
+            payment_reference: `ADMIN-REACTIVATE-${Date.now()}`,
+            metadata: { reactivated_by: actor, reactivated_at: new Date().toISOString() },
+          });
+
+        if (reactInsErr) {
+          console.error("[MEMBER ACTION] Failed to insert active sub:", reactInsErr.message);
+          return c.json({ error: "Failed to reactivate account: " + reactInsErr.message }, 500);
+        }
+      }
+
       await logAuditEvent(supabase, actor, "MEMBER_REACTIVATED", "user", memberId, {});
-      return c.json({ success: true, message: "Member reactivated successfully" });
+      return c.json({ success: true, message: `Account for ${targetUser.name || targetEmail} reactivated successfully` });
     }
 
     return c.json({ success: true, message: "Action processed" });

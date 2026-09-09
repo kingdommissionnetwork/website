@@ -78,7 +78,7 @@
     overflow-x: clip;
   }
   body {
-    @apply bg-[#e6eef7] text-[#0c1b33] antialiased;
+    @apply bg-[#e6eef7] text-[#0c1b33] dark:bg-[#071324] dark:text-[#f8f6f3] transition-colors duration-300 antialiased;
     font-family: 'Inter', sans-serif;
     overscroll-behavior-y: none;
     /* Remove tap delay / double-tap zoom on controls */
@@ -246,4 +246,30 @@
 ::selection {
   background: rgba(212, 175, 55, 0.3);
   color: var(--midnight);
+}
+
+/* Partner ID Card Print Isolation */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #printable-partner-id-card,
+  #printable-partner-id-card * {
+    visibility: visible !important;
+  }
+  #printable-partner-id-card {
+    position: fixed !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: 2px solid #d4af37 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  @page {
+    size: landscape;
+    margin: 1cm;
+  }
 }

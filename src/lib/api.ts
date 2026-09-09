@@ -521,7 +521,7 @@ export const api = {
       const qs = q.toString() ? `?${q.toString()}` : "";
       return await request(`/admin/members${qs}`, { headers: authHeaders() });
     },
-    memberAction: async (id: string | number, data: { action: string; planName?: string; role?: string; message?: string }) => {
+    memberAction: async (id: string | number, data: { action: string; planName?: string; role?: string; message?: string }): Promise<{ success: boolean; message: string }> => {
       return request(`/admin/members/${id}/action`, {
         method: "POST",
         headers: authHeaders(),
