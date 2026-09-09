@@ -776,12 +776,20 @@ subscriptionRoutes.post("/mpesa/c2b-confirmation", async (c) => {
 subscriptionRoutes.post("/mpesa/kcb-ipn", async (c) => {
   if (!mpesaWebhookGuard(c)) {
     console.warn("[KCB IPN] rejected callback with bad webhook secret");
-    return c.json({ statusCode: "0", statusDescription: "Notification received successfully" });
+    return c.json({
+      transactionID: "",
+      statusCode: "0",
+      statusMessage: "Notification received",
+      statusDescription: "Notification received successfully",
+    });
   }
+  let txId = "";
   try {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    txId = String(body.transactionReference || body.transactionID || body.transId || body.TransID || "");
     const normalized = normalizeKcbIpn(body);
     if (normalized) {
+      txId = normalized.transId;
       const supabase = getSupabase(c.env as Record<string, string>);
       await recordPaybillReceipt(supabase, normalized);
       await logBillingEvent(c.env as Record<string, string>, "kcb-ipn", "paybill_receipt_recorded", "mpesa_receipt", normalized.transId, {
@@ -795,7 +803,12 @@ subscriptionRoutes.post("/mpesa/kcb-ipn", async (c) => {
   } catch (err) {
     console.error("[KCB IPN ERROR]", err);
   }
-  return c.json({ statusCode: "0", statusDescription: "Notification received successfully" });
+  return c.json({
+    transactionID: txId,
+    statusCode: "0",
+    statusMessage: "Notification received",
+    statusDescription: "Notification received successfully",
+  });
 });
 
 interface MpesaCheckoutSession {

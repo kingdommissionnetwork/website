@@ -998,6 +998,16 @@ export default function SubscriptionPortal() {
                       </div>
                     </div>
 
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 flex items-start gap-2.5 mb-4">
+                      <Building2 className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-semibold text-[#fbf5b7]">Registered Account Name Note:</div>
+                        <div className="text-[11px] text-white/80 mt-0.5">
+                          Official M-Pesa Paybill receipt will display our registered ministry name: <strong className="text-white">HEAVENLY GOD KINGDOM CHURCHES</strong> (Account 1335674365).
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Step by Step Instructions */}
                     <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-white/80 space-y-2">
                       <div className="font-bold text-[#fbf5b7] text-[11px] uppercase tracking-wider mb-1">
@@ -1182,8 +1192,11 @@ export default function SubscriptionPortal() {
                   {/* Manual Code Mode */}
                   {mpesaMode === "manual" && (
                     <form onSubmit={handleMpesaSubscription} className="space-y-4">
-                      <div className="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/25 text-xs text-blue-300 leading-relaxed">
-                        First send <strong>KES {Math.round(activeAmountKes).toLocaleString()}</strong> to Paybill <strong>522522</strong>, Account <strong>1335674365</strong>, then paste the M-Pesa transaction code from your SMS below.
+                      <div className="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/25 text-xs text-blue-200 leading-relaxed space-y-1.5">
+                        <div>First send <strong>KES {Math.round(activeAmountKes).toLocaleString()}</strong> to Paybill <strong>522522</strong>, Account <strong>1335674365</strong>, then paste the M-Pesa transaction code from your SMS below.</div>
+                        <div className="text-[11px] text-amber-300/90 pt-1.5 border-t border-white/10">
+                          Official M-Pesa Paybill receipt will display our registered ministry name: <strong className="text-white">HEAVENLY GOD KINGDOM CHURCHES</strong> (Account 1335674365).
+                        </div>
                       </div>
 
                       <div>

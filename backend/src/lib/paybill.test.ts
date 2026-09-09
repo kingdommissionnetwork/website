@@ -41,6 +41,34 @@ describe("Paybill ground-truth matching", () => {
     expect(normalizeKcbIpn({ hello: "world" })).toBeNull();
   });
 
+  test("normalizeKcbIpn parses official KCB IPN specification payload", () => {
+    const officialPayload = {
+      transactionReference: "FT00026252",
+      requestId: "c7d702cb-6b5f-4fa6-8b57-436d0f789017",
+      channelCode: "202",
+      timestamp: "2021111103005",
+      transactionAmount: "100.00",
+      currency: "KES",
+      customerReference: "INV-0001",
+      customerName: "John Doe",
+      customerMobileNumber: "25471111111",
+      balance: "",
+      narration: "Payment for goods",
+      creditAccountIdentifier: "JD001",
+      organizationShortCode: "777777",
+      tillNumber: "150150",
+    };
+    const r = normalizeKcbIpn(officialPayload);
+    expect(r).not.toBeNull();
+    expect(r?.transId).toBe("FT00026252");
+    expect(r?.amount).toBe(100);
+    expect(r?.phone).toBe("25471111111");
+    expect(r?.billRef).toBe("INV-0001");
+    expect(r?.shortcode).toBe("777777");
+    expect(r?.transTime).toBe("2021111103005");
+    expect(r?.source).toBe("kcb_ipn");
+  });
+
   test("exact recurring match approves", () => {
     const v = matchReceiptToClaim({
       receipt: { amount: 3000, billRef: OUR_ACCOUNT, consumed: false, transTime: null },

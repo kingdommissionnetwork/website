@@ -58,21 +58,57 @@ export function normalizeDarajaConfirmation(body: Record<string, unknown>): Norm
   };
 }
 
-/** Parse a KCB Buni IPN / credit notification (flexible field names). */
+/** Parse a KCB Buni IPN / credit notification (flexible field names matching official KCB IPN spec). */
 export function normalizeKcbIpn(body: Record<string, unknown>): NormalizedReceipt | null {
   const flat = (body.response || body.Body || body) as Record<string, unknown>;
   const transId = cleanStr(
-    flat.TransID ?? flat.transId ?? flat.MpesaReceiptNumber ?? flat.mpesaReceiptNumber ?? flat.reference ?? flat.Reference
+    flat.transactionReference ??
+    flat.TransID ??
+    flat.transId ??
+    flat.MpesaReceiptNumber ??
+    flat.mpesaReceiptNumber ??
+    flat.reference ??
+    flat.Reference
   ).toUpperCase();
-  const amount = Number(flat.TransAmount ?? flat.amount ?? flat.Amount ?? flat.value);
+  const amount = Number(
+    flat.transactionAmount ??
+    flat.TransAmount ??
+    flat.amount ??
+    flat.Amount ??
+    flat.value
+  );
   if (!transId || !Number.isFinite(amount) || amount <= 0) return null;
   return {
     transId,
     amount: Math.round(amount),
-    phone: cleanStr(flat.MSISDN ?? flat.msisdn ?? flat.PhoneNumber ?? flat.phone),
-    billRef: cleanStr(flat.BillRefNumber ?? flat.billRef ?? flat.Account ?? flat.account),
-    shortcode: cleanStr(flat.BusinessShortCode ?? flat.shortcode ?? OUR_PAYBILL),
-    transTime: cleanStr(flat.TransTime ?? flat.time ?? flat.TransactionDate) || null,
+    phone: cleanStr(
+      flat.customerMobileNumber ??
+      flat.MSISDN ??
+      flat.msisdn ??
+      flat.PhoneNumber ??
+      flat.phone
+    ),
+    billRef: cleanStr(
+      flat.customerReference ??
+      flat.creditAccountIdentifier ??
+      flat.BillRefNumber ??
+      flat.billRef ??
+      flat.Account ??
+      flat.account
+    ),
+    shortcode: cleanStr(
+      flat.organizationShortCode ??
+      flat.tillNumber ??
+      flat.BusinessShortCode ??
+      flat.shortcode ??
+      OUR_PAYBILL
+    ),
+    transTime: cleanStr(
+      flat.timestamp ??
+      flat.TransTime ??
+      flat.time ??
+      flat.TransactionDate
+    ) || null,
     source: "kcb_ipn",
     raw: body,
   };

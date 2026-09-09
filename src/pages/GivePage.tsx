@@ -647,9 +647,14 @@ export default function GivePage() {
                           </button>
                         </div>
                       </div>
-                      <div className="text-[11px] text-white/70 flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-[#d4af37]" />
-                        <span>Account Name: <strong className="text-white">Heavenly God Kingdom Churches</strong> (KCB Bank)</span>
+                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 flex items-start gap-2.5">
+                        <Building2 className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-semibold text-[#fbf5b7]">Registered Account Name Note:</div>
+                          <div className="text-[11px] text-white/80 mt-0.5">
+                            Official M-Pesa Paybill receipt will display our registered ministry name: <strong className="text-white">HEAVENLY GOD KINGDOM CHURCHES</strong> (Account 1335674365).
+                          </div>
+                        </div>
                       </div>
 
                       {/* Quick Steps */}

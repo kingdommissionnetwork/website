@@ -290,14 +290,16 @@ export default function GiveSection() {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/80">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-[#d4af37] shrink-0" />
-                    <span>Account Name: <strong className="text-white">Heavenly God Kingdom Churches</strong></span>
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-white/80">
+                  <div className="flex items-start gap-2.5">
+                    <Building2 className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
+                    <div>
+                      <span>Official M-Pesa Paybill receipt will display our registered ministry name: <strong className="text-white">HEAVENLY GOD KINGDOM CHURCHES</strong> (Account 1335674365).</span>
+                    </div>
                   </div>
                   <Link
                     to="/give?step=checkout"
-                    className="text-[#fbf5b7] hover:underline font-bold text-xs shrink-0"
+                    className="text-[#fbf5b7] hover:underline font-bold text-xs shrink-0 whitespace-nowrap"
                   >
                     Enter Reference for Receipt →
                   </Link>

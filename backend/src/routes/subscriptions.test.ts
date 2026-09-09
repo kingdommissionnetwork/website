@@ -169,13 +169,21 @@ describe("Subscription Routes", () => {
     expect(body.code).toBe("STK_DISABLED");
   });
 
-  test("POST /mpesa/kcb-ipn acks unparseable payloads without touching the ledger", async () => {
+  test("POST /mpesa/kcb-ipn acks official KCB IPN payloads with expected schema", async () => {
     const res = await app.request("/mpesa/kcb-ipn", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hello: "world" }),
+      body: JSON.stringify({
+        transactionReference: "FT00026252",
+        transactionAmount: "100.00",
+        customerMobileNumber: "25471111111",
+      }),
     });
     expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.statusCode).toBe("0");
+    expect(body.statusMessage).toBe("Notification received");
+    expect(body.transactionID).toBe("FT00026252");
   });
 
   test("POST /mpesa/c2b-confirmation acks unparseable payloads without touching the ledger", async () => {
