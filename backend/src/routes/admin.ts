@@ -489,25 +489,34 @@ adminRoutes.post(
     "json",
     z.object({
       action: z.enum(["approve", "reject"]),
-      type: z.enum(["subscription_claim", "donation"]),
-      notes: z.string().optional(),
+      type: z.enum(["subscription_claim", "donation"]).optional().default("subscription_claim"),
+      notes: z.string().nullable().optional(),
       // For approvals — pass the M-Pesa receipt if admin is manually verifying
-      mpesa_receipt: z.string().optional(),
-    })
+      mpesa_receipt: z.string().nullable().optional(),
+    }),
+    (result, c) => {
+      if (!result.success) {
+        const firstIssue = result.error.issues?.[0];
+        const errorMsg = firstIssue ? `${firstIssue.path.join(".")}: ${firstIssue.message}` : "Invalid claim resolution payload";
+        return c.json({ error: errorMsg, details: result.error.issues }, 400);
+      }
+    }
   ),
   async (c) => {
     const supabase = getSupabase(c.env as Record<string, string>);
     const claimId = c.req.param("id");
     const { action, type, notes, mpesa_receipt } = c.req.valid("json");
     const actor = getActorEmail(c);
+    const resolvedNotes = (notes || "").trim() || undefined;
+    const resolvedReceipt = (mpesa_receipt || "").trim() || undefined;
 
     if (action === "reject") {
       if (type === "subscription_claim") {
-        await supabase.from("payment_claims").update({ status: "rejected", notes }).eq("id", claimId);
+        await supabase.from("payment_claims").update({ status: "rejected", note: resolvedNotes || "Rejected by admin" }).eq("id", claimId);
       } else {
-        await supabase.from("donations").update({ status: "rejected", notes }).eq("id", claimId);
+        await supabase.from("donations").update({ status: "rejected", notes: resolvedNotes || "Rejected by admin" }).eq("id", claimId);
       }
-      await logAuditEvent(supabase, actor, "MPESA_CLAIM_REJECTED", type, claimId, { notes });
+      await logAuditEvent(supabase, actor, "MPESA_CLAIM_REJECTED", type, claimId, { notes: resolvedNotes });
       return c.json({ success: true, message: "Claim rejected successfully." });
     }
 
@@ -525,26 +534,28 @@ adminRoutes.post(
           return c.json({ error: "Claim not found" }, 404);
         }
 
-        const receipt = mpesa_receipt || claim.mpesa_reference || `ADMIN-APPROVED-${Date.now()}`;
+        const receipt = resolvedReceipt || claim.payment_reference || claim.mpesa_reference || `ADMIN-APPROVED-${Date.now()}`;
         const result = await fulfillPaybillRedemption(c, receipt, {
           name: claim.subscriber_name || claim.name || "Partner",
           email: claim.subscriber_email || claim.email,
           amount: Number(claim.amount),
           planName: claim.plan_name || "Kingdom Partner",
-          planId: claim.plan_id || "ambassador",
+          planId: claim.plan_id || "harvest",
           interval: (claim.interval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly",
+          phone: claim.phone || undefined,
+          kind: claim.kind || "subscription",
         });
 
         if (result.subData) {
-          await supabase.from("payment_claims").update({ status: "approved", notes }).eq("id", claimId);
+          await supabase.from("payment_claims").update({ status: "approved", note: resolvedNotes || "Admin-approved" }).eq("id", claimId);
         }
 
-        await logAuditEvent(supabase, actor, "MPESA_CLAIM_APPROVED", type, claimId, { receipt, notes });
+        await logAuditEvent(supabase, actor, "MPESA_CLAIM_APPROVED", type, claimId, { receipt, notes: resolvedNotes });
         return c.json({ success: true, message: "Subscription claim approved and activated.", result });
       } else {
         // Donation — just mark as completed
-        await supabase.from("donations").update({ status: "completed", notes }).eq("id", claimId);
-        await logAuditEvent(supabase, actor, "MPESA_DONATION_APPROVED", type, claimId, { notes });
+        await supabase.from("donations").update({ status: "completed", notes: resolvedNotes || "Admin-approved" }).eq("id", claimId);
+        await logAuditEvent(supabase, actor, "MPESA_DONATION_APPROVED", type, claimId, { notes: resolvedNotes });
         return c.json({ success: true, message: "Donation verified and marked as completed." });
       }
     } catch (err) {

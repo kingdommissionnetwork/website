@@ -301,16 +301,17 @@ export default function AdminDashboard() {
       const res = await api.admin.resolveMpesaClaim(resolveModal.claim.id, {
         action: resolveModal.action,
         type: resolveModal.claim.type,
-        notes: resolveNotes || undefined,
-        mpesa_receipt: resolveReceipt || undefined,
+        notes: resolveNotes.trim() || undefined,
+        mpesa_receipt: resolveReceipt.trim() || undefined,
       });
       showToast(res.message, "success");
       setResolveModal(null);
       setResolveReceipt("");
       setResolveNotes("");
       loadAllData();
-    } catch {
-      showToast("Failed to process claim — check connection and try again.", "error");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to process claim — check connection and try again.";
+      showToast(msg, "error");
     } finally {
       setResolving(false);
     }

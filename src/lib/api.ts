@@ -15,8 +15,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = API_BASE ? `${API_BASE}/api${path}` : `/api${path}`;
   const res = await fetch(url, {
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options?.headers || {}),
+    },
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
