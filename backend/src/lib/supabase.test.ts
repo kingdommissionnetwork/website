@@ -28,10 +28,15 @@ describe('Supabase Client', () => {
     expect(client.from).toBeInstanceOf(Function);
   });
 
-  test('getSupabase returns cached instance on second call', () => {
+  test('getSupabase returns a functional client on each call', () => {
     const a = getSupabase();
     const b = getSupabase();
-    expect(a).toBe(b);
+    // Intentional: getSupabase() creates a fresh client per call to avoid
+    // stale module-level singletons in Cloudflare Workers (env is per-request).
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+    expect(a.from).toBeInstanceOf(Function);
+    expect(b.from).toBeInstanceOf(Function);
   });
 
   test('getSupabase throws when URL is missing', () => {

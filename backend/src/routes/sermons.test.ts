@@ -20,6 +20,7 @@ describe('Sermon Routes', () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         or: vi.fn().mockReturnThis(),
+        range: vi.fn().mockResolvedValue({ data: [], error: null }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({ data: { id: 1, title: 'Test' }, error: null }),
@@ -43,6 +44,11 @@ describe('Sermon Routes', () => {
 
   test('GET / returns sermon list', async () => {
     const res = await app.request('/');
+    expect(res.status).toBe(200);
+  });
+
+  test('GET / accepts limit and offset params', async () => {
+    const res = await app.request('/?limit=10&offset=5');
     expect(res.status).toBe(200);
   });
 

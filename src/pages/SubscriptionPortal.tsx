@@ -21,7 +21,7 @@ import ScrollReveal from "../components/ScrollReveal";
 import AmbientParticles from "../components/AmbientParticles";
 import SEO from "../components/SEO";
 import PartnershipSupportCard from "../components/PartnershipSupportCard";
-import { api } from "../lib/api";
+import { api, normalizeAuthUser } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
 import brandLogo from "../assets/logo.png";
@@ -53,88 +53,7 @@ declare global {
   }
 }
 
-export interface PartnerPlan {
-  id: string;
-  name: string;
-  badge: string;
-  kesMonthly: number;
-  description: string;
-  isPopular?: boolean;
-  tagline: string;
-  impactHighlight: string;
-  perks: string[];
-}
-
-export const PARTNER_PLANS: PartnerPlan[] = [
-  {
-    id: "seed",
-    name: "Seed Partner",
-    badge: "🌱 Seed Partner",
-    kesMonthly: 1000,
-    tagline: "Foundational Mission & Bread Support",
-    description: "Sow into frontline evangelism, gospel bread relief for vulnerable families, and Holy Bible distribution.",
-    impactHighlight: "Feeds 2 vulnerable families & supplies 1 Holy Bible to new converts each month.",
-    perks: [
-      "Official Digital Partner Membership Certificate",
-      "Name & Family listed on 24/7 Global Intercessory Altar",
-      "Monthly Mission Impact Digest & Financial Report",
-      "Access to partner devotional library & study plans",
-      "Interactive Partner Dashboard & giving history",
-    ],
-  },
-  {
-    id: "ambassador",
-    name: "Kingdom Ambassador",
-    badge: "👑 Kingdom Ambassador",
-    kesMonthly: 3000,
-    isPopular: true,
-    tagline: "Outreach Crusades & Field Deployment",
-    description: "Directly sponsor village crusades, church planting, and qualify for official mission delegation travel.",
-    impactHighlight: "Funds village crusade sound equipment & regional evangelist mobilization.",
-    perks: [
-      "Official Kingdom Missions Network Partner ID Card",
-      "Priority Selection for Mission Travel Teams & Global Crusades",
-      "Monthly Live Prophetic Briefing with Bishop Dr. George Githinji",
-      "Dedicated 24/7 Urgent Pastoral Prayer WhatsApp Line",
-      "Reserved Partner Seating at all KMN Summits & Conferences",
-      "All Seed Partner perks included",
-    ],
-  },
-  {
-    id: "harvest",
-    name: "Global Harvest Partner",
-    badge: "🌍 Global Harvest Partner",
-    kesMonthly: 7500,
-    tagline: "International Itineraries & Ministry Logistical Backing",
-    description: "Empower international missionary travel, satellite broadcasts, and receive itinerary facilitation for overseas ministry.",
-    impactHighlight: "Establishes permanent regional mission bases & international crusades.",
-    perks: [
-      "International Preaching Logistics & Pastoral Network Facilitation (KMN connects you with vetted pastoral bodies abroad & helps arrange meeting logistics)",
-      "Official Ministry Ambassador Credential Endorsement",
-      "Quarterly Private Executive Roundtable with Bishop George",
-      "VIP Access & Reserved Platform Seating at all Global Summits",
-      "Direct sponsorship recognition in KMN broadcast credits",
-      "All Kingdom Ambassador perks included",
-    ],
-  },
-  {
-    id: "pillar",
-    name: "Covenant Pillar",
-    badge: "🏛️ Covenant Pillar",
-    kesMonthly: 20000,
-    tagline: "Strategic Vision & Global Expansion",
-    description: "Lead major kingdom expansion initiatives, television broadcasting, and strategic disaster relief.",
-    impactHighlight: "Sponsors city-wide stadium crusades and multi-nation satellite broadcasts.",
-    perks: [
-      "Advisory Seat on KMN Global Missions Strategy Council",
-      "Personalized Physical Gold-Plated Partner Seal & Ordination Letter",
-      "Comprehensive International Preaching Delegation Logistics Coordination",
-      "Personal Monthly Pastoral Prayer Covenant with Bishop Dr. George Githinji",
-      "Executive Briefing & Strategy Access on upcoming mission frontiers",
-      "All Global Harvest perks included",
-    ],
-  },
-];
+import { PARTNER_PLANS } from "../data/plans";
 
 
 const showStkPush = import.meta.env.VITE_ENABLE_STK_PUSH === "true";
@@ -214,7 +133,7 @@ export default function SubscriptionPortal() {
   // minted only after the emailed ownership code is verified (anti-takeover).
   const runOnboardingTransition = async (
     planTitle: string,
-    verifiedUser?: Record<string, unknown> | null,
+    verifiedUser?: unknown | null,
     _token?: string | null,
     subscription?: Record<string, unknown> | null,
     refCode?: string | null,
@@ -225,8 +144,8 @@ export default function SubscriptionPortal() {
     if (verifiedUser) {
       // Cookie-only auth: backend sets httpOnly session cookie; token (if any)
       // is ignored to avoid localStorage theft.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setSession(verifiedUser as any);
+      const sessionUser = normalizeAuthUser(verifiedUser);
+      if (sessionUser) setSession(sessionUser);
     }
     if (claimRequired) {
       showToast("Payment confirmed! A verification code was sent to your email to secure your Partner Hub.", "info");
@@ -238,12 +157,13 @@ export default function SubscriptionPortal() {
     await new Promise((r) => setTimeout(r, 650));
     setOnboardingStage(4);
     await new Promise((r) => setTimeout(r, 500));
+    const sessionUser = verifiedUser ? normalizeAuthUser(verifiedUser) : null;
     navigate("/partner-portal", {
       state: {
         justSubscribed: true,
         planName: planTitle,
-        partnerName: subscriberName.trim() || (verifiedUser?.name as string) || "Kingdom Partner",
-        partnerEmail: subscriberEmail.trim() || (verifiedUser?.email as string) || "",
+        partnerName: subscriberName.trim() || sessionUser?.name || "Kingdom Partner",
+        partnerEmail: subscriberEmail.trim() || sessionUser?.email || "",
         paymentReference: refCode || "",
         paymentProvider: "mpesa_paybill",
         amount: activeAmountKes,
@@ -264,9 +184,12 @@ export default function SubscriptionPortal() {
         .then((res) => {
           runOnboardingTransition(res.planName || activePlan.name, res.user, res.token, null, ref, res.claimRequired);
         })
-        .catch(() => {
-          showToast("Payment verified. Redirecting to your dashboard...", "success");
-          runOnboardingTransition(activePlan.name, null, null);
+        .catch((err: unknown) => {
+          const msg = err instanceof Error && err.message
+            ? err.message
+            : "Payment verification failed. If you were charged, use the receipt code to verify instead.";
+          showToast(msg, "error");
+          setSubmitting(false);
         });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -589,12 +512,18 @@ export default function SubscriptionPortal() {
             const capture = await api.subscriptions.paypalCapture({
               orderId: data.orderID,
               subscriberName: subscriberName || "Kingdom Partner",
+              planId: isCustomAmount ? "custom" : activePlan.id,
+              interval: billingCycle,
             });
             if (capture.status === "COMPLETED") {
-              await runOnboardingTransition(activePlan.name, capture.user, capture.token, null, data.orderID, capture.claimRequired);
+              await runOnboardingTransition(capture.planName || activePlan.name, capture.user, capture.token, null, data.orderID, capture.claimRequired);
+            } else {
+              showToast("PayPal payment was not completed. Please try again.", "error");
+              setSubmitting(false);
             }
-          } catch {
-            await runOnboardingTransition(activePlan.name, null, null);
+          } catch (err: unknown) {
+            showToast(err instanceof Error ? err.message : "PayPal verification failed. Please try again.", "error");
+            setSubmitting(false);
           }
         },
         onError: () => {

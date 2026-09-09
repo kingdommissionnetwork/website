@@ -27,7 +27,6 @@ export default function Sermons() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSermons(activeCategory, searchQuery);
   }, [activeCategory, searchQuery, fetchSermons]);
 

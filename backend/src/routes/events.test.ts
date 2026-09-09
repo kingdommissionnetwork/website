@@ -18,7 +18,8 @@ describe('Event Routes', () => {
     vi.mocked(getSupabase).mockReturnValue({
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+        order: vi.fn().mockReturnThis(),
+        range: vi.fn().mockResolvedValue({ data: [], error: null }),
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({ data: { id: 1, title: 'Test' }, error: null }),
@@ -42,6 +43,11 @@ describe('Event Routes', () => {
 
   test('GET / returns event list', async () => {
     const res = await app.request('/');
+    expect(res.status).toBe(200);
+  });
+
+  test('GET / accepts limit and offset params', async () => {
+    const res = await app.request('/?limit=10&offset=5');
     expect(res.status).toBe(200);
   });
 

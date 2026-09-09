@@ -14,13 +14,17 @@ const createPrayerSchema = z.object({
 
 prayerRoutes.get("/", async (c) => {
   const supabase = getSupabase(c.env as Record<string, string>);
-  const category = c.req.query("category");
+  const category = (c.req.query("category") || "").slice(0, 50);
+  const limit = Math.min(Math.max(Number(c.req.query("limit")) || 50, 1), 100);
+  const offset = Math.max(Number(c.req.query("offset")) || 0, 0);
   // Public wall shows moderated content only.
   let q = supabase.from("prayers").select("*").eq("status", "approved");
   if (category && category !== "All Prayers") {
     q = q.eq("category", category);
   }
-  const { data, error } = await q.order("created_at", { ascending: false });
+  const { data, error } = await q
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
   if (error) return c.json({ error: "Failed to load prayers." }, 500);
   return c.json(data);
 });
@@ -53,11 +57,14 @@ prayerRoutes.post("/:id/pray", rateLimit, async (c) => {
 prayerRoutes.get("/:id/comments", async (c) => {
   const supabase = getSupabase(c.env as Record<string, string>);
   const prayerId = Number(c.req.param("id"));
+  const limit = Math.min(Math.max(Number(c.req.query("limit")) || 50, 1), 100);
+  const offset = Math.max(Number(c.req.query("offset")) || 0, 0);
   const { data, error } = await supabase
     .from("prayer_comments")
     .select("*")
     .eq("prayer_id", prayerId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
   if (error) return c.json({ error: "Failed to load comments." }, 500);
   return c.json(data);
 });

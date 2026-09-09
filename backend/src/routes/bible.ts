@@ -2,9 +2,11 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
+import { requireAuth } from "../lib/jwt";
+import type { JwtPayload } from "../lib/jwt";
 import { rateLimit } from "../lib/rateLimiter";
 
-export const bibleRoutes = new Hono();
+export const bibleRoutes = new Hono<{ Variables: { user: JwtPayload } }>();
 
 const searchCache = new Map<string, { time: number; results: unknown }>();
 
@@ -359,17 +361,17 @@ bibleRoutes.get("/search", rateLimit, async (c) => {
 });
 
 const noteSchema = z.object({
-  userId: z.string().optional(),
   book: z.string().min(1).max(100),
   verse: z.string().min(1).max(20),
   text: z.string().min(1).max(2000),
 });
 
-bibleRoutes.post("/notes", zValidator("json", noteSchema), async (c) => {
+bibleRoutes.post("/notes", requireAuth, zValidator("json", noteSchema), async (c) => {
   const supabase = getSupabase(c.env as Record<string, string>);
   const body = c.req.valid("json");
+  const user = c.get("user") as JwtPayload;
   const { data: note, error } = await supabase.from("bible_notes").insert({
-    user_id: body.userId,
+    user_id: user.userId,
     book: body.book,
     verse: body.verse,
     text: body.text,
@@ -381,11 +383,10 @@ bibleRoutes.post("/notes", zValidator("json", noteSchema), async (c) => {
   return c.json(note, 201);
 });
 
-bibleRoutes.get("/notes", async (c) => {
+bibleRoutes.get("/notes", requireAuth, async (c) => {
   const supabase = getSupabase(c.env as Record<string, string>);
-  const userId = c.req.query("userId");
-  if (!userId) return c.json([]);
-  const { data, error } = await supabase.from("bible_notes").select("*").eq("user_id", userId);
+  const user = c.get("user") as JwtPayload;
+  const { data, error } = await supabase.from("bible_notes").select("*").eq("user_id", user.userId);
   if (error) {
     console.error("[BIBLE] notes error:", error.message);
     return c.json({ error: "Failed to load notes." }, 500);

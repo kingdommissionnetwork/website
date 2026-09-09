@@ -1,4 +1,11 @@
-import { Skeleton } from "./ui/skeleton";
+export function Skeleton({ className = "", ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      className={`animate-pulse rounded-md bg-white/5 ${className}`}
+      {...props}
+    />
+  );
+}
 
 export function CardSkeleton() {
   return (

@@ -1,16 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { Mail } from "lucide-react";
-import { api } from "./api";
+import { api, normalizeAuthUser, type AuthUser as User } from "./api";
 import brandLogo from "../assets/logo.png";
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: "member" | "admin" | "superadmin";
-  avatar?: string;
-}
+export type { User };
 
 interface AuthContextType {
   user: User | null;
@@ -42,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     api.auth
       .me()
-      .then((u) => { if (!cancelled) setUser(u as User); })
+      .then((u) => { if (!cancelled) setUser(normalizeAuthUser(u)); })
       .catch(() => { /* not logged in — that's fine */ })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -62,7 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.auth.login(email, password);
       api.setToken();
-      setUser(res.user as User);
+      const user = normalizeAuthUser(res.user);
+      if (!user) return false;
+      setUser(user);
       return true;
     } catch {
       return false;
@@ -73,7 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.auth.register(name, email, password);
       api.setToken();
-      setUser(res.user as User);
+      const user = normalizeAuthUser(res.user);
+      if (!user) return { ok: false, error: "Invalid session response" };
+      setUser(user);
       return { ok: true };
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Registration failed";
@@ -85,7 +83,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.auth.google(token);
       api.setToken();
-      setUser(res.user as User);
+      const user = normalizeAuthUser(res.user);
+      if (!user) return false;
+      setUser(user);
       return true;
     } catch {
       return false;

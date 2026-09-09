@@ -10,7 +10,13 @@ export const eventRoutes = new Hono();
 
 eventRoutes.get("/", async (c) => {
   const supabase = getSupabase(c.env as Record<string, string>);
-  const { data, error } = await supabase.from("events").select("*").order("date", { ascending: false });
+  const limit = Math.min(Math.max(Number(c.req.query("limit")) || 50, 1), 100);
+  const offset = Math.max(Number(c.req.query("offset")) || 0, 0);
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .order("date", { ascending: false })
+    .range(offset, offset + limit - 1);
   if (error) {
     console.error("[EVENTS] list error:", error.message);
     return c.json({ error: "Failed to load events." }, 500);

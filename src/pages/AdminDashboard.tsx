@@ -37,6 +37,7 @@ import SEO from "../components/SEO";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
+import { PARTNER_PLANS, kesToUsd } from "../data/plans";
 import brandLogo from "../assets/logo.png";
 
 type Tab =
@@ -135,12 +136,25 @@ const sidebarSections = [
   },
 ];
 
-const partnerPlansCatalog = [
-  { id: "seed", name: "Seed Partner", kes: 1000, usd: 7.72, badge: "🌱 Seed", membersCount: 142, impact: "Food hampers & Holy Bibles" },
-  { id: "ambassador", name: "Kingdom Ambassador", kes: 3000, usd: 23.16, badge: "👑 Ambassador", membersCount: 386, impact: "Village crusades & sound rigs" },
-  { id: "harvest", name: "Global Harvest Partner", kes: 7500, usd: 57.9, badge: "🌍 Harvest", membersCount: 94, impact: "International itineraries & mission bases" },
-  { id: "pillar", name: "Covenant Pillar", kes: 20000, usd: 154.4, badge: "🏛️ Pillar", membersCount: 28, impact: "Global broadcast & city revival summits" },
-];
+// Admin overlay: member counts are operational snapshots (replace with live
+// `/admin/stats` data when available). Prices/badges come from the shared
+// catalog so plan amounts cannot drift from checkout.
+const ADMIN_PLAN_STATS: Record<string, { membersCount: number; impact: string }> = {
+  seed: { membersCount: 142, impact: "Food hampers & Holy Bibles" },
+  ambassador: { membersCount: 386, impact: "Village crusades & sound rigs" },
+  harvest: { membersCount: 94, impact: "International itineraries & mission bases" },
+  pillar: { membersCount: 28, impact: "Global broadcast & city revival summits" },
+};
+
+const partnerPlansCatalog = PARTNER_PLANS.map((p) => ({
+  id: p.id,
+  name: p.name,
+  kes: p.kesMonthly,
+  usd: kesToUsd(p.kesMonthly),
+  badge: p.badge,
+  membersCount: ADMIN_PLAN_STATS[p.id]?.membersCount ?? 0,
+  impact: ADMIN_PLAN_STATS[p.id]?.impact ?? p.impactHighlight,
+}));
 
 function normalizePrayer(p: Record<string, unknown>): AdminPrayer {
   return {
@@ -536,8 +550,10 @@ export default function AdminDashboard() {
       {isMobileSidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
+            role="presentation"
             className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setIsMobileSidebarOpen(false)}
+            onKeyDown={(e) => e.key === "Escape" && setIsMobileSidebarOpen(false)}
           />
           <div className="relative w-72 max-w-[85vw] bg-[#09182d] border-r border-white/10 p-5 flex flex-col justify-between z-10 shadow-2xl">
             <div className="space-y-6">

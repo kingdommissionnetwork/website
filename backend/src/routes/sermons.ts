@@ -10,6 +10,8 @@ sermonRoutes.get("/", async (c) => {
   const supabase = getSupabase(c.env as Record<string, string>);
   const category = (c.req.query("category") || "").slice(0, 50);
   const query = (c.req.query("q") || "").slice(0, 100);
+  const limit = Math.min(Math.max(Number(c.req.query("limit")) || 50, 1), 100);
+  const offset = Math.max(Number(c.req.query("offset")) || 0, 0);
 
   let q = supabase.from("sermons").select("*");
   if (category && category !== "All") {
@@ -24,7 +26,7 @@ sermonRoutes.get("/", async (c) => {
     }
   }
 
-  const { data, error } = await q;
+  const { data, error } = await q.range(offset, offset + limit - 1);
   if (error) {
     console.error("[SERMONS] list error:", error.message);
     return c.json({ error: "Failed to load sermons." }, 500);

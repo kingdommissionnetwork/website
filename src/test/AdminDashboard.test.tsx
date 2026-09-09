@@ -9,22 +9,6 @@ vi.mock("../lib/auth", () => ({
   }),
 }));
 
-vi.mock("../hooks/use-async", () => ({
-  useAsync: () => ({
-    data: {
-      totalUsers: 10,
-      totalPrayers: 20,
-      pendingPrayers: 5,
-      totalSermons: 15,
-      monthlyGiving: 1000,
-      activeEvents: 3,
-      totalYtd: 12000,
-      donorCount: 50,
-    },
-    loading: false,
-    error: null,
-  }),
-}));
 
 import { MemoryRouter } from "react-router-dom";
 

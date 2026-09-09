@@ -36,6 +36,24 @@ export async function verifyToken(token: string, env?: Record<string, string>): 
   return verify(token, getJwtSecret(env), "HS256") as unknown as Promise<JwtPayload>;
 }
 
+export async function requireAuth(c: Context, next: () => Promise<void>) {
+  const authHeader = c.req.header("Authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : getCookie(c, "token");
+
+  if (!token) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const env = (c.env || {}) as Record<string, string>;
+    const payload = await verifyToken(token, env);
+    c.set("user", payload);
+    await next();
+  } catch {
+    return c.json({ error: "Invalid token" }, 401);
+  }
+}
+
 export async function requireAdmin(c: Context, next: () => Promise<void>) {
   const authHeader = c.req.header("Authorization");
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : getCookie(c, "token");

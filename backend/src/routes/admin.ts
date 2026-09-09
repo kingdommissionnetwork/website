@@ -202,21 +202,33 @@ adminRoutes.get("/members", async (c) => {
   const search = c.req.query("search")?.toLowerCase();
   const statusFilter = c.req.query("status");
   const roleFilter = c.req.query("role");
+  // Bounded page: search/status filters run in memory below, so keep the
+  // window generous but capped instead of pulling the whole table.
+  const limit = Math.min(Math.max(Number(c.req.query("limit")) || 200, 1), 1000);
+  const offset = Math.max(Number(c.req.query("offset")) || 0, 0);
 
   let q = supabase.from("users").select("id, name, email, role, avatar, created_at").order("name");
-  
+
   if (roleFilter && roleFilter !== "all") {
     q = q.eq("role", roleFilter);
   }
 
-  const { data: users, error } = await q;
+  const { data: users, error } = await q.range(offset, offset + limit - 1);
   if (error) {
     console.error("[ADMIN] members error:", error.message);
     return c.json({ error: "Failed to load members." }, 500);
   }
 
-  // Fetch subscription tier for each member
-  const { data: subs } = await supabase.from("subscriptions").select("subscriber_email, plan_name, status, amount, currency");
+  // Fetch subscription tier only for the page's members (not the whole table).
+  const pageEmails = (users || [])
+    .map((u: { email?: string }) => String(u.email || "").toLowerCase())
+    .filter(Boolean);
+  const { data: subs } = pageEmails.length
+    ? await supabase
+        .from("subscriptions")
+        .select("subscriber_email, plan_name, status, amount, currency")
+        .in("subscriber_email", pageEmails)
+    : { data: [] as { subscriber_email?: string }[] };
   const subsByEmail = new Map<string, Record<string, unknown>>();
   (subs || []).forEach((s: { subscriber_email?: string }) => {
     if (s.subscriber_email) subsByEmail.set(s.subscriber_email.toLowerCase(), s);

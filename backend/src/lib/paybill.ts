@@ -287,12 +287,13 @@ export async function upsertPaymentClaim(db: Db, input: ClaimInput): Promise<Cla
       if (mpesaMessage) patch.mpesa_message = mpesaMessage;
       if (note) patch.note = note;
       else if (mpesaMessage) patch.note = `M-Pesa SMS: ${mpesaMessage}`.slice(0, 1000);
-      let { data, error } = await db
+      const { data: updateData, error } = await db
         .from("payment_claims")
         .update(patch)
         .eq("id", row.id)
         .select()
         .maybeSingle();
+      let data = updateData;
       if (error && (patch.mpesa_message || patch.note)) {
         delete patch.mpesa_message;
         delete patch.note;
@@ -318,11 +319,12 @@ export async function upsertPaymentClaim(db: Db, input: ClaimInput): Promise<Cla
     payload.note = note || (mpesaMessage ? `M-Pesa SMS: ${mpesaMessage}`.slice(0, 1000) : null);
     if (!payload.note) delete payload.note;
     if (!payload.mpesa_message) delete payload.mpesa_message;
-    let { data, error: insertError } = await db
+    const { data: insertData, error: insertError } = await db
       .from("payment_claims")
       .insert(payload)
       .select()
       .single();
+    let data = insertData;
     if (insertError && (payload.mpesa_message || payload.note)) {
       delete payload.mpesa_message;
       delete payload.note;

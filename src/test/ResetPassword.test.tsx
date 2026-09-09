@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractRecoveryToken, extractRecoveryError } from "../pages/ResetPassword";
+import { extractRecoveryToken, extractRecoveryError } from "../lib/recoveryToken";
 
 describe("extractRecoveryToken", () => {
   it("reads access_token from the URL hash (Supabase implicit flow)", () => {

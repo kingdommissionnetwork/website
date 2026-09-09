@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import AmbientParticles from "../components/AmbientParticles";
 import SEO from "../components/SEO";
-import { api } from "../lib/api";
+import { api, normalizeAuthUser } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
 import brandLogo from "../assets/logo.png";
@@ -147,17 +147,17 @@ export default function GivePage() {
   const completeTransaction = (
     reference: string,
     provider: string,
-    verifiedUser?: Record<string, unknown> | null
+    verifiedUser?: unknown | null
   ) => {
     if (verifiedUser) {
-      const authUser = {
-        id: (verifiedUser.id as number) || 1,
-        name: (verifiedUser.name as string) || donorName || "Kingdom Partner",
-        email: (verifiedUser.email as string) || donorEmail,
-        role: ((verifiedUser.role === "admin" || verifiedUser.role === "superadmin")
-          ? verifiedUser.role : "member") as "member" | "admin" | "superadmin",
-      };
-      setSession(authUser);
+      const sessionUser = normalizeAuthUser(verifiedUser);
+      if (sessionUser) {
+        setSession({
+          ...sessionUser,
+          name: sessionUser.name || donorName || "Kingdom Partner",
+          email: sessionUser.email || donorEmail,
+        });
+      }
     }
     setReceipt({
       reference,
@@ -206,7 +206,7 @@ export default function GivePage() {
           const pollRes = await api.subscriptions.queryMpesaStk(checkoutId);
           if (pollRes.status === "completed") {
             clearInterval(pollInterval);
-            completeTransaction(pollRes.receiptCode || checkoutId, "M-Pesa STK Push", pollRes.user as Record<string, unknown>);
+            completeTransaction(pollRes.receiptCode || checkoutId, "M-Pesa STK Push", pollRes.user);
           } else if (pollRes.status === "failed") {
             clearInterval(pollInterval);
             setStkPending(false); setSubmitting(false);
@@ -247,7 +247,7 @@ export default function GivePage() {
           callback: async (response: { reference: string }) => {
             try {
               const verifyRes = await api.subscriptions.verify(response.reference);
-              completeTransaction(response.reference, "Card (Paystack)", verifyRes.user as Record<string, unknown>);
+              completeTransaction(response.reference, "Card (Paystack)", verifyRes.user);
             } catch { completeTransaction(response.reference, "Card (Paystack)", null); }
           },
           onClose: () => { showToast("Payment window closed.", "info"); setSubmitting(false); },
@@ -322,8 +322,16 @@ export default function GivePage() {
           onApprove: async (data: { orderID: string }) => {
             try {
               const capture = await api.subscriptions.paypalCapture({ orderId: data.orderID, subscriberName: donorName || "Kingdom Partner" });
-              completeTransaction(capture.id || data.orderID, "PayPal", capture.user as Record<string, unknown>);
-            } catch { completeTransaction(data.orderID, "PayPal", null); }
+              if (capture.status === "COMPLETED") {
+                completeTransaction(capture.id || data.orderID, "PayPal", capture.user);
+              } else {
+                showToast("PayPal payment was not completed. Please try again.", "error");
+                setSubmitting(false);
+              }
+            } catch (err: unknown) {
+              showToast(err instanceof Error ? err.message : "PayPal verification failed. Please try again.", "error");
+              setSubmitting(false);
+            }
           },
           onError: () => { showToast("PayPal transaction was not completed.", "error"); setSubmitting(false); },
         }).render("#paypal-button-mount");
@@ -393,7 +401,7 @@ export default function GivePage() {
 
               {/* Purpose Selector */}
               <div className="mb-6">
-                <label className="block text-xs font-bold text-[#fbf5b7] uppercase tracking-wider mb-3">
+                <label htmlFor="giving-purpose" className="block text-xs font-bold text-[#fbf5b7] uppercase tracking-wider mb-3">
                   Select Giving Designation / Purpose:
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -414,7 +422,7 @@ export default function GivePage() {
               {/* Preset Amounts */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-xs font-bold text-[#fbf5b7] uppercase tracking-wider">Select Amount:</label>
+                  <label htmlFor="currency-toggle" className="text-xs font-bold text-[#fbf5b7] uppercase tracking-wider">Select Amount:</label>
                   <div className="flex items-center bg-white/[0.06] rounded-xl p-0.5 border border-white/10">
                     <button type="button" onClick={() => setCurrencyView("KES")}
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${currencyView === "KES" ? "bg-[#d4af37] text-[#0c1b33]" : "text-white/50 hover:text-white"}`}>
@@ -521,15 +529,15 @@ export default function GivePage() {
                 <div className="lg:col-span-7 space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-white/80 mb-1">Your Full Name:</label>
-                      <input type="text" value={donorName} onChange={(e) => setDonorName(e.target.value)}
+                      <label htmlFor="donor-name" className="block text-xs font-bold text-white/80 mb-1">Your Full Name:</label>
+                      <input id="donor-name" type="text" value={donorName} onChange={(e) => setDonorName(e.target.value)}
                         placeholder="e.g. John Kariuki"
                         autoComplete="name"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.06] border border-white/15 text-white text-sm focus:outline-none focus:border-[#d4af37]" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-white/80 mb-1">Email (for Receipt):</label>
-                      <input type="email" value={donorEmail} onChange={(e) => setDonorEmail(e.target.value)}
+                      <label htmlFor="donor-email" className="block text-xs font-bold text-white/80 mb-1">Email (for Receipt):</label>
+                      <input id="donor-email" type="email" value={donorEmail} onChange={(e) => setDonorEmail(e.target.value)}
                         placeholder="e.g. john@example.com"
                         autoComplete="email"
                         inputMode="email"
@@ -539,7 +547,7 @@ export default function GivePage() {
 
                   {/* Payment Method Selector */}
                   <div>
-                    <label className="block text-xs font-bold text-[#fbf5b7] uppercase tracking-wider mb-2">Select Payment Method:</label>
+                    <label htmlFor="payment-method" className="block text-xs font-bold text-[#fbf5b7] uppercase tracking-wider mb-2">Select Payment Method:</label>
                     <div className={`grid ${showStkPush ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3"} gap-2`}>
                       {showStkPush && (
                         <button type="button" onClick={() => setPaymentMethod("mpesa")}
@@ -566,9 +574,9 @@ export default function GivePage() {
                   {showStkPush && paymentMethod === "mpesa" && (
                     <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-4">
                       <div>
-                        <label className="block text-xs font-bold text-emerald-300 mb-1">Safaricom M-Pesa Phone Number:</label>
+                        <label htmlFor="mpesa-phone" className="block text-xs font-bold text-emerald-300 mb-1">Safaricom M-Pesa Phone Number:</label>
                         <div className="relative">
-                          <input type="tel" value={mpesaPhone} onChange={(e) => setMpesaPhone(e.target.value)}
+                          <input id="mpesa-phone" type="tel" value={mpesaPhone} onChange={(e) => setMpesaPhone(e.target.value)}
                             placeholder="e.g. 0712345678" disabled={stkPending}
                             autoComplete="tel"
                             inputMode="tel"
@@ -666,9 +674,9 @@ export default function GivePage() {
                       </div>
 
                       <div className="pt-2 border-t border-white/10">
-                        <label className="block text-xs font-bold text-white/80 mb-1">Enter your M-Pesa Transaction Code:</label>
+                        <label htmlFor="mpesa-ref-code" className="block text-xs font-bold text-white/80 mb-1">Enter your M-Pesa Transaction Code:</label>
                         <div className="flex gap-2">
-                          <input type="text" value={manualRefCode} onChange={(e) => setManualRefCode(e.target.value.toUpperCase())}
+                          <input id="mpesa-ref-code" type="text" value={manualRefCode} onChange={(e) => setManualRefCode(e.target.value.toUpperCase())}
                             placeholder="e.g. QKJ8921820"
                             autoComplete="off"
                             autoCapitalize="characters"

@@ -42,7 +42,30 @@ function authHeaders(): Record<string, string> {
   return {};
 }
 
-type AuthUser = { id: number; name: string; email: string; role: string; avatar?: string };
+export type UserRole = "member" | "admin" | "superadmin";
+
+export interface AuthUser {
+  id: number | string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatar?: string;
+}
+
+/** Fail-closed user normalizer: unknown roles collapse to "member" (no admin access). */
+export function normalizeAuthUser(raw: unknown): AuthUser | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const id = r.id;
+  const name = r.name;
+  const email = r.email;
+  if ((typeof id !== "number" && typeof id !== "string") || typeof name !== "string" || typeof email !== "string") {
+    return null;
+  }
+  const role: UserRole = r.role === "admin" || r.role === "superadmin" ? r.role : "member";
+  const avatar = typeof r.avatar === "string" ? r.avatar : undefined;
+  return { id, name, email, role, avatar };
+}
 
 export const api = {
   getToken,
@@ -358,10 +381,11 @@ export const api = {
         body: JSON.stringify(data),
       });
     },
-    paypalCapture: async (data: { orderId: string; subscriberName?: string }) => {
+    paypalCapture: async (data: { orderId: string; subscriberName?: string; planId?: string; interval?: "monthly" | "yearly" }) => {
       return request<{
         status: string;
         id: string;
+        duplicate?: boolean;
         claimRequired?: boolean;
         user?: AuthUser | null;
         token?: string | null;

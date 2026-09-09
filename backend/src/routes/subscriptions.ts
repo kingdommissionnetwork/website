@@ -25,6 +25,7 @@ import {
   ONETIME_PLAN_ID,
   PARTNER_PLAN_CATALOG,
   MAX_DUNNING_ATTEMPTS,
+  findPlan,
   nextRetryDate,
   validatePaymentAmount,
   yearlyPriceFromMonthly,
@@ -107,7 +108,9 @@ async function getPayPalAccessToken(clientId: string, clientSecret: string): Pro
 }
 
 // Structured billing audit log (audit_logs table with console fallback)
+// Takes env explicitly — using module-level `c` was a ReferenceError.
 async function logBillingEvent(
+  env: Record<string, string>,
   actor: string,
   action: string,
   targetType: string,
@@ -115,7 +118,7 @@ async function logBillingEvent(
   details: Record<string, unknown> = {}
 ) {
   try {
-    const supabase = getSupabase(c.env as Record<string, string>);
+    const supabase = getSupabase(env);
     await supabase.from("audit_logs").insert({
       actor,
       action,
@@ -162,9 +165,9 @@ async function mintSubscriberSession(
 }
 
 // Issue a single-use email-ownership code (stores only the hash, never the code)
-async function issueClaimOtp(email: string): Promise<string | null> {
+async function issueClaimOtp(env: Record<string, string>, email: string): Promise<string | null> {
   try {
-    const supabase = getSupabase(c.env as Record<string, string>);
+    const supabase = getSupabase(env);
     const code = generateOtpCode();
     const codeHash = await hashOtpCode(code);
     const { error } = await supabase.from("subscriber_otps").insert({
@@ -181,9 +184,9 @@ async function issueClaimOtp(email: string): Promise<string | null> {
   }
 }
 
-async function checkClaimOtp(email: string, code: string): Promise<{ ok: boolean; reason?: string }> {
+async function checkClaimOtp(env: Record<string, string>, email: string, code: string): Promise<{ ok: boolean; reason?: string }> {
   try {
-    const supabase = getSupabase(c.env as Record<string, string>);
+    const supabase = getSupabase(env);
     const norm = email.trim().toLowerCase();
     const { data } = await supabase
       .from("subscriber_otps")
@@ -252,7 +255,7 @@ async function provisionSubscriberUser(
     if (user) {
       if (!isNew) {
         // Existing identity: gate the merge behind email-ownership proof.
-        const code = await issueClaimOtp(normEmail);
+        const code = await issueClaimOtp(c.env as Record<string, string>, normEmail);
         if (code) {
           try {
             await sendClaimOtpEmail(c, normEmail, user.name || displayName, code);
@@ -260,7 +263,7 @@ async function provisionSubscriberUser(
             console.error("[CLAIM-OTP] email dispatch error:", err);
           }
         }
-        await logBillingEvent(normEmail, "partner_claim_required", "user", user.id, { source: "payment" });
+        await logBillingEvent(c.env as Record<string, string>, normEmail, "partner_claim_required", "user", user.id, { source: "payment" });
         return {
           user: { id: user.id, name: user.name, email: user.email, role: user.role },
           token: null,
@@ -432,7 +435,7 @@ export async function fulfillPaybillRedemption(
 
   // Provision Partner profile (existing identities are OTP-gated)
   const authSession = await provisionSubscriberUser(c, displayName, normEmail);
-  await logBillingEvent(normEmail, "mpesa_paybill_verified", "subscription", cleanRef, {
+  await logBillingEvent(c.env as Record<string, string>, normEmail, "mpesa_paybill_verified", "subscription", cleanRef, {
     planName: r.planName,
     amount: r.amount,
     claimRequired: authSession?.claimRequired || false,
@@ -546,7 +549,7 @@ subscriptionRoutes.post(
         phone: phone || null,
         mpesaMessage: (mpesaMessage || "").trim().slice(0, 1000) || null,
       });
-      await logBillingEvent(email.trim().toLowerCase(), "paybill_claim_awaiting_receipt", "payment_claim", cleanRef, {
+      await logBillingEvent(c.env as Record<string, string>, email.trim().toLowerCase(), "paybill_claim_awaiting_receipt", "payment_claim", cleanRef, {
         planName: canonicalPlanName,
         amount: canonicalAmount,
       });
@@ -586,7 +589,7 @@ subscriptionRoutes.post(
           note: verdict.reason,
         });
       }
-      await logBillingEvent(email.trim().toLowerCase(), "paybill_claim_rejected", "payment_claim", cleanRef, {
+      await logBillingEvent(c.env as Record<string, string>, email.trim().toLowerCase(), "paybill_claim_rejected", "payment_claim", cleanRef, {
         reason: verdict.reason,
         receiptAmount: receipt.amount,
         claimedAmount: canonicalAmount,
@@ -708,7 +711,7 @@ async function tryAutoFulfillClaim(c: import("hono").Context, transId: string): 
         receipt_id: receipt.id,
         note: verdict.reason,
       });
-      await logBillingEvent(claim.email, "paybill_autofulfill_rejected", "payment_claim", transId, { reason: verdict.reason });
+      await logBillingEvent(c.env as Record<string, string>, claim.email, "paybill_autofulfill_rejected", "payment_claim", transId, { reason: verdict.reason });
       return;
     }
 
@@ -725,7 +728,7 @@ async function tryAutoFulfillClaim(c: import("hono").Context, transId: string): 
       kind: claim.kind || "subscription",
     });
     await setClaimStatus(supabase, claim.id, "matched", { receipt_id: receipt.id });
-    await logBillingEvent(claim.email, "paybill_claim_autofulfilled", "payment_claim", transId, { claimId: claim.id });
+    await logBillingEvent(c.env as Record<string, string>, claim.email, "paybill_claim_autofulfilled", "payment_claim", transId, { claimId: claim.id });
   } catch (err) {
     console.error("[PAYBILL AUTOFULFILL ERROR]", err);
   }
@@ -752,7 +755,7 @@ subscriptionRoutes.post("/mpesa/c2b-confirmation", async (c) => {
     if (normalized) {
       const supabase = getSupabase(c.env as Record<string, string>);
       await recordPaybillReceipt(supabase, normalized);
-      await logBillingEvent("daraja-c2b", "paybill_receipt_recorded", "mpesa_receipt", normalized.transId, {
+      await logBillingEvent(c.env as Record<string, string>, "daraja-c2b", "paybill_receipt_recorded", "mpesa_receipt", normalized.transId, {
         amount: normalized.amount,
         billRef: normalized.billRef,
       });
@@ -781,7 +784,7 @@ subscriptionRoutes.post("/mpesa/kcb-ipn", async (c) => {
     if (normalized) {
       const supabase = getSupabase(c.env as Record<string, string>);
       await recordPaybillReceipt(supabase, normalized);
-      await logBillingEvent("kcb-ipn", "paybill_receipt_recorded", "mpesa_receipt", normalized.transId, {
+      await logBillingEvent(c.env as Record<string, string>, "kcb-ipn", "paybill_receipt_recorded", "mpesa_receipt", normalized.transId, {
         amount: normalized.amount,
         billRef: normalized.billRef,
       });
@@ -904,7 +907,7 @@ subscriptionRoutes.post(
         status: "pending",
         createdAt: Date.now(),
       });
-      await logBillingEvent(email.trim().toLowerCase(), "stk_push_initiated", "mpesa_checkout", result.checkoutRequestId, {
+      await logBillingEvent(c.env as Record<string, string>, email.trim().toLowerCase(), "stk_push_initiated", "mpesa_checkout", result.checkoutRequestId, {
         planName: canonicalPlanName,
         amount: canonicalAmount,
       });
@@ -984,7 +987,7 @@ async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCh
 
   // Provision Partner profile (existing identities are OTP-gated)
   const authSession = await provisionSubscriberUser(c, checkout.name, checkout.email);
-  await logBillingEvent(checkout.email, "stk_push_completed", "subscription", receiptCode, {
+  await logBillingEvent(c.env as Record<string, string>, checkout.email, "stk_push_completed", "subscription", receiptCode, {
     planName: checkout.planName,
     amount: checkout.amount,
     claimRequired: authSession?.claimRequired || false,
@@ -1043,7 +1046,7 @@ subscriptionRoutes.get("/mpesa/query/:checkoutRequestId", rateLimit, async (c) =
   const elapsed = Date.now() - checkout.createdAt;
   if (elapsed > STK_SESSION_TTL_MS) {
     checkout.status = "failed";
-    await logBillingEvent(checkout.email, "stk_push_expired", "mpesa_checkout", checkoutRequestId, {
+    await logBillingEvent(c.env as Record<string, string>, checkout.email, "stk_push_expired", "mpesa_checkout", checkoutRequestId, {
       amount: checkout.amount,
     });
     return c.json({
@@ -1073,7 +1076,7 @@ subscriptionRoutes.post("/mpesa/kcb-callback", async (c) => {
 
     if (!checkoutId || !activeMpesaCheckouts.has(checkoutId)) {
       console.warn("[KCB CALLBACK] unknown CheckoutRequestID:", checkoutId || "(missing)");
-      await logBillingEvent("kcb-callback", "stk_callback_unknown", "mpesa_checkout", checkoutId || "missing", {});
+      await logBillingEvent(c.env as Record<string, string>, "kcb-callback", "stk_callback_unknown", "mpesa_checkout", checkoutId || "missing", {});
       return c.json({ statusCode: "0", statusDescription: "Callback received successfully" });
     }
 
@@ -1082,7 +1085,7 @@ subscriptionRoutes.post("/mpesa/kcb-callback", async (c) => {
     const callbackAmount = Number(response.Amount ?? response.amount ?? checkout.amount);
     if (Number.isFinite(callbackAmount) && Math.round(callbackAmount) !== Math.round(checkout.amount)) {
       console.error("[KCB CALLBACK] amount mismatch:", { checkoutId, expected: checkout.amount, got: callbackAmount });
-      await logBillingEvent(checkout.email, "stk_callback_amount_mismatch", "mpesa_checkout", checkoutId, {
+      await logBillingEvent(c.env as Record<string, string>, checkout.email, "stk_callback_amount_mismatch", "mpesa_checkout", checkoutId, {
         expected: checkout.amount,
         received: callbackAmount,
       });
@@ -1095,12 +1098,12 @@ subscriptionRoutes.post("/mpesa/kcb-callback", async (c) => {
       checkout.receiptCode = String(
         response.MpesaReceiptNumber || response.receipt || `KCB${Date.now().toString().slice(-7)}`
       );
-      await logBillingEvent(checkout.email, "stk_callback_completed", "mpesa_checkout", checkoutId, {
+      await logBillingEvent(c.env as Record<string, string>, checkout.email, "stk_callback_completed", "mpesa_checkout", checkoutId, {
         receiptCode: checkout.receiptCode,
       });
     } else {
       checkout.status = "failed";
-      await logBillingEvent(checkout.email, "stk_callback_failed", "mpesa_checkout", checkoutId, { resultCode });
+      await logBillingEvent(c.env as Record<string, string>, checkout.email, "stk_callback_failed", "mpesa_checkout", checkoutId, { resultCode });
     }
   } catch (err) {
     console.error("[KCB CALLBACK ERROR]", err);
@@ -1235,7 +1238,7 @@ subscriptionRoutes.get("/verify/:reference", rateLimit, async (c) => {
     const expectedMajor = chargeCurrency === "KES" ? kesAmount : usdAmount;
     if (Number.isFinite(chargedMajor) && Number.isFinite(expectedMajor) && Math.abs(chargedMajor - expectedMajor) > 0.009) {
       console.error("[PAYSTACK] charged-amount mismatch:", { reference, chargedMajor, chargeCurrency, expectedMajor });
-      await logBillingEvent(subscriberEmail, "paystack_amount_mismatch", "subscription", reference, {
+      await logBillingEvent(c.env as Record<string, string>, subscriberEmail, "paystack_amount_mismatch", "subscription", reference, {
         chargedMajor,
         chargeCurrency,
         expectedMajor,
@@ -1296,7 +1299,7 @@ subscriptionRoutes.get("/verify/:reference", rateLimit, async (c) => {
     }
 
     const authSession = await provisionSubscriberUser(c, subscriberName, subscriberEmail);
-    await logBillingEvent(subscriberEmail, "paystack_verified", "subscription", reference, {
+    await logBillingEvent(c.env as Record<string, string>, subscriberEmail, "paystack_verified", "subscription", reference, {
       planName,
       amount: kesAmount,
       claimRequired: authSession?.claimRequired || false,
@@ -1393,6 +1396,8 @@ subscriptionRoutes.post(
     z.object({
       orderId: z.string(),
       subscriberName: z.string().optional(),
+      planId: z.string().max(32).optional(),
+      interval: z.enum(["monthly", "yearly"]).default("monthly"),
     })
   ),
   async (c) => {
@@ -1400,7 +1405,7 @@ subscriptionRoutes.post(
     const clientSecret = getSecret(c, "PAYPAL_CLIENT_SECRET");
     if (!clientId || !clientSecret) return c.json({ error: "PayPal not configured" }, 503);
 
-    const { orderId, subscriberName } = c.req.valid("json");
+    const { orderId, subscriberName, planId, interval } = c.req.valid("json");
     const accessToken = await getPayPalAccessToken(clientId, clientSecret);
 
     const res = await fetch(`https://api-m.paypal.com/v2/checkout/orders/${orderId}/capture`, {
@@ -1415,6 +1420,17 @@ subscriptionRoutes.post(
 
     if (data.status === "COMPLETED") {
       const supabase = getSupabase(c.env as Record<string, string>);
+
+      // Idempotency: PayPal retries / double-clicks must not create duplicate ledger rows.
+      const { data: existing } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("payment_reference", orderId)
+        .maybeSingle();
+      if (existing) {
+        return c.json({ status: "COMPLETED", id: orderId, duplicate: true, user: null, token: null });
+      }
+
       const payer = (data.payer as Record<string, unknown>) || {};
       const payerName = (payer.name as Record<string, unknown>) || {};
       const fullName =
@@ -1425,53 +1441,83 @@ subscriptionRoutes.post(
 
       const pu = ((data.purchase_units as Record<string, unknown>[]) || [])[0] || {};
       const amountObj = (pu.amount as Record<string, unknown>) || {};
-      const usdAmount = parseFloat(amountObj.value as string) || 7.72;
+      const capturedUsd = parseFloat(amountObj.value as string) || 0;
+
+      // Plan binding: the capture carries the plan context that /paypal/create
+      // priced (client cannot set prices — re-validate server-side).
+      const plan = planId ? findPlan(planId) : null;
+      const planName = plan ? plan.name : "Kingdom Partner";
+      const resolvedPlanId = plan ? plan.id : ONETIME_PLAN_ID;
+      const targetKes = plan
+        ? interval === "yearly"
+          ? yearlyPriceFromMonthly(plan.kesMonthly)
+          : plan.kesMonthly
+        : 1000;
+      if (plan) {
+        const priceCheck = validatePaymentAmount({ planId: plan.id, interval, amount: targetKes });
+        if (!priceCheck.ok) {
+          return c.json({ error: priceCheck.error, code: priceCheck.code }, 400);
+        }
+      }
 
       const wiseToken = getSecret(c, "WISE_API_TOKEN");
-      const conversion = await computeKesToUsd(1000, wiseToken);
+      const conversion = await computeKesToUsd(targetKes, wiseToken);
+      // Trust PayPal's captured USD for the money record; fall back to live conversion.
+      const usdAmount = capturedUsd > 0 ? capturedUsd : conversion.usdAmount;
 
       const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      periodEnd.setMonth(periodEnd.getMonth() + (interval === "yearly" ? 12 : 1));
 
-      await supabase.from("subscriptions").insert({
-        subscriber_name: fullName,
-        subscriber_email: email,
-        plan_name: "Kingdom Partner",
-        amount: 1000,
-        currency: "KES",
-        usd_amount: usdAmount,
-        exchange_rate: conversion.rate,
-        interval: "monthly",
-        status: "active",
-        payment_provider: "paypal",
-        payment_reference: orderId,
-        current_period_start: new Date().toISOString(),
-        current_period_end: periodEnd.toISOString(),
-      });
+      await supabase.from("subscriptions").upsert(
+        {
+          subscriber_name: fullName,
+          subscriber_email: email,
+          plan_name: planName,
+          plan_id: resolvedPlanId,
+          amount: targetKes,
+          currency: "KES",
+          usd_amount: usdAmount,
+          exchange_rate: conversion.rate,
+          interval,
+          status: "active",
+          retry_count: 0,
+          next_retry_at: null,
+          payment_provider: "paypal",
+          payment_reference: orderId,
+          current_period_start: new Date().toISOString(),
+          current_period_end: periodEnd.toISOString(),
+          metadata: { paypalOrderId: orderId, capturedUsd: usdAmount },
+        },
+        { onConflict: "payment_reference", ignoreDuplicates: true }
+      );
 
-      await supabase.from("donations").insert({
-        amount: usdAmount,
-        currency: "USD",
-        donor_email: email,
-        donor_name: fullName,
-        recurring: true,
-        payment_provider: "paypal",
-        payment_reference: orderId,
-        status: "completed",
-      });
+      await supabase.from("donations").upsert(
+        {
+          amount: usdAmount,
+          currency: "USD",
+          donor_email: email,
+          donor_name: fullName,
+          recurring: true,
+          payment_provider: "paypal",
+          payment_reference: orderId,
+          status: "completed",
+        },
+        { onConflict: "payment_reference", ignoreDuplicates: true }
+      );
 
       await sendDonationEmail(c, email, fullName, usdAmount, "USD", {
         reference: orderId,
       });
       try {
-        await sendPartnerWelcomeEmail(c, email, fullName, "Kingdom Partner", usdAmount, "USD");
+        await sendPartnerWelcomeEmail(c, email, fullName, planName, usdAmount, "USD");
       } catch (err) {
         console.error("[EMAIL] Partner welcome error:", err);
       }
 
       const authSession = await provisionSubscriberUser(c, fullName, email);
-      await logBillingEvent(email, "paypal_captured", "subscription", orderId, {
+      await logBillingEvent(c.env as Record<string, string>, email, "paypal_captured", "subscription", orderId, {
         amount: usdAmount,
+        planId: resolvedPlanId,
         claimRequired: authSession?.claimRequired || false,
       });
 
@@ -1481,7 +1527,7 @@ subscriptionRoutes.post(
         claimRequired: authSession?.claimRequired || false,
         user: authSession?.user || null,
         token: authSession?.token || null,
-        planName: "Kingdom Partner",
+        planName,
       });
     }
 
@@ -1542,7 +1588,7 @@ subscriptionRoutes.post("/webhook", async (c) => {
         .from("subscriptions")
         .update({ status: "canceled", canceled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq("subscription_code", subCode);
-      await logBillingEvent((data.customer as Record<string, unknown>)?.email as string || "paystack-webhook", "subscription_canceled", "subscription", subCode, { via: "paystack_webhook" });
+      await logBillingEvent(c.env as Record<string, string>, (data.customer as Record<string, unknown>)?.email as string || "paystack-webhook", "subscription_canceled", "subscription", subCode, { via: "paystack_webhook" });
     }
   } else if (event === "invoice.payment_failed" || event === "charge.failed") {
     // Dunning entry: mark past_due and schedule the Day-1 retry.
@@ -1556,7 +1602,7 @@ subscriptionRoutes.post("/webhook", async (c) => {
         .update({ status: "past_due", retry_count: 1, next_retry_at: retryAt ? retryAt.toISOString() : null, updated_at: new Date().toISOString() })
         .eq("subscriber_email", email)
         .eq("status", "active");
-      await logBillingEvent(email, "renewal_payment_failed", "subscription", ref || email, { event });
+      await logBillingEvent(c.env as Record<string, string>, email, "renewal_payment_failed", "subscription", ref || email, { event });
     }
   }
 
@@ -1622,7 +1668,7 @@ subscriptionRoutes.post(
       ]);
       const hasRecord = Boolean(user) || (Array.isArray(subs) && subs.length > 0);
       if (hasRecord) {
-        const code = await issueClaimOtp(norm);
+        const code = await issueClaimOtp(c.env as Record<string, string>, norm);
         if (code) {
           const displayName =
             (user as { name?: string } | null)?.name ||
@@ -1634,7 +1680,7 @@ subscriptionRoutes.post(
             console.error("[CLAIM-OTP] email dispatch error:", err);
           }
         }
-        await logBillingEvent(norm, "partner_claim_requested", "user", norm, {});
+        await logBillingEvent(c.env as Record<string, string>, norm, "partner_claim_requested", "user", norm, {});
       }
     } catch (err) {
       console.error("[CLAIM] request error:", err);
@@ -1651,7 +1697,7 @@ subscriptionRoutes.post(
   async (c) => {
     const { email, code } = c.req.valid("json");
     const norm = email.trim().toLowerCase();
-    const check = await checkClaimOtp(norm, code);
+    const check = await checkClaimOtp(c.env as Record<string, string>, norm, code);
     if (!check.ok) {
       return c.json({ error: check.reason || "Verification failed.", code: "INVALID_OTP" }, 400);
     }
@@ -1659,7 +1705,7 @@ subscriptionRoutes.post(
     if (!session) {
       return c.json({ error: "No matching partnership record found.", code: "NO_RECORD" }, 404);
     }
-    await logBillingEvent(norm, "partner_claim_verified", "user", String(session.user.id), {});
+    await logBillingEvent(c.env as Record<string, string>, norm, "partner_claim_verified", "user", String(session.user.id), {});
     return c.json({ status: "verified", user: session.user, token: session.token });
   }
 );
@@ -1669,8 +1715,8 @@ subscriptionRoutes.post(
 // Ownership proof = email + the subscription's own payment_reference.
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function findOwnedSubscription(email: string, paymentReference: string) {
-  const supabase = getSupabase(c.env as Record<string, string>);
+async function findOwnedSubscription(env: Record<string, string>, email: string, paymentReference: string) {
+  const supabase = getSupabase(env);
   const norm = email.trim().toLowerCase();
   // paymentReference is REQUIRED: email alone never authorizes a mutation.
   // It acts as the possession factor (Paystack ref / M-Pesa code / order id).
@@ -1691,7 +1737,7 @@ const manageSchema = z.object({
 
 subscriptionRoutes.post("/manage/cancel", rateLimit, zValidator("json", manageSchema), async (c) => {
   const { email, paymentReference, reason } = c.req.valid("json");
-  const sub = await findOwnedSubscription(email, paymentReference);
+  const sub = await findOwnedSubscription(c.env as Record<string, string>, email, paymentReference);
   if (!sub) return c.json({ error: "No matching partnership record found.", code: "NO_RECORD" }, 404);
   if (String(sub.status) === "canceled") {
     return c.json({ status: "canceled", subscription: sub });
@@ -1709,13 +1755,13 @@ subscriptionRoutes.post("/manage/cancel", rateLimit, zValidator("json", manageSc
     .eq("id", sub.id as number)
     .select()
     .maybeSingle();
-  await logBillingEvent(email.trim().toLowerCase(), "subscription_canceled", "subscription", String(sub.payment_reference || sub.id), { reason: reason || null });
+  await logBillingEvent(c.env as Record<string, string>, email.trim().toLowerCase(), "subscription_canceled", "subscription", String(sub.payment_reference || sub.id), { reason: reason || null });
   return c.json({ status: "canceled", subscription: data || { ...sub, status: "canceled" } });
 });
 
 subscriptionRoutes.post("/manage/pause", rateLimit, zValidator("json", manageSchema), async (c) => {
   const { email, paymentReference } = c.req.valid("json");
-  const sub = await findOwnedSubscription(email, paymentReference);
+  const sub = await findOwnedSubscription(c.env as Record<string, string>, email, paymentReference);
   if (!sub) return c.json({ error: "No matching partnership record found.", code: "NO_RECORD" }, 404);
   const status = String(sub.status);
   if (!["active", "past_due", "grace"].includes(status)) {
@@ -1728,13 +1774,13 @@ subscriptionRoutes.post("/manage/pause", rateLimit, zValidator("json", manageSch
     .eq("id", sub.id as number)
     .select()
     .maybeSingle();
-  await logBillingEvent(email.trim().toLowerCase(), "subscription_paused", "subscription", String(sub.payment_reference || sub.id), {});
+  await logBillingEvent(c.env as Record<string, string>, email.trim().toLowerCase(), "subscription_paused", "subscription", String(sub.payment_reference || sub.id), {});
   return c.json({ status: "paused", subscription: data || { ...sub, status: "paused" } });
 });
 
 subscriptionRoutes.post("/manage/resume", rateLimit, zValidator("json", manageSchema), async (c) => {
   const { email, paymentReference } = c.req.valid("json");
-  const sub = await findOwnedSubscription(email, paymentReference);
+  const sub = await findOwnedSubscription(c.env as Record<string, string>, email, paymentReference);
   if (!sub) return c.json({ error: "No matching partnership record found.", code: "NO_RECORD" }, 404);
   const status = String(sub.status);
   if (!["paused", "past_due", "grace", "suspended"].includes(status)) {
@@ -1757,7 +1803,7 @@ subscriptionRoutes.post("/manage/resume", rateLimit, zValidator("json", manageSc
     .eq("id", sub.id as number)
     .select()
     .maybeSingle();
-  await logBillingEvent(email.trim().toLowerCase(), "subscription_resumed", "subscription", String(sub.payment_reference || sub.id), { from: status });
+  await logBillingEvent(c.env as Record<string, string>, email.trim().toLowerCase(), "subscription_resumed", "subscription", String(sub.payment_reference || sub.id), { from: status });
   return c.json({ status: "active", subscription: data || { ...sub, status: "active" } });
 });
 
@@ -1779,7 +1825,7 @@ subscriptionRoutes.post(
   ),
   async (c) => {
     const { email, paymentReference, newPlanId, interval, apply } = c.req.valid("json");
-    const sub = await findOwnedSubscription(email, paymentReference);
+    const sub = await findOwnedSubscription(c.env as Record<string, string>, email, paymentReference);
     if (!sub) return c.json({ error: "No matching partnership record found.", code: "NO_RECORD" }, 404);
     const status = String(sub.status);
     if (["canceled", "suspended"].includes(status)) {
@@ -1827,7 +1873,7 @@ subscriptionRoutes.post(
       .eq("id", sub.id as number)
       .select()
       .maybeSingle();
-    await logBillingEvent(email.trim().toLowerCase(), "subscription_plan_changed", "subscription", String(sub.payment_reference || sub.id), {
+    await logBillingEvent(c.env as Record<string, string>, email.trim().toLowerCase(), "subscription_plan_changed", "subscription", String(sub.payment_reference || sub.id), {
       from: preview.from,
       to: preview.to,
       immediateBalance,
@@ -1923,7 +1969,7 @@ subscriptionRoutes.post(
       const actor = ((c.get as unknown as (key: string) => { email?: string } | undefined)("user"))?.email || "admin";
       if (decision === "reject") {
         await setClaimStatus(supabase, claim.id, "rejected", { note: note || "Rejected by admin." });
-        await logBillingEvent(actor, "paybill_claim_admin_rejected", "payment_claim", claim.payment_reference, { claimId: claim.id, note: note || null });
+        await logBillingEvent(c.env as Record<string, string>, actor, "paybill_claim_admin_rejected", "payment_claim", claim.payment_reference, { claimId: claim.id, note: note || null });
         return c.json({ status: "rejected", claim: { ...claim, status: "rejected" } });
       }
 
@@ -1948,7 +1994,7 @@ subscriptionRoutes.post(
         receipt_id: receipt?.id || null,
         note: note ? `Admin-approved: ${note}` : "Admin-approved against statement.",
       });
-      await logBillingEvent(actor, "paybill_claim_admin_approved", "payment_claim", claim.payment_reference, { claimId: claim.id, note: note || null });
+      await logBillingEvent(c.env as Record<string, string>, actor, "paybill_claim_admin_approved", "payment_claim", claim.payment_reference, { claimId: claim.id, note: note || null });
       return c.json({ status: "matched", claim: { ...claim, status: "matched" }, subscription: subData || null });
     } catch (err: unknown) {
       return c.json({ error: err instanceof Error ? err.message : "Resolve failed." }, 500);
@@ -1993,7 +2039,7 @@ subscriptionRoutes.post(
         source: "sandbox",
         raw: { simulated: true, at: new Date().toISOString() },
       });
-      await logBillingEvent("sandbox", "paybill_receipt_simulated", "mpesa_receipt", cleanId, {
+      await logBillingEvent(c.env as Record<string, string>, "sandbox", "paybill_receipt_simulated", "mpesa_receipt", cleanId, {
         amount: Math.round(amount),
       });
       await tryAutoFulfillClaim(c, cleanId);
@@ -2095,7 +2141,7 @@ subscriptionRoutes.post("/billing/retry-due", async (c) => {
             .from("subscriptions")
             .update({ status: "suspended", next_retry_at: null, updated_at: new Date().toISOString() })
             .eq("id", sub.id as number);
-          await logBillingEvent(email, "subscription_suspended", "subscription", String(sub.payment_reference || sub.id), { attempts: attemptNo - 1 });
+          await logBillingEvent(c.env as Record<string, string>, email, "subscription_suspended", "subscription", String(sub.payment_reference || sub.id), { attempts: attemptNo - 1 });
           results.suspended++;
           continue;
         }
@@ -2139,7 +2185,7 @@ subscriptionRoutes.post("/billing/retry-due", async (c) => {
         } catch (err) {
           console.error("[DUNNING] email error:", err);
         }
-        await logBillingEvent(email, "dunning_reminder_sent", "subscription", String(sub.payment_reference || sub.id), { attemptNo });
+        await logBillingEvent(c.env as Record<string, string>, email, "dunning_reminder_sent", "subscription", String(sub.payment_reference || sub.id), { attemptNo });
         results.reminded++;
       } catch (err) {
         console.error("[DUNNING] row error:", err);

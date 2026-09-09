@@ -4,7 +4,7 @@
  * Security rule: the client NEVER sets the price. Every payment endpoint
  * must validate the submitted amount against this catalog before touching
  * any provider (KCB/Daraja STK, Paystack, PayPal) or the ledger.
- * Keep in sync with `PARTNER_PLANS` in `src/pages/SubscriptionPortal.tsx`.
+ * Keep in sync with `PARTNER_PLANS` in `src/data/plans.ts`.
  */
 
 export interface PartnerPlanDef {

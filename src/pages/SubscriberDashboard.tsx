@@ -34,7 +34,7 @@ import SEO from "../components/SEO";
 import AmbientParticles from "../components/AmbientParticles";
 import PartnershipSupportCard from "../components/PartnershipSupportCard";
 import brandLogo from "../assets/logo.png";
-import { api } from "../lib/api";
+import { api, normalizeAuthUser } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
 
@@ -47,91 +47,7 @@ type SubscriberTab =
   | "prayer"
   | "settings";
 
-interface PartnerTierInfo {
-  id: string;
-  name: string;
-  badge: string;
-  kesMonthly: number;
-  usdMonthly: number;
-  tagline: string;
-  description: string;
-  impactHighlight: string;
-  perks: string[];
-}
-
-const PARTNER_TIERS: Record<string, PartnerTierInfo> = {
-  seed: {
-    id: "seed",
-    name: "Seed Partner",
-    badge: "🌱 Seed Partner",
-    kesMonthly: 1000,
-    usdMonthly: 7.72,
-    tagline: "Foundational Mission & Bread Support",
-    description: "Sowing into frontline evangelism, gospel bread relief, and Holy Bible distribution.",
-    impactHighlight: "Feeds 2 vulnerable families & supplies 1 Holy Bible to new converts each month.",
-    perks: [
-      "Official Digital Partner Membership Certificate",
-      "Name & Family placed on 24/7 Global Intercessory Altar",
-      "Monthly Mission Impact Digest & Financial Stewardship Report",
-      "Access to partner devotional library & study plans",
-      "Interactive Partner Dashboard & giving history records",
-    ],
-  },
-  ambassador: {
-    id: "ambassador",
-    name: "Kingdom Ambassador",
-    badge: "👑 Kingdom Ambassador",
-    kesMonthly: 3000,
-    usdMonthly: 23.16,
-    tagline: "Outreach Crusades & Field Deployment",
-    description: "Directly sponsor village crusades, church planting, and qualify for official mission delegation travel.",
-    impactHighlight: "Funds village crusade sound equipment & regional evangelist mobilization.",
-    perks: [
-      "Official Kingdom Missions Network Partner ID Card & Seal",
-      "Priority Selection for Mission Travel Teams & Global Crusades",
-      "Monthly Live Prophetic Briefing with Bishop Dr. George Githinji",
-      "Dedicated 24/7 Urgent Pastoral Prayer WhatsApp Line",
-      "Reserved Partner Seating at all KMN Summits & Conferences",
-      "All Seed Partner perks included",
-    ],
-  },
-  harvest: {
-    id: "harvest",
-    name: "Global Harvest Partner",
-    badge: "🌍 Global Harvest Partner",
-    kesMonthly: 7500,
-    usdMonthly: 57.9,
-    tagline: "International Itineraries & Ministry Logistical Backing",
-    description: "Empower international missionary travel, satellite broadcasts, and receive itinerary facilitation for overseas ministry.",
-    impactHighlight: "Establishes permanent regional mission bases & international crusades.",
-    perks: [
-      "International Preaching Logistics & Pastoral Network Facilitation",
-      "Official Ministry Ambassador Credential Endorsement",
-      "Quarterly Private Executive Roundtable with Bishop George",
-      "VIP Access & Platform Seating at all Global Summits",
-      "Direct sponsorship recognition in KMN broadcast credits",
-      "All Kingdom Ambassador perks included",
-    ],
-  },
-  pillar: {
-    id: "pillar",
-    name: "Covenant Pillar",
-    badge: "🏛️ Covenant Pillar",
-    kesMonthly: 20000,
-    usdMonthly: 154.4,
-    tagline: "Strategic Vision & Global Expansion",
-    description: "Lead major kingdom expansion initiatives, television broadcasting, and strategic disaster relief.",
-    impactHighlight: "Sponsors city-wide stadium crusades and multi-nation satellite broadcasts.",
-    perks: [
-      "Advisory Seat on KMN Global Missions Strategy Council",
-      "Personalized Physical Gold-Plated Partner Seal & Ordination Letter",
-      "Comprehensive International Preaching Delegation Logistics Coordination",
-      "Personal Monthly Pastoral Prayer Covenant with Bishop Dr. George Githinji",
-      "Executive Briefing & Strategy Access on upcoming mission frontiers",
-      "All Global Harvest perks included",
-    ],
-  },
-};
+import { PARTNER_TIERS } from "../data/plans";
 
 const DEVOTIONAL_RESOURCES = [
   {
@@ -319,17 +235,12 @@ export default function SubscriberDashboard() {
     try {
       const res = await api.subscriptions.verifyClaim(claimEmail, claimCode.trim());
       if (res.user) {
-        setSession(
-          {
-            ...res.user,
-            role: (res.user.role === "admin" || res.user.role === "superadmin" ? res.user.role : "member") as
-              | "member"
-              | "admin"
-              | "superadmin",
-          }
-        );
-        setClaimDone(true);
-        showToast("Partner Hub secured! Welcome back.", "success");
+        const sessionUser = normalizeAuthUser(res.user);
+        if (sessionUser) {
+          setSession(sessionUser);
+          setClaimDone(true);
+          showToast("Partner Hub secured! Welcome back.", "success");
+        }
       }
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : "Verification failed. Please try again.", "error");
@@ -1478,14 +1389,15 @@ export default function SubscriberDashboard() {
                     {Object.values(PARTNER_TIERS).map((plan) => {
                       const isSelected = partnerTierKey === plan.id;
                       return (
-                        <div
+                        <button
                           key={plan.id}
+                          type="button"
                           onClick={() => {
                             setPartnerTierKey(plan.id);
                             setPlanPreview(null);
                             handlePreviewPlanChange(plan.id, false);
                           }}
-                          className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+                          className={`p-5 rounded-2xl border cursor-pointer transition-all text-left w-full ${
                             isSelected
                               ? "bg-[#d4af37]/10 border-[#d4af37] shadow-[0_0_20px_rgba(212,175,55,0.2)]"
                               : "bg-white/[0.02] border-white/10 hover:bg-white/[0.05]"
@@ -1506,7 +1418,7 @@ export default function SubscriberDashboard() {
                             </span>
                           </div>
                           <p className="text-xs text-white/70">{plan.tagline}</p>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>

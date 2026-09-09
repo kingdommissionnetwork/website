@@ -60,7 +60,6 @@ export default function PrayerWall() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPrayers(activeCategory);
   }, [activeCategory, fetchPrayers]);
 

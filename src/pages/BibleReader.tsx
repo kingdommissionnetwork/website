@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import SEO from "../components/SEO";
 import {
@@ -61,7 +61,13 @@ export default function BibleReader() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [fontSize, setFontSize] = useState(18);
-  const [bookmarkedVerses, setBookmarkedVerses] = useLocalStorage<Set<string>>("bible-bookmarks", new Set());
+  const [bookmarkedList, setBookmarkedList] = useLocalStorage<string[]>("bible-bookmarks", []);
+  // Derive a Set for O(1) lookups. Guard against legacy corrupted values
+  // (JSON.stringify(new Set()) === "{}") written before the array migration.
+  const bookmarkedVerses = useMemo(() => {
+    const list = Array.isArray(bookmarkedList) ? bookmarkedList : [];
+    return new Set(list);
+  }, [bookmarkedList]);
   const [noteText, setNoteText] = useState("");
   const [savedNotes, setSavedNotes] = useLocalStorage<Record<string, string>>("bible-notes", {});
   const [expandedSection, setExpandedSection] = useState<"old" | "new" | null>("old");
@@ -128,16 +134,14 @@ export default function BibleReader() {
 
   const handleBookmark = (verse: number) => {
     const key = `${selectedBook} ${selectedChapter}:${verse}`;
-    setBookmarkedVerses((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
+    setBookmarkedList((prev) => {
+      const list = Array.isArray(prev) ? prev : [];
+      if (list.includes(key)) {
         showToast("Bookmark removed", "info");
-      } else {
-        next.add(key);
-        showToast("Verse bookmarked!", "success");
+        return list.filter((k) => k !== key);
       }
-      return next;
+      showToast("Verse bookmarked!", "success");
+      return [...list, key];
     });
   };
 

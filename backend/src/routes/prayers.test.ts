@@ -19,7 +19,8 @@ describe('Prayer Routes', () => {
   beforeAll(() => {
     const mockSelect = vi.fn().mockReturnThis();
     const mockEq = vi.fn().mockReturnThis();
-    const mockOrder = vi.fn().mockResolvedValue({ data: [], error: null });
+    const mockOrder = vi.fn().mockReturnThis();
+    const mockRange = vi.fn().mockResolvedValue({ data: [], error: null });
     const mockInsertSingle = vi.fn().mockResolvedValue({ data: { id: 1 }, error: null });
     const mockInsert = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: mockInsertSingle }) });
     const mockRpcSingle = vi.fn().mockResolvedValue({ data: { prayers: 1 }, error: null });
@@ -32,6 +33,7 @@ describe('Prayer Routes', () => {
         insert: mockInsert,
         eq: mockEq,
         order: mockOrder,
+        range: mockRange,
         single: mockSingle,
       }),
       rpc: mockRpc,
@@ -86,6 +88,16 @@ describe('Prayer Routes', () => {
 
   test('GET / with category filter', async () => {
     const res = await app.request('/?category=Healing');
+    expect(res.status).toBe(200);
+  });
+
+  test('GET / accepts limit and offset params', async () => {
+    const res = await app.request('/?limit=10&offset=5');
+    expect(res.status).toBe(200);
+  });
+
+  test('GET / caps limit at 100', async () => {
+    const res = await app.request('/?limit=9999');
     expect(res.status).toBe(200);
   });
 
