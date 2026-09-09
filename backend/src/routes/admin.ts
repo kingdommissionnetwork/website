@@ -512,9 +512,12 @@ adminRoutes.post(
 
     if (action === "reject") {
       if (type === "subscription_claim") {
-        await supabase.from("payment_claims").update({ status: "rejected", note: resolvedNotes || "Rejected by admin" }).eq("id", claimId);
+        const { error: rejErr } = await supabase.from("payment_claims").update({ status: "rejected", note: resolvedNotes || "Rejected by admin" }).eq("id", claimId);
+        if (rejErr) return c.json({ error: "Failed to reject claim: " + rejErr.message }, 500);
       } else {
-        await supabase.from("donations").update({ status: "rejected", notes: resolvedNotes || "Rejected by admin" }).eq("id", claimId);
+        // donations table has no notes column — only update status
+        const { error: rejErr } = await supabase.from("donations").update({ status: "rejected" }).eq("id", claimId);
+        if (rejErr) return c.json({ error: "Failed to reject donation: " + rejErr.message }, 500);
       }
       await logAuditEvent(supabase, actor, "MPESA_CLAIM_REJECTED", type, claimId, { notes: resolvedNotes });
       return c.json({ success: true, message: "Claim rejected successfully." });
@@ -553,8 +556,9 @@ adminRoutes.post(
         await logAuditEvent(supabase, actor, "MPESA_CLAIM_APPROVED", type, claimId, { receipt, notes: resolvedNotes });
         return c.json({ success: true, message: "Subscription claim approved and activated.", result });
       } else {
-        // Donation — just mark as completed
-        await supabase.from("donations").update({ status: "completed", notes: resolvedNotes || "Admin-approved" }).eq("id", claimId);
+        // Donation — mark as completed. donations table has no notes column.
+        const { error: donErr } = await supabase.from("donations").update({ status: "completed" }).eq("id", claimId);
+        if (donErr) throw new Error("Failed to update donation status: " + donErr.message);
         await logAuditEvent(supabase, actor, "MPESA_DONATION_APPROVED", type, claimId, { notes: resolvedNotes });
         return c.json({ success: true, message: "Donation verified and marked as completed." });
       }
