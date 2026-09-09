@@ -490,7 +490,7 @@ export default function AdminDashboard() {
   const currentTabLabel = sidebarSections.flatMap((s) => s.items).find((i) => i.id === activeTab)?.label || "Command Center";
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] dark:bg-[#071324] text-[#0c1b33] dark:text-white flex flex-col font-outfit transition-colors duration-300">
+    <div className="admin-dashboard min-h-screen bg-[#f4f7fb] dark:bg-[#071324] text-[#0c1b33] dark:text-white flex flex-col font-outfit transition-colors duration-300">
       <SEO title="Enterprise Operations Hub — Kingdom Missions Network" description="Operational Command Center, Members, Subscriptions, and Governance." />
 
       {/* Sticky Command Top Bar */}
@@ -2109,11 +2109,23 @@ export default function AdminDashboard() {
                   id="broadcastAudienceSelect"
                   value={broadcastAudience}
                   onChange={(e) => setBroadcastAudience(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs font-bold focus:outline-none"
+                  className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white text-xs font-bold focus:outline-none focus:border-[#d4af37]"
                 >
-                  <option value="all_partners" className="bg-[#0c1b33]">All Covenant Partners ({members.length})</option>
-                  <option value="ambassadors" className="bg-[#0c1b33]">Kingdom Ambassadors Only</option>
-                  <option value="harvest_partners" className="bg-[#0c1b33]">Global Harvest & Pillars Only</option>
+                  <optgroup label="General Outreach" className="bg-[#0c1b33] text-[#d4af37] font-bold">
+                    <option value="all_partners" className="bg-[#0c1b33] text-white">All Members & Partners ({members.length})</option>
+                    <option value="active_subscribers" className="bg-[#0c1b33] text-white">Active Covenant Partners ({members.filter(m => m.subscriptionStatus === 'active').length})</option>
+                    <option value="suspended_members" className="bg-[#0c1b33] text-white">Suspended Accounts Only ({members.filter(m => m.subscriptionStatus === 'suspended').length})</option>
+                  </optgroup>
+                  <optgroup label="Partnership Tiers" className="bg-[#0c1b33] text-[#d4af37] font-bold">
+                    <option value="harvest_and_pillars" className="bg-[#0c1b33] text-white">Global Harvest & Pillars ({members.filter(m => /harvest|pillar/i.test(m.planName)).length})</option>
+                    <option value="ambassadors" className="bg-[#0c1b33] text-white">Kingdom Ambassadors ({members.filter(m => /ambassador/i.test(m.planName)).length})</option>
+                    <option value="seed_partners" className="bg-[#0c1b33] text-white">Seed Partners ({members.filter(m => /seed/i.test(m.planName)).length})</option>
+                  </optgroup>
+                  <optgroup label="Giving Cadence & Governance" className="bg-[#0c1b33] text-[#d4af37] font-bold">
+                    <option value="monthly_partners" className="bg-[#0c1b33] text-white">Monthly Giving Partners</option>
+                    <option value="annual_partners" className="bg-[#0c1b33] text-white">Annual Giving Partners</option>
+                    <option value="admin_leadership" className="bg-[#0c1b33] text-white">Ministry Leadership Council ({members.filter(m => ['admin', 'superadmin', 'pastor'].includes(m.role?.toLowerCase())).length})</option>
+                  </optgroup>
                 </select>
               </div>
 

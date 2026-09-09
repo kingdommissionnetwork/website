@@ -273,3 +273,173 @@
     margin: 1cm;
   }
 }
+
+/* ==========================================================================
+   SYSTEM-WIDE THEME ADAPTATION (NORMAL / LIGHT & DARK MODES)
+   ========================================================================== */
+
+/* 1. Normal / Light Mode for Admin Dashboard */
+html:not(.dark) .admin-dashboard {
+  background-color: #f1f5f9 !important;
+  color: #0c1b33 !important;
+}
+
+html:not(.dark) .admin-dashboard header {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: #e2e8f0 !important;
+  color: #0c1b33 !important;
+}
+
+html:not(.dark) .admin-dashboard header span.text-white\/40,
+html:not(.dark) .admin-dashboard header span.text-white\/30 {
+  color: #64748b !important;
+}
+
+html:not(.dark) .admin-dashboard header span.text-\[\#fbf5b7\] {
+  color: #996515 !important;
+}
+
+html:not(.dark) .admin-dashboard aside {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0c1b33 !important;
+}
+
+html:not(.dark) .admin-dashboard main {
+  background-color: #f1f5f9 !important;
+  color: #0c1b33 !important;
+}
+
+/* Light mode cards, panels, stats containers */
+html:not(.dark) .admin-dashboard .bg-white\/\[0\.03\],
+html:not(.dark) .admin-dashboard .bg-white\/5,
+html:not(.dark) .admin-dashboard .bg-\[\#0d1d36\],
+html:not(.dark) .admin-dashboard .bg-\[\#09182d\],
+html:not(.dark) .admin-dashboard .bg-\[\#071324\],
+html:not(.dark) .admin-dashboard .bg-\[\#0c1f38\] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Light mode text colors */
+html:not(.dark) .admin-dashboard .text-white {
+  color: #0c1b33 !important;
+}
+
+html:not(.dark) .admin-dashboard .text-white\/80,
+html:not(.dark) .admin-dashboard .text-white\/70 {
+  color: #334155 !important;
+}
+
+html:not(.dark) .admin-dashboard .text-white\/60,
+html:not(.dark) .admin-dashboard .text-white\/50,
+html:not(.dark) .admin-dashboard .text-white\/40 {
+  color: #64748b !important;
+}
+
+html:not(.dark) .admin-dashboard .text-white\/30,
+html:not(.dark) .admin-dashboard .text-white\/20 {
+  color: #94a3b8 !important;
+}
+
+html:not(.dark) .admin-dashboard .border-white\/10,
+html:not(.dark) .admin-dashboard .border-white\/15,
+html:not(.dark) .admin-dashboard .border-white\/20,
+html:not(.dark) .admin-dashboard .divide-white\/5,
+html:not(.dark) .admin-dashboard .divide-white\/10 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Attention Cards in Light Mode */
+html:not(.dark) .admin-dashboard .bg-amber-500\/10 {
+  background-color: #fefce8 !important;
+  border-color: #fef08a !important;
+}
+html:not(.dark) .admin-dashboard .bg-red-500\/10 {
+  background-color: #fef2f2 !important;
+  border-color: #fecaca !important;
+}
+html:not(.dark) .admin-dashboard .bg-emerald-500\/10 {
+  background-color: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+}
+
+/* Interactive elements in Light Mode */
+html:not(.dark) .admin-dashboard button.hover\:bg-white\/5:hover,
+html:not(.dark) .admin-dashboard button.hover\:bg-white\/10:hover,
+html:not(.dark) .admin-dashboard .bg-white\/5,
+html:not(.dark) .admin-dashboard .bg-white\/10 {
+  background-color: #f1f5f9 !important;
+  color: #0c1b33 !important;
+}
+
+html:not(.dark) .admin-dashboard table thead tr {
+  background-color: #f8fafc !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .admin-dashboard table thead th {
+  color: #64748b !important;
+}
+
+html:not(.dark) .admin-dashboard table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .admin-dashboard input,
+html:not(.dark) .admin-dashboard select,
+html:not(.dark) .admin-dashboard textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0c1b33 !important;
+}
+
+html:not(.dark) .admin-dashboard input::placeholder,
+html:not(.dark) .admin-dashboard textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* 2. Dark Mode for Public Portal & Pages */
+html.dark .bg-\[\#FAF7F2\],
+html.dark .bg-\[\#f5f0e8\],
+html.dark .bg-\[\#f8f6f3\],
+html.dark .bg-parchment {
+  background-color: #0a1628 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .bg-\[\#e6eef7\],
+html.dark .bg-cloud-blue {
+  background-color: #071324 !important;
+  color: #f8fafc !important;
+}
+
+html.dark blockquote.text-\[\#0c1b33\],
+html.dark h1.text-\[\#0c1b33\],
+html.dark h2.text-\[\#0c1b33\],
+html.dark h3.text-\[\#0c1b33\],
+html.dark h4.text-\[\#0c1b33\],
+html.dark p.text-\[\#0c1b33\] {
+  color: #f8fafc !important;
+}
+
+html.dark .bg-white {
+  background-color: #0c1c33 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+}
+
+html.dark .text-\[\#0c1b33\] {
+  color: #f8fafc !important;
+}
+
+html.dark .text-midnight {
+  color: #f8fafc !important;
+}
+
+html.dark .border-\[\#0c1b33\]\/10,
+html.dark .border-gray-200 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+

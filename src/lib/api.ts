@@ -23,7 +23,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new ApiError(res.status, body.error || res.statusText);
+    let errorMsg = res.statusText;
+    if (typeof body.error === "string") {
+      errorMsg = body.error;
+    } else if (typeof body.message === "string") {
+      errorMsg = body.message;
+    } else if (body.error && typeof body.error === "object") {
+      if (Array.isArray(body.error.issues)) {
+        errorMsg = body.error.issues.map((i: { message?: string; path?: (string | number)[] }) => i.message || String(i)).join(", ");
+      } else {
+        errorMsg = JSON.stringify(body.error);
+      }
+    }
+    throw new ApiError(res.status, errorMsg);
   }
   return res.json();
 }

@@ -846,7 +846,21 @@ adminRoutes.post(
     z.object({
       subject: z.string().min(1).max(200),
       body: z.string().min(1).max(10000),
-      audience: z.enum(["all_partners", "active_subscribers", "monthly_partners", "annual_partners"]).default("all_partners"),
+      audience: z
+        .enum([
+          "all_partners",
+          "all_members",
+          "active_subscribers",
+          "suspended_members",
+          "seed_partners",
+          "ambassadors",
+          "harvest_and_pillars",
+          "harvest_partners",
+          "monthly_partners",
+          "annual_partners",
+          "admin_leadership",
+        ])
+        .default("all_partners"),
     })
   ),
   async (c) => {
@@ -854,44 +868,107 @@ adminRoutes.post(
     const { subject, body, audience } = c.req.valid("json");
     const actor = getActorEmail(c);
 
-    // Build recipient query based on audience segment
-    let q = supabase.from("subscriptions").select("subscriber_email, subscriber_name, interval").eq("status", "active");
-    if (audience === "monthly_partners") q = q.eq("interval", "monthly");
-    if (audience === "annual_partners") q = q.eq("interval", "yearly");
-
-    const { data: subs, error } = await q;
-    if (error) {
-      console.error("[BROADCAST] Failed to fetch recipients:", error.message);
-      return c.json({ error: "Failed to fetch subscriber list: " + error.message }, 500);
+    interface Recipient {
+      email: string;
+      name: string;
     }
 
-    const recipients = (subs || []).filter((s: Record<string, unknown>) => s.subscriber_email);
-    if (recipients.length === 0) {
-      return c.json({ success: true, sent: 0, message: "No active partners found for the selected audience." });
+    const rawRecipients: Recipient[] = [];
+
+    if (audience === "all_members" || audience === "all_partners") {
+      // Query both community members and subscribers for maximum outreach coverage
+      const [{ data: users }, { data: subs }] = await Promise.all([
+        supabase.from("users").select("email, name"),
+        supabase.from("subscriptions").select("subscriber_email, subscriber_name"),
+      ]);
+
+      (users || []).forEach((u: { email?: string; name?: string }) => {
+        if (u.email) rawRecipients.push({ email: u.email, name: u.name || "Kingdom Member" });
+      });
+      (subs || []).forEach((s: { subscriber_email?: string; subscriber_name?: string }) => {
+        if (s.subscriber_email) rawRecipients.push({ email: s.subscriber_email, name: s.subscriber_name || "Kingdom Partner" });
+      });
+    } else if (audience === "admin_leadership") {
+      // Target leadership council and platform administrators
+      const { data: leaders, error } = await supabase
+        .from("users")
+        .select("email, name")
+        .in("role", ["admin", "superadmin", "super_admin", "system_admin"]);
+
+      if (error) {
+        console.error("[BROADCAST] Failed to fetch leaders:", error.message);
+        return c.json({ error: "Failed to fetch leadership list: " + error.message }, 500);
+      }
+
+      (leaders || []).forEach((u: { email?: string; name?: string }) => {
+        if (u.email) rawRecipients.push({ email: u.email, name: u.name || "Ministry Leader" });
+      });
+    } else {
+      // Subscriptions-based segments
+      let q = supabase
+        .from("subscriptions")
+        .select("subscriber_email, subscriber_name, status, plan_name, interval");
+
+      if (audience === "active_subscribers") {
+        q = q.eq("status", "active");
+      } else if (audience === "suspended_members") {
+        q = q.eq("status", "suspended");
+      } else if (audience === "seed_partners") {
+        q = q.eq("status", "active").ilike("plan_name", "%Seed%");
+      } else if (audience === "ambassadors") {
+        q = q.eq("status", "active").ilike("plan_name", "%Ambassador%");
+      } else if (audience === "harvest_and_pillars" || audience === "harvest_partners") {
+        q = q.eq("status", "active").or("plan_name.ilike.%Harvest%,plan_name.ilike.%Pillar%");
+      } else if (audience === "monthly_partners") {
+        q = q.eq("status", "active").eq("interval", "monthly");
+      } else if (audience === "annual_partners") {
+        q = q.eq("status", "active").eq("interval", "yearly");
+      }
+
+      const { data: subs, error } = await q;
+      if (error) {
+        console.error("[BROADCAST] Failed to fetch recipients:", error.message);
+        return c.json({ error: "Failed to fetch subscriber list: " + error.message }, 500);
+      }
+
+      (subs || []).forEach((s: { subscriber_email?: string; subscriber_name?: string }) => {
+        if (s.subscriber_email) rawRecipients.push({ email: s.subscriber_email, name: s.subscriber_name || "Kingdom Partner" });
+      });
     }
 
-    // De-duplicate by email
+    // De-duplicate by normalized lowercase email
     const seen = new Set<string>();
-    const unique = recipients.filter((s: Record<string, unknown>) => {
-      const email = String(s.subscriber_email).toLowerCase();
-      if (seen.has(email)) return false;
-      seen.add(email);
-      return true;
-    });
+    const uniqueRecipients: Recipient[] = [];
+    for (const r of rawRecipients) {
+      const em = r.email.trim().toLowerCase();
+      if (!em || !em.includes("@") || seen.has(em)) continue;
+      seen.add(em);
+      uniqueRecipients.push({ email: em, name: r.name });
+    }
 
-    // Fan-out — send in batches of 10 to avoid overwhelming Resend rate limits
+    if (uniqueRecipients.length === 0) {
+      return c.json({
+        success: true,
+        sent: 0,
+        failed: 0,
+        total: 0,
+        message: "No recipients found matching the selected audience criteria.",
+      });
+    }
+
+    // Fan-out dispatch in batches of 10 to protect Resend rate limits
     let sent = 0;
     let failed = 0;
     const BATCH = 10;
-    for (let i = 0; i < unique.length; i += BATCH) {
-      const batch = unique.slice(i, i + BATCH);
+    for (let i = 0; i < uniqueRecipients.length; i += BATCH) {
+      const batch = uniqueRecipients.slice(i, i + BATCH);
       await Promise.allSettled(
-        batch.map(async (s: Record<string, unknown>) => {
+        batch.map(async (recipient) => {
           try {
             await sendPastoralBroadcastEmail(
               c,
-              String(s.subscriber_email),
-              String(s.subscriber_name || "Kingdom Partner"),
+              recipient.email,
+              recipient.name,
               subject,
               body,
               audience
@@ -899,7 +976,7 @@ adminRoutes.post(
             sent++;
           } catch (e) {
             failed++;
-            console.error("[BROADCAST] Failed to send to", s.subscriber_email, e);
+            console.error("[BROADCAST] Failed dispatching to", recipient.email, e);
           }
         })
       );
@@ -910,15 +987,15 @@ adminRoutes.post(
       audience,
       sent,
       failed,
-      total: unique.length,
+      total: uniqueRecipients.length,
     });
 
     return c.json({
       success: true,
       sent,
       failed,
-      total: unique.length,
-      message: `Broadcast sent to ${sent} of ${unique.length} partners${failed > 0 ? ` (${failed} failed)` : ""}.`,
+      total: uniqueRecipients.length,
+      message: `Broadcast delivered to ${sent} of ${uniqueRecipients.length} recipients${failed > 0 ? ` (${failed} failed)` : ""}.`,
     });
   }
 );
