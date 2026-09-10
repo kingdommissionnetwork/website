@@ -587,5 +587,34 @@ export const api = {
       });
     },
   },
-
+  verifyDocument: async (params: { ref?: string; inv?: string; partner?: string; statement?: string }): Promise<{
+    verified: boolean;
+    type: "invoice" | "partner" | "statement";
+    reference?: string;
+    invoiceNumber?: string;
+    amount?: number;
+    currency?: string;
+    donorName?: string;
+    donorEmail?: string;
+    recurring?: boolean;
+    provider?: string;
+    status?: string;
+    date?: string;
+    partnerId?: string;
+    name?: string;
+    tier?: string;
+    joinedAt?: string;
+    year?: string;
+    verifiedAt?: string;
+    notice?: string;
+    error?: string;
+  }> => {
+    const q = new URLSearchParams();
+    if (params.ref) q.set("ref", params.ref);
+    if (params.inv) q.set("inv", params.inv);
+    if (params.partner) q.set("partner", params.partner);
+    if (params.statement) q.set("statement", params.statement);
+    return await request(`/donations/verify-receipt?${q.toString()}`);
+  },
 };
+

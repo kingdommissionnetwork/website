@@ -47,4 +47,26 @@ describe('Donation Routes', () => {
     });
     expect(res.status).toBe(401);
   });
+
+  test('GET /verify-receipt returns 400 when missing parameters', async () => {
+    const res = await app.request('/verify-receipt');
+    expect(res.status).toBe(400);
+  });
+
+  test('GET /verify-receipt returns verified document for ref/inv', async () => {
+    const res = await app.request('/verify-receipt?ref=RTY54EW23R&inv=KMN-REC-16');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.verified).toBe(true);
+    expect(body.reference).toBe('RTY54EW23R');
+    expect(body.invoiceNumber).toBe('KMN-REC-16');
+  });
+
+  test('GET /verify-receipt returns verified partner credential', async () => {
+    const res = await app.request('/verify-receipt?partner=HKN-PTN-4029');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.verified).toBe(true);
+    expect(body.type).toBe('partner');
+  });
 });

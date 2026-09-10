@@ -307,7 +307,14 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     
     @page {
       size: A4 portrait;
-      margin: 12mm 15mm 15mm 15mm;
+      /* Slightly reduced margins to guarantee single-page fit */
+      margin: 8mm 12mm 10mm 12mm;
+    }
+
+    html, body {
+      /* fit-content height ensures iframe preview does not scroll */
+      height: fit-content;
+      width: 100%;
     }
 
     * {
@@ -322,23 +329,23 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       font-family: 'Inter', sans-serif;
       color: #0c1b33;
       background: #ffffff;
-      font-size: 13px;
-      line-height: 1.5;
+      font-size: 11.5px;
+      line-height: 1.4;
     }
 
     .invoice-container {
       position: relative;
-      max-width: 800px;
+      width: 100%;
       margin: 0 auto;
       border: 2px solid #d4af37;
-      padding: 32px 38px;
+      padding: 20px 26px;
       background: #ffffff;
-      overflow: hidden;
+      /* No overflow:hidden — would clip content in iframe preview */
     }
 
     /* Guilloche Pattern Border */
     .guilloche-bar {
-      height: 6px;
+      height: 5px;
       background: repeating-linear-gradient(
         45deg,
         #d4af37,
@@ -346,7 +353,7 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
         #0c1b33 10px,
         #0c1b33 20px
       );
-      margin-bottom: 24px;
+      margin-bottom: 14px;
     }
 
     /* Background Anti-Counterfeit Watermark */
@@ -372,23 +379,25 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       justify-content: space-between;
       align-items: flex-start;
       border-bottom: 2px solid #0c1b33;
-      padding-bottom: 20px;
-      margin-bottom: 24px;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
       position: relative;
       z-index: 1;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .brand-section {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
     }
 
     .brand-logo {
-      width: 72px;
-      height: 72px;
+      width: 56px;
+      height: 56px;
       object-fit: contain;
-      border-radius: 12px;
+      border-radius: 10px;
       border: 2px solid #d4af37;
       padding: 2px;
       background: #ffffff;
@@ -396,7 +405,7 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
 
     .brand-title {
       font-family: 'Outfit', sans-serif;
-      font-size: 22px;
+      font-size: 18px;
       font-weight: 800;
       color: #0c1b33;
       letter-spacing: 0.5px;
@@ -404,20 +413,20 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     }
 
     .brand-subtitle {
-      font-size: 11px;
+      font-size: 10px;
       color: #d4af37;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 2px;
       display: block;
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
     .brand-details {
-      font-size: 10px;
+      font-size: 9px;
       color: #556987;
-      margin-top: 4px;
-      line-height: 1.4;
+      margin-top: 3px;
+      line-height: 1.35;
     }
 
     .doc-badge-section {
@@ -450,14 +459,16 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .metadata-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
+      gap: 8px;
       background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 14px 18px;
-      margin-bottom: 24px;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
       position: relative;
       z-index: 1;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .meta-box span.label {
@@ -485,49 +496,53 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .party-info {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-bottom: 28px;
+      gap: 14px;
+      margin-bottom: 14px;
       position: relative;
       z-index: 1;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .party-card {
       border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 16px;
+      border-radius: 6px;
+      padding: 10px 12px;
       background: #ffffff;
     }
 
     .party-card-title {
       font-family: 'Outfit', sans-serif;
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 800;
       color: #855d14;
       text-transform: uppercase;
       letter-spacing: 1.5px;
       border-bottom: 1px solid #f1f5f9;
-      padding-bottom: 6px;
-      margin-bottom: 8px;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .party-name {
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 800;
       color: #0c1b33;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
 
     .party-sub {
-      font-size: 11px;
+      font-size: 10px;
       color: #64748b;
-      line-height: 1.4;
+      line-height: 1.35;
     }
 
     /* Line Item Table */
     .table-container {
-      margin-bottom: 24px;
+      margin-bottom: 14px;
       position: relative;
       z-index: 1;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     table {
@@ -540,11 +555,11 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       background: #0c1b33;
       color: #ffffff;
       font-family: 'Outfit', sans-serif;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
-      padding: 10px 14px;
+      padding: 7px 10px;
     }
 
     thead th:last-child {
@@ -552,16 +567,16 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     }
 
     tbody td {
-      padding: 12px 14px;
+      padding: 9px 10px;
       border-bottom: 1px solid #e2e8f0;
-      font-size: 12px;
+      font-size: 10.5px;
     }
 
     tbody td:last-child {
       text-align: right;
       font-weight: 700;
       color: #0c1b33;
-      font-size: 13px;
+      font-size: 11px;
     }
 
     tbody tr:nth-child(even) {
@@ -572,29 +587,31 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .totals-area {
       display: flex;
       justify-content: flex-end;
-      margin-bottom: 28px;
+      margin-bottom: 14px;
       position: relative;
       z-index: 1;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .totals-table {
-      width: 320px;
+      width: 280px;
     }
 
     .totals-row {
       display: flex;
       justify-content: space-between;
-      padding: 6px 0;
-      font-size: 12px;
+      padding: 4px 0;
+      font-size: 10.5px;
       color: #475569;
     }
 
     .totals-row.grand-total {
       border-top: 2px solid #0c1b33;
       border-bottom: 2px solid #0c1b33;
-      padding: 10px 0;
-      margin-top: 6px;
-      font-size: 15px;
+      padding: 7px 0;
+      margin-top: 4px;
+      font-size: 13px;
       font-weight: 800;
       color: #0c1b33;
     }
@@ -602,22 +619,24 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .grand-total .amount {
       color: #007a4d;
       font-family: 'Outfit', sans-serif;
-      font-size: 18px;
+      font-size: 15px;
     }
 
     /* Security & Signatory Section */
     .security-section {
       display: grid;
-      grid-template-columns: 120px 1fr 200px;
-      gap: 20px;
+      grid-template-columns: 100px 1fr 170px;
+      gap: 14px;
       align-items: center;
       border: 1px dashed #d4af37;
-      border-radius: 8px;
-      padding: 16px;
+      border-radius: 6px;
+      padding: 11px 14px;
       background: #fbfbf9;
-      margin-bottom: 24px;
+      margin-bottom: 14px;
       position: relative;
       z-index: 1;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .qr-container {
@@ -625,8 +644,8 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     }
 
     .qr-img {
-      width: 95px;
-      height: 95px;
+      width: 80px;
+      height: 80px;
       display: block;
       margin: 0 auto;
       border: 1px solid #cbd5e1;
@@ -675,14 +694,14 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     }
 
     .microprint {
-      font-size: 7px;
+      font-size: 6.5px;
       color: #94a3b8;
       text-align: center;
       letter-spacing: 1.5px;
       text-transform: uppercase;
       border-top: 1px solid #e2e8f0;
-      padding-top: 10px;
-      margin-top: 14px;
+      padding-top: 7px;
+      margin-top: 10px;
     }
   </style>
 </head>

@@ -1,49 +1,48 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Printer, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
-import { type InvoiceDetails, buildInvoiceHtml, printInvoice } from "../lib/printEngine";
+import {
+  type AnnualStatementDetails,
+  buildAnnualStatementHtml,
+  printAnnualStatement,
+} from "../lib/printEngine";
 import { useToast } from "../lib/toast";
 
-interface OfficialInvoiceModalProps {
-  invoice: InvoiceDetails | null;
+interface AnnualStatementModalProps {
+  statement: AnnualStatementDetails | null;
   onClose: () => void;
 }
 
-export default function OfficialInvoiceModal({ invoice, onClose }: OfficialInvoiceModalProps) {
+export default function AnnualStatementModal({ statement, onClose }: AnnualStatementModalProps) {
   const { showToast } = useToast();
   const [printing, setPrinting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [zoom, setZoom] = useState(0.72);
+  const [zoom, setZoom] = useState(0.68);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Build the exact same HTML used by the printer and inject it into the preview iframe
   useEffect(() => {
-    if (!invoice) return;
+    if (!statement) return;
     setLoading(true);
 
-    buildInvoiceHtml(invoice).then((html) => {
+    buildAnnualStatementHtml(statement).then((html) => {
       const iframe = iframeRef.current;
       if (!iframe) return;
-
       const doc = iframe.contentDocument || iframe.contentWindow?.document;
       if (!doc) return;
-
       doc.open();
       doc.write(html);
       doc.close();
-
       iframe.onload = () => setLoading(false);
-      // Safety: in case onload already fired
-      setTimeout(() => setLoading(false), 800);
+      setTimeout(() => setLoading(false), 900);
     });
-  }, [invoice]);
+  }, [statement]);
 
-  if (!invoice) return null;
+  if (!statement) return null;
 
   const handlePrint = async () => {
     setPrinting(true);
     try {
-      await printInvoice(invoice);
-      showToast("Document sent to printer / PDF dialog.", "success");
+      await printAnnualStatement(statement);
+      showToast("Annual statement sent to printer / PDF dialog.", "success");
     } catch (err) {
       console.error(err);
       showToast("Print failed. Please check browser permissions.", "error");
@@ -58,21 +57,22 @@ export default function OfficialInvoiceModal({ invoice, onClose }: OfficialInvoi
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="relative w-full max-w-3xl my-auto flex flex-col bg-[#1a1a2e] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-        {/* ── Toolbar ─────────────────────────────────────────────────── */}
+        {/* Toolbar */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#12122b] border-b border-white/10 shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-white font-bold text-sm tracking-wide">Invoice Preview</span>
+            <span className="text-white font-bold text-sm tracking-wide">
+              Annual Statement Preview — {statement.year}
+            </span>
             <span className="text-white/40 text-xs hidden sm:block">
-              This is an exact preview of the printed document
+              Exact preview of what will be printed
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Zoom controls */}
             <div className="hidden sm:flex items-center gap-1 bg-white/5 rounded-lg px-1 py-0.5 border border-white/10">
               <button
                 type="button"
-                onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))}
+                onClick={() => setZoom((z) => Math.max(0.35, +(z - 0.1).toFixed(2)))}
                 className="p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-white transition-colors"
                 title="Zoom out"
               >
@@ -91,7 +91,7 @@ export default function OfficialInvoiceModal({ invoice, onClose }: OfficialInvoi
               </button>
               <button
                 type="button"
-                onClick={() => setZoom(0.72)}
+                onClick={() => setZoom(0.68)}
                 className="p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-white transition-colors"
                 title="Reset zoom"
               >
@@ -99,7 +99,6 @@ export default function OfficialInvoiceModal({ invoice, onClose }: OfficialInvoi
               </button>
             </div>
 
-            {/* Print button */}
             <button
               type="button"
               onClick={handlePrint}
@@ -111,46 +110,38 @@ export default function OfficialInvoiceModal({ invoice, onClose }: OfficialInvoi
               <span className="sm:hidden">{printing ? "…" : "Print"}</span>
             </button>
 
-            {/* Close */}
             <button
               type="button"
               onClick={onClose}
               className="p-2 rounded-xl bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-colors"
-              aria-label="Close preview"
+              aria-label="Close"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* ── Preview Viewport ─────────────────────────────────────────── */}
-        <div className="relative overflow-auto bg-[#2a2a3e]" style={{ minHeight: "560px", maxHeight: "75vh" }}>
-          {/* Page shadow */}
+        {/* Preview */}
+        <div className="relative overflow-auto bg-[#2a2a3e]" style={{ minHeight: "520px", maxHeight: "75vh" }}>
           <div className="flex justify-center py-6 px-4">
             <div
               className="relative shadow-2xl shadow-black/60"
-              style={{
-                width: `${Math.round(794 * zoom)}px`,
-                // A4 at 96dpi ≈ 794×1123px; we scale the iframe via transform
-              }}
+              style={{ width: `${Math.round(794 * zoom)}px` }}
             >
-              {/* Loading shimmer */}
               {loading && (
                 <div
                   className="absolute inset-0 z-10 bg-white flex items-center justify-center rounded"
                   style={{ height: `${Math.round(1123 * zoom)}px` }}
                 >
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-3 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
-                    <span className="text-[#64748b] text-xs font-medium">Rendering invoice…</span>
+                    <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+                    <span className="text-[#64748b] text-xs font-medium">Rendering statement…</span>
                   </div>
                 </div>
               )}
-
-              {/* The iframe shows the exact print HTML */}
               <iframe
                 ref={iframeRef}
-                title="Invoice Preview"
+                title="Annual Statement Preview"
                 sandbox="allow-same-origin"
                 style={{
                   width: "794px",
@@ -160,19 +151,17 @@ export default function OfficialInvoiceModal({ invoice, onClose }: OfficialInvoi
                   transformOrigin: "top left",
                   transform: `scale(${zoom})`,
                   background: "#ffffff",
-                  borderRadius: "2px",
                 }}
               />
-              {/* Spacer so the container matches scaled height */}
               <div style={{ height: `${Math.round(1123 * zoom)}px` }} />
             </div>
           </div>
         </div>
 
-        {/* ── Footer note ─────────────────────────────────────────────── */}
+        {/* Footer */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-[#12122b] border-t border-white/10 text-white/40 text-xs shrink-0">
           <span>What you see is exactly what will be printed / saved as PDF.</span>
-          <span className="hidden sm:block">A4 Portrait · 1 page</span>
+          <span className="hidden sm:block">A4 Portrait · Tax Year {statement.year}</span>
         </div>
       </div>
     </div>

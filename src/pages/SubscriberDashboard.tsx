@@ -36,7 +36,8 @@ import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
 import PartnerIdCard from "../components/PartnerIdCard";
 import OfficialInvoiceModal from "../components/OfficialInvoiceModal";
-import { printAnnualStatement, type InvoiceDetails } from "../lib/printEngine";
+import { type InvoiceDetails, type AnnualStatementDetails } from "../lib/printEngine";
+import AnnualStatementModal from "../components/AnnualStatementModal";
 
 type SubscriberTab =
   | "overview"
@@ -371,32 +372,24 @@ export default function SubscriberDashboard() {
 
   // Invoice & Statement Print State
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetails | null>(null);
-  const [printingStatement, setPrintingStatement] = useState(false);
+  const [statementPreview, setStatementPreview] = useState<AnnualStatementDetails | null>(null);
 
-  const handleDownloadAnnualStatement = async () => {
-    setPrintingStatement(true);
-    try {
-      await printAnnualStatement({
-        partnerName,
-        partnerEmail,
-        partnerId: partnerIdNumber,
-        year: new Date().getFullYear(),
-        donations: donations.map((d) => ({
-          date: d.created_at,
-          description: d.recurring ? "Covenant Monthly Partnership Seed" : "Kingdom Mission Offering",
-          reference: d.id || `REC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-          amount: Number(d.amount),
-          currency: d.currency || "KES",
-          recurring: Boolean(d.recurring),
-        })),
-      });
-      showToast("Annual Tax Statement sent to printer / PDF!", "success");
-    } catch (err) {
-      console.error(err);
-      showToast("Could not generate statement. Please try again.", "error");
-    } finally {
-      setPrintingStatement(false);
-    }
+  const handleDownloadAnnualStatement = () => {
+    // Open WYSIWYG preview modal — user can then print/save PDF from there
+    setStatementPreview({
+      partnerName,
+      partnerEmail,
+      partnerId: partnerIdNumber,
+      year: new Date().getFullYear(),
+      donations: donations.map((d) => ({
+        date: d.created_at,
+        description: d.recurring ? "Covenant Monthly Partnership Seed" : "Kingdom Mission Offering",
+        reference: d.id || `REC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        amount: Number(d.amount),
+        currency: d.currency || "KES",
+        recurring: Boolean(d.recurring),
+      })),
+    });
   };
 
   // Load subscriber details
@@ -934,11 +927,10 @@ export default function SubscriberDashboard() {
                   <button
                     type="button"
                     onClick={handleDownloadAnnualStatement}
-                    disabled={printingStatement}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:brightness-110 transition-all disabled:opacity-60"
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:brightness-110 transition-all"
                   >
                     <Download className="w-4 h-4" />
-                    <span>{printingStatement ? "Generating Statement..." : "Download Annual Tax Statement"}</span>
+                    <span>Preview Annual Tax Statement</span>
                   </button>
                 </div>
 
@@ -1664,6 +1656,14 @@ export default function SubscriberDashboard() {
         <OfficialInvoiceModal
           invoice={selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
+        />
+      )}
+
+      {/* Annual Tax Statement Preview Modal */}
+      {statementPreview && (
+        <AnnualStatementModal
+          statement={statementPreview}
+          onClose={() => setStatementPreview(null)}
         />
       )}
     </div>
