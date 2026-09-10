@@ -135,6 +135,14 @@ export default function VerificationPage() {
     };
   }, [docParam, refParam, invParam, partnerParam, statementParam]);
 
+  // Scroll to top when result loads — query param changes don't trigger
+  // the global ScrollToTop component since the pathname stays the same.
+  useEffect(() => {
+    if (result) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [result]);
+
   const handleManualSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchQuery.trim();
