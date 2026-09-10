@@ -16,6 +16,7 @@ import {
   Heart,
 } from "lucide-react";
 import brandLogo from "../assets/logo.png";
+import bishopSignature from "../assets/bishop-signature.png";
 import { api } from "../lib/api";
 import { type InvoiceDetails } from "../lib/printEngine";
 import OfficialInvoiceModal from "../components/OfficialInvoiceModal";
@@ -348,6 +349,29 @@ export default function VerificationPage() {
                 <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap">
                   <ShieldCheck className="w-4 h-4" />
                   <span>256-Bit TLS Verified</span>
+                </div>
+              </div>
+
+              {/* Authorized Apostolic Endorsement */}
+              <div className="mt-6 pt-5 border-t border-slate-200/80 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 bg-amber-500/[0.04] p-4 rounded-2xl border border-amber-500/10">
+                <div className="flex items-center gap-3 text-left">
+                  <img
+                    src={bishopSignature}
+                    alt="Official Signature of Bishop Dr. George Githinji"
+                    className="h-10 w-auto object-contain dark:brightness-125"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block font-brand">
+                      Bishop Dr. George Githinji
+                    </span>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold uppercase tracking-wider block">
+                      Presiding Prelate &amp; General Overseer
+                    </span>
+                  </div>
+                </div>
+                <div className="text-center sm:text-right text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300 block">Authorized Digital Registry</span>
+                  <span>Kingdom Missions Network International</span>
                 </div>
               </div>
 

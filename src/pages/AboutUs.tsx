@@ -5,6 +5,7 @@ import ScrollReveal from "../components/ScrollReveal";
 import AmbientParticles from "../components/AmbientParticles";
 import brandLogo from "../assets/logo.png";
 import bishopImg from "../assets/bishop.webp";
+import bishopSignature from "../assets/bishop-signature.png";
 
 const faithStatements = [
   {
@@ -261,7 +262,18 @@ export default function AboutUs() {
                   General Overseer of HKM Ministries International & Kingdom Missions Network.
                 </p>
 
-                <div className="mt-4 pt-4 border-t border-white/10 w-full flex justify-center gap-3 text-xs text-[#fbf5b7]">
+                <div className="mt-4 pt-3 border-t border-white/10 w-full flex flex-col items-center">
+                  <img
+                    src={bishopSignature}
+                    alt="Official Signature of Bishop Dr. George Githinji"
+                    className="h-10 w-auto object-contain filter brightness-125 my-1"
+                  />
+                  <span className="text-[9px] uppercase tracking-wider text-[#d4af37] font-semibold">
+                    Authorized Apostolic Signature
+                  </span>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-white/10 w-full flex justify-center gap-3 text-xs text-[#fbf5b7]">
                   <span className="inline-flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-[#d4af37]" /> Verified Ministry
                   </span>

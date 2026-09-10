@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 import brandLogo from "../assets/logo.png";
+import { BISHOP_SIGNATURE_BASE64 } from "./signatureData";
 
 export interface InvoiceDetails {
   id?: string | number;
@@ -71,15 +72,13 @@ export async function generateQrDataUrl(data: string): Promise<string> {
 }
 
 /**
- * Generates an SVG string for Bishop Dr. George Githinji's digital signature
+ * Generates an SVG string for Bishop Dr. George Githinji's official digital signature
  */
 export function getBishopSignatureSvg(): string {
   return `
-    <svg viewBox="0 0 240 70" width="180" height="52" xmlns="http://www.w3.org/2000/svg">
-      <path d="M15 45 C 30 15, 45 60, 60 25 C 75 10, 85 45, 95 30 C 110 15, 120 50, 140 28 C 160 10, 180 55, 210 35 M45 40 Q 95 10 190 20 M70 52 L 185 48" 
-        fill="none" stroke="#0c1b33" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.88"/>
-      <circle cx="195" cy="30" r="3" fill="#0c1b33" opacity="0.85"/>
-      <text x="35" y="65" font-family="'Outfit', sans-serif" font-size="10" font-weight="700" fill="#855d14" letter-spacing="1">
+    <svg viewBox="0 0 240 75" width="180" height="56" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <image href="${BISHOP_SIGNATURE_BASE64}" xlink:href="${BISHOP_SIGNATURE_BASE64}" x="25" y="0" width="190" height="52" preserveAspectRatio="xMidYMid meet" />
+      <text x="120" y="68" text-anchor="middle" font-family="'Outfit', 'Inter', sans-serif" font-size="9.5" font-weight="700" fill="#855d14" letter-spacing="1">
         BISHOP DR. GEORGE GITHINJI
       </text>
     </svg>
@@ -307,14 +306,14 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     
     @page {
       size: A4 portrait;
-      /* Slightly reduced margins to guarantee single-page fit */
-      margin: 8mm 12mm 10mm 12mm;
+      margin: 8mm 10mm 8mm 10mm;
     }
 
     html, body {
-      /* fit-content height ensures iframe preview does not scroll */
-      height: fit-content;
+      height: 100%;
       width: 100%;
+      margin: 0;
+      padding: 0;
     }
 
     * {
@@ -336,24 +335,27 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .invoice-container {
       position: relative;
       width: 100%;
+      max-width: 800px;
+      min-height: 275mm;
+      box-sizing: border-box;
       margin: 0 auto;
       border: 2px solid #d4af37;
-      padding: 20px 26px;
+      padding: 26px 30px 20px 30px;
       background: #ffffff;
-      /* No overflow:hidden — would clip content in iframe preview */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
 
-    /* Guilloche Pattern Border */
-    .guilloche-bar {
-      height: 5px;
-      background: repeating-linear-gradient(
-        45deg,
-        #d4af37,
-        #d4af37 10px,
-        #0c1b33 10px,
-        #0c1b33 20px
-      );
-      margin-bottom: 14px;
+    .invoice-body {
+      position: relative;
+      z-index: 1;
+    }
+
+    .invoice-footer-section {
+      position: relative;
+      z-index: 1;
+      margin-top: auto;
     }
 
     /* Background Anti-Counterfeit Watermark */
@@ -363,9 +365,9 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       left: 50%;
       transform: translate(-50%, -50%) rotate(-35deg);
       font-family: 'Outfit', sans-serif;
-      font-size: 64px;
+      font-size: 68px;
       font-weight: 900;
-      color: rgba(212, 175, 55, 0.05);
+      color: rgba(212, 175, 55, 0.04);
       text-transform: uppercase;
       letter-spacing: 8px;
       pointer-events: none;
@@ -379,8 +381,8 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       justify-content: space-between;
       align-items: flex-start;
       border-bottom: 2px solid #0c1b33;
-      padding-bottom: 12px;
-      margin-bottom: 14px;
+      padding-bottom: 14px;
+      margin-bottom: 18px;
       position: relative;
       z-index: 1;
       page-break-inside: avoid;
@@ -390,12 +392,12 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .brand-section {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .brand-logo {
-      width: 56px;
-      height: 56px;
+      width: 62px;
+      height: 62px;
       object-fit: contain;
       border-radius: 10px;
       border: 2px solid #d4af37;
@@ -405,7 +407,7 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
 
     .brand-title {
       font-family: 'Outfit', sans-serif;
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 800;
       color: #0c1b33;
       letter-spacing: 0.5px;
@@ -413,20 +415,20 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     }
 
     .brand-subtitle {
-      font-size: 10px;
+      font-size: 10.5px;
       color: #d4af37;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 2px;
       display: block;
-      margin-top: 1px;
+      margin-top: 2px;
     }
 
     .brand-details {
       font-size: 9px;
       color: #556987;
       margin-top: 3px;
-      line-height: 1.35;
+      line-height: 1.4;
     }
 
     .doc-badge-section {
@@ -435,7 +437,7 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
 
     .doc-type {
       font-family: 'Outfit', sans-serif;
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 800;
       color: #0c1b33;
       text-transform: uppercase;
@@ -459,12 +461,12 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .metadata-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      gap: 10px;
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 6px;
-      padding: 10px 14px;
-      margin-bottom: 14px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
       position: relative;
       z-index: 1;
       page-break-inside: avoid;
@@ -478,11 +480,11 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       text-transform: uppercase;
       color: #64748b;
       letter-spacing: 0.5px;
-      margin-bottom: 2px;
+      margin-bottom: 3px;
     }
 
     .meta-box span.value {
-      font-size: 12px;
+      font-size: 12.5px;
       font-weight: 700;
       color: #0c1b33;
     }
@@ -496,8 +498,8 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .party-info {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 14px;
+      gap: 16px;
+      margin-bottom: 18px;
       position: relative;
       z-index: 1;
       page-break-inside: avoid;
@@ -507,13 +509,13 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .party-card {
       border: 1px solid #e2e8f0;
       border-radius: 6px;
-      padding: 10px 12px;
+      padding: 12px 14px;
       background: #ffffff;
     }
 
     .party-card-title {
       font-family: 'Outfit', sans-serif;
-      font-size: 9px;
+      font-size: 9.5px;
       font-weight: 800;
       color: #855d14;
       text-transform: uppercase;
@@ -524,21 +526,21 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     }
 
     .party-name {
-      font-size: 13px;
+      font-size: 13.5px;
       font-weight: 800;
       color: #0c1b33;
-      margin-bottom: 1px;
+      margin-bottom: 2px;
     }
 
     .party-sub {
-      font-size: 10px;
+      font-size: 10.5px;
       color: #64748b;
-      line-height: 1.35;
+      line-height: 1.45;
     }
 
     /* Line Item Table */
     .table-container {
-      margin-bottom: 14px;
+      margin-bottom: 18px;
       position: relative;
       z-index: 1;
       page-break-inside: avoid;
@@ -555,11 +557,11 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       background: #0c1b33;
       color: #ffffff;
       font-family: 'Outfit', sans-serif;
-      font-size: 9px;
+      font-size: 9.5px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
-      padding: 7px 10px;
+      padding: 8px 12px;
     }
 
     thead th:last-child {
@@ -567,16 +569,16 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     }
 
     tbody td {
-      padding: 9px 10px;
+      padding: 12px 12px;
       border-bottom: 1px solid #e2e8f0;
-      font-size: 10.5px;
+      font-size: 11.5px;
     }
 
     tbody td:last-child {
       text-align: right;
       font-weight: 700;
       color: #0c1b33;
-      font-size: 11px;
+      font-size: 12px;
     }
 
     tbody tr:nth-child(even) {
@@ -587,7 +589,7 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .totals-area {
       display: flex;
       justify-content: flex-end;
-      margin-bottom: 14px;
+      margin-bottom: 18px;
       position: relative;
       z-index: 1;
       page-break-inside: avoid;
@@ -595,23 +597,23 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     }
 
     .totals-table {
-      width: 280px;
+      width: 300px;
     }
 
     .totals-row {
       display: flex;
       justify-content: space-between;
-      padding: 4px 0;
-      font-size: 10.5px;
+      padding: 5px 0;
+      font-size: 11px;
       color: #475569;
     }
 
     .totals-row.grand-total {
       border-top: 2px solid #0c1b33;
       border-bottom: 2px solid #0c1b33;
-      padding: 7px 0;
+      padding: 8px 0;
       margin-top: 4px;
-      font-size: 13px;
+      font-size: 13.5px;
       font-weight: 800;
       color: #0c1b33;
     }
@@ -619,20 +621,20 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .grand-total .amount {
       color: #007a4d;
       font-family: 'Outfit', sans-serif;
-      font-size: 15px;
+      font-size: 16px;
     }
 
     /* Security & Signatory Section */
     .security-section {
       display: grid;
-      grid-template-columns: 100px 1fr 170px;
+      grid-template-columns: 95px 1fr 190px;
       gap: 14px;
       align-items: center;
       border: 1px dashed #d4af37;
       border-radius: 6px;
-      padding: 11px 14px;
+      padding: 14px 16px;
       background: #fbfbf9;
-      margin-bottom: 14px;
+      margin-bottom: 10px;
       position: relative;
       z-index: 1;
       page-break-inside: avoid;
@@ -656,7 +658,7 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       font-size: 8px;
       font-weight: 700;
       color: #64748b;
-      margin-top: 4px;
+      margin-top: 3px;
       text-transform: uppercase;
     }
 
@@ -686,7 +688,7 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     }
 
     .sign-title {
-      font-size: 9px;
+      font-size: 8.5px;
       font-weight: 700;
       text-transform: uppercase;
       color: #64748b;
@@ -694,24 +696,24 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     }
 
     .microprint {
-      font-size: 6.5px;
+      font-size: 7px;
       color: #94a3b8;
       text-align: center;
       letter-spacing: 1.5px;
       text-transform: uppercase;
       border-top: 1px solid #e2e8f0;
-      padding-top: 7px;
-      margin-top: 10px;
+      padding-top: 6px;
+      margin-top: 8px;
     }
   </style>
 </head>
 <body>
   <div class="invoice-container">
-    <div class="guilloche-bar"></div>
     <div class="watermark">OFFICIAL RECEIPT</div>
 
-    <!-- Letterhead -->
-    <div class="header">
+    <div class="invoice-body">
+      <!-- Letterhead -->
+      <div class="header">
       <div class="brand-section">
         <img src="${brandLogo}" alt="Kingdom Missions Network" class="brand-logo" />
         <div>
@@ -817,7 +819,9 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
         </div>
       </div>
     </div>
+  </div>
 
+  <div class="invoice-footer-section">
     <!-- Security & Signatory Block -->
     <div class="security-section">
       <div class="qr-container">
@@ -841,6 +845,7 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       KINGDOM MISSIONS NETWORK • OFFICIAL COVENANT RECORD • SECURE VERIFICATION • NOT TRANSFERABLE • INTEGRITY IN STEWARDSHIP
     </div>
   </div>
+</div>
 </body>
 </html>
   `;
@@ -1316,6 +1321,7 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
       <div class="footer-left">
         <div class="oversight-sig">
           Spiritual Oversight:<br>
+          <img src="${BISHOP_SIGNATURE_BASE64}" style="height: 10px; width: auto; max-width: 42px; object-fit: contain; display: block; margin: 0.4mm 0; filter: brightness(1.3) contrast(1.1);" alt="Official Signature" />
           <strong>Bishop Dr. George Githinji</strong>
         </div>
       </div>

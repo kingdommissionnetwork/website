@@ -25,6 +25,7 @@ import {
   getBarcodeSvg,
 } from "../lib/printEngine";
 import { useToast } from "../lib/toast";
+import bishopSignature from "../assets/bishop-signature.png";
 
 interface PartnerIdCardProps {
   card: PartnerCardDetails;
@@ -317,7 +318,8 @@ export default function PartnerIdCard({
               <div className="border-t border-white/10 pt-2.5 flex items-center justify-between text-[10px] text-white/50 relative z-10">
                 <div>
                   <span className="block text-[8px] uppercase tracking-widest text-white/40">Spiritual Oversight</span>
-                  <span className="font-bold text-white/90">Bishop Dr. George Githinji</span>
+                  <img src={bishopSignature} alt="Bishop Dr. George Githinji Official Signature" className="h-4 sm:h-5 w-auto object-contain my-0.5 filter brightness-125" />
+                  <span className="font-bold text-white/90 block">Bishop Dr. George Githinji</span>
                 </div>
                 <div className="text-center">
                   <span className="font-mono text-[8px] text-[#d4af37] tracking-widest block font-bold">★ HOLO-SECURE PASS ★</span>
