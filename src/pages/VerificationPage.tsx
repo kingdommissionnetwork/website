@@ -17,7 +17,8 @@ import {
 } from "lucide-react";
 import brandLogo from "../assets/logo.png";
 import { api } from "../lib/api";
-import { printInvoice, type InvoiceDetails } from "../lib/printEngine";
+import { type InvoiceDetails } from "../lib/printEngine";
+import OfficialInvoiceModal from "../components/OfficialInvoiceModal";
 
 interface VerificationResult {
   verified: boolean;
@@ -53,7 +54,7 @@ export default function VerificationPage() {
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [printing, setPrinting] = useState(false);
+  const [invoiceModal, setInvoiceModal] = useState<InvoiceDetails | null>(null);
 
   // Compute security fingerprint
   const securityHash = result
@@ -109,12 +110,13 @@ export default function VerificationPage() {
               invoiceNumber: invParam || "KMN-REC-OFFICIAL",
               amount: 5000,
               currency: "KES",
-              donorName: "Kingdom Covenant Sower",
+              donorName: "Kingdom Missions Donor",
+              donorEmail: "donor@kingdommissionsnetwork.org",
+              recurring: false,
+              provider: "Card / M-Pesa",
               status: "completed",
               date: new Date().toISOString(),
               verifiedAt: new Date().toISOString(),
-              provider: "M-Pesa / Paystack Gateway",
-              notice: "Verified via ministry public authorization ledger.",
             });
           }
         }
@@ -146,28 +148,21 @@ export default function VerificationPage() {
     }
   };
 
-  const handlePrint = async () => {
+  const handlePrint = () => {
     if (!result) return;
-    setPrinting(true);
-    try {
-      const invoiceData: InvoiceDetails = {
-        reference: result.reference || refParam,
-        invoiceNumber: result.invoiceNumber || invParam,
-        name: result.donorName || "Kingdom Sower",
-        amount: result.amount || 5000,
-        currency: result.currency || "KES",
-        provider: result.provider || "Verified Gateway",
-        status: result.status || "completed",
-        date: result.date || new Date().toISOString(),
-        purpose: "Kingdom Missions Outreach & Frontier Evangelism Seed",
-        recurring: result.recurring || false,
-      };
-      await printInvoice(invoiceData);
-    } catch (e) {
-      console.error("Print error:", e);
-    } finally {
-      setPrinting(false);
-    }
+    const invoiceData: InvoiceDetails = {
+      reference: result.reference || refParam || "KMN-REF-VERIFIED",
+      invoiceNumber: result.invoiceNumber || invParam || "KMN-REC-OFFICIAL",
+      name: result.donorName || "Kingdom Sower",
+      amount: result.amount || 5000,
+      currency: result.currency || "KES",
+      provider: result.provider || "Verified Gateway",
+      status: result.status || "completed",
+      date: result.date || new Date().toISOString(),
+      purpose: "Kingdom Missions Outreach & Frontier Evangelism Seed",
+      recurring: result.recurring || false,
+    };
+    setInvoiceModal(invoiceData);
   };
 
   return (
@@ -362,11 +357,10 @@ export default function VerificationPage() {
                   <button
                     type="button"
                     onClick={handlePrint}
-                    disabled={printing}
-                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50"
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                   >
                     <Printer className="w-4 h-4" />
-                    <span>{printing ? "Generating PDF..." : "Print Official Receipt"}</span>
+                    <span>Preview &amp; Print Official Receipt</span>
                   </button>
                 )}
 
@@ -464,6 +458,13 @@ export default function VerificationPage() {
           </p>
         </div>
       </div>
+
+      {invoiceModal && (
+        <OfficialInvoiceModal
+          invoice={invoiceModal}
+          onClose={() => setInvoiceModal(null)}
+        />
+      )}
     </div>
   );
 }

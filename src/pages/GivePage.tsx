@@ -25,7 +25,8 @@ import { api, normalizeAuthUser } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
 import brandLogo from "../assets/logo.png";
-import { printInvoice } from "../lib/printEngine";
+import { type InvoiceDetails } from "../lib/printEngine";
+import OfficialInvoiceModal from "../components/OfficialInvoiceModal";
 
 const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "";
 
@@ -100,6 +101,7 @@ export default function GivePage() {
   const [paybillPending, setPaybillPending] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ReceiptInfo | null>(null);
+  const [invoiceModal, setInvoiceModal] = useState<InvoiceDetails | null>(null);
 
   const currentAmountKes = isCustomAmount ? customAmountVal : oneTimeAmount;
   const currentAmountUsd = Number((currentAmountKes * exchangeRate).toFixed(2));
@@ -759,8 +761,8 @@ export default function GivePage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button
                   type="button"
-                  onClick={async () => {
-                    await printInvoice({
+                  onClick={() => {
+                    setInvoiceModal({
                       reference: receipt.reference,
                       name: receipt.donorName,
                       email: receipt.donorEmail,
@@ -775,7 +777,7 @@ export default function GivePage() {
                   className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Print Official Receipt</span>
+                  <span>Preview &amp; Print Official Receipt</span>
                 </button>
                 <Link to="/"
                   className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm hover:scale-105 transition-all flex items-center justify-center gap-1.5 shadow-lg">
@@ -791,6 +793,13 @@ export default function GivePage() {
 
         </div>
       </div>
+
+      {invoiceModal && (
+        <OfficialInvoiceModal
+          invoice={invoiceModal}
+          onClose={() => setInvoiceModal(null)}
+        />
+      )}
     </div>
   );
 }

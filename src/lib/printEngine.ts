@@ -1404,19 +1404,22 @@ export async function buildAnnualStatementHtml(statement: AnnualStatementDetails
   <title>Annual Tax Statement ${statement.year} — ${statement.partnerName}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
-    @page { size: A4 portrait; margin: 15mm; }
+    @page { size: A4 portrait; margin: 10mm 12mm 10mm 12mm; }
     * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    body { font-family: 'Inter', sans-serif; color: #0c1b33; margin: 0; padding: 0; font-size: 12px; }
-    .container { max-width: 800px; margin: 0 auto; border: 2px solid #d4af37; padding: 30px; }
-    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0c1b33; padding-bottom: 16px; margin-bottom: 20px; }
-    .brand { display: flex; align-items: center; gap: 14px; }
-    .logo { width: 64px; height: 64px; object-fit: contain; }
-    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    th { background: #0c1b33; color: white; padding: 8px 10px; font-size: 10px; text-transform: uppercase; text-align: left; }
-    td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-size: 11px; }
-    .total-box { display: flex; justify-content: flex-end; margin-top: 10px; }
-    .total-card { width: 300px; border: 1.5px solid #0c1b33; padding: 12px; border-radius: 6px; background: #f8fafc; }
-    .footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 30px; }
+    html, body { height: fit-content; }
+    body { font-family: 'Inter', sans-serif; color: #0c1b33; margin: 0; padding: 0; font-size: 11px; background: #ffffff; }
+    .container { max-width: 800px; margin: 0 auto; border: 2px solid #d4af37; padding: 24px; background: #ffffff; }
+    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0c1b33; padding-bottom: 14px; margin-bottom: 16px; page-break-inside: avoid; break-inside: avoid; }
+    .partner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; page-break-inside: avoid; break-inside: avoid; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 56px; height: 56px; object-fit: contain; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    th { background: #0c1b33; color: white; padding: 7px 10px; font-size: 10px; text-transform: uppercase; text-align: left; }
+    td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; font-size: 11px; }
+    tr { page-break-inside: avoid; break-inside: avoid; }
+    .total-box { display: flex; justify-content: flex-end; margin-top: 10px; page-break-inside: avoid; break-inside: avoid; }
+    .total-card { width: 300px; border: 1.5px solid #0c1b33; padding: 10px 14px; border-radius: 6px; background: #f8fafc; }
+    .footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 24px; page-break-inside: avoid; break-inside: avoid; }
   </style>
 </head>
 <body>
@@ -1440,7 +1443,7 @@ export async function buildAnnualStatementHtml(statement: AnnualStatementDetails
       </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+    <div class="partner-grid">
       <div style="background: #f8fafc; padding: 14px; border-radius: 6px; border: 1px solid #e2e8f0;">
         <span style="font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 700; display: block;">Partner Record</span>
         <strong style="font-size: 14px; display: block; margin: 2px 0;">${statement.partnerName}</strong>
