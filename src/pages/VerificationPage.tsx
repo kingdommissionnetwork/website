@@ -175,7 +175,7 @@ export default function VerificationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#060e1a] text-slate-900 dark:text-slate-100 selection:bg-amber-500/20 selection:text-amber-500 py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#060e1a] text-slate-900 dark:text-slate-100 selection:bg-amber-500/20 selection:text-amber-500 pt-28 md:pt-36 lg:pt-40 pb-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300 relative overflow-hidden">
       {/* Background Decorative Elements */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-amber-500/10 via-emerald-500/5 to-transparent blur-3xl pointer-events-none" />
       <div className="absolute top-40 right-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />

@@ -394,6 +394,41 @@ html:not(.dark) .admin-dashboard .bg-emerald-500\/10 {
   border-color: #bbf7d0 !important;
 }
 
+/* Pale gold / cream text (#fbf5b7, #d4af37) is ~1-2:1 on white — use bronze in light mode */
+html:not(.dark) .admin-dashboard .text-\[\#fbf5b7\] {
+  color: #996515 !important;
+}
+html:not(.dark) .admin-dashboard .text-\[\#d4af37\] {
+  color: #996515 !important;
+}
+/* Emerald-400 amounts/badges are ~2:1 on white — use emerald-700 in light mode */
+html:not(.dark) .admin-dashboard .text-emerald-400 {
+  color: #047857 !important;
+}
+/* Light amber alert text is invisible on white — use amber-800 */
+html:not(.dark) .admin-dashboard .text-amber-300,
+html:not(.dark) .admin-dashboard .text-amber-200 {
+  color: #92400e !important;
+}
+/* /20 badge tints need the same light treatment as /10 */
+html:not(.dark) .admin-dashboard .bg-emerald-500\/20 {
+  background-color: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
+}
+html:not(.dark) .admin-dashboard .bg-amber-500\/20 {
+  background-color: #fef3c7 !important;
+  border-color: #fcd34d !important;
+}
+html:not(.dark) .admin-dashboard .bg-\[\#d4af37\]\/20 {
+  background-color: #fef9e7 !important;
+  border-color: #eab308 !important;
+}
+/* Mobile off-canvas drawer keeps bg-[#09182d] — make it light too so the same text rules stay readable */
+html:not(.dark) .admin-dashboard .bg-\[\#09182d\] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
 /* Interactive elements in Light Mode */
 html:not(.dark) .admin-dashboard button.hover\:bg-white\/5:hover,
 html:not(.dark) .admin-dashboard button.hover\:bg-white\/10:hover,
