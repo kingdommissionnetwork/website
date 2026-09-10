@@ -336,26 +336,11 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       position: relative;
       width: 100%;
       max-width: 800px;
-      min-height: 275mm;
       box-sizing: border-box;
       margin: 0 auto;
       border: 2px solid #d4af37;
-      padding: 26px 30px 20px 30px;
+      padding: 22px 26px 16px 26px;
       background: #ffffff;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .invoice-body {
-      position: relative;
-      z-index: 1;
-    }
-
-    .invoice-footer-section {
-      position: relative;
-      z-index: 1;
-      margin-top: auto;
     }
 
     /* Background Anti-Counterfeit Watermark */
@@ -585,25 +570,60 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       background: #f8fafc;
     }
 
-    /* Totals Box */
-    .totals-area {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 18px;
+    /* Settlement & Totals Grid */
+    .settlement-totals-grid {
+      display: grid;
+      grid-template-columns: 1fr 290px;
+      gap: 16px;
+      margin-bottom: 16px;
       position: relative;
       z-index: 1;
       page-break-inside: avoid;
       break-inside: avoid;
     }
 
+    .settlement-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px 14px;
+      background: #f8fafc;
+      font-size: 10px;
+      color: #475569;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .settlement-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 8.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #855d14;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 3px;
+      margin-bottom: 5px;
+    }
+
+    .settlement-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+    }
+
+    .settlement-row strong {
+      color: #0c1b33;
+    }
+
     .totals-table {
-      width: 300px;
+      width: 100%;
     }
 
     .totals-row {
       display: flex;
       justify-content: space-between;
-      padding: 5px 0;
+      padding: 4px 0;
       font-size: 11px;
       color: #475569;
     }
@@ -611,9 +631,9 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .totals-row.grand-total {
       border-top: 2px solid #0c1b33;
       border-bottom: 2px solid #0c1b33;
-      padding: 8px 0;
+      padding: 7px 0;
       margin-top: 4px;
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 800;
       color: #0c1b33;
     }
@@ -621,7 +641,101 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
     .grand-total .amount {
       color: #007a4d;
       font-family: 'Outfit', sans-serif;
-      font-size: 16px;
+      font-size: 15.5px;
+    }
+
+    /* Stewardship Certification Box */
+    .stewardship-cert-box {
+      border: 1px solid #e2d7b8;
+      border-radius: 6px;
+      padding: 11px 15px;
+      background: #faf8f2;
+      margin-bottom: 14px;
+      position: relative;
+      z-index: 1;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .cert-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #ebdcb5;
+      padding-bottom: 5px;
+      margin-bottom: 7px;
+    }
+
+    .cert-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 9.5px;
+      font-weight: 800;
+      color: #855d14;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .cert-badge {
+      font-size: 8px;
+      font-weight: 700;
+      color: #007a4d;
+      background: #e6f7ef;
+      border: 1px solid #00a86b;
+      padding: 2px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+    }
+
+    .cert-body {
+      font-size: 9.5px;
+      color: #475569;
+      line-height: 1.45;
+      margin-bottom: 8px;
+    }
+
+    .allocation-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+
+    .alloc-item {
+      background: #ffffff;
+      border: 1px solid #e5e0d3;
+      border-radius: 4px;
+      padding: 5px 8px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .alloc-pct {
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      font-weight: 800;
+      color: #d4af37;
+    }
+
+    .alloc-text {
+      font-size: 8px;
+      color: #64748b;
+      line-height: 1.25;
+    }
+
+    .alloc-text strong {
+      display: block;
+      color: #0c1b33;
+      font-size: 8.5px;
+    }
+
+    .cert-scripture {
+      font-size: 8.5px;
+      font-style: italic;
+      color: #855d14;
+      text-align: center;
+      border-top: 1px dashed #e5dfcf;
+      padding-top: 5px;
     }
 
     /* Security & Signatory Section */
@@ -802,8 +916,15 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       </table>
     </div>
 
-    <!-- Totals -->
-    <div class="totals-area">
+    <!-- Settlement & Totals Grid -->
+    <div class="settlement-totals-grid">
+      <div class="settlement-card">
+        <div class="settlement-title">PAYMENT CLEARANCE &amp; AUDIT TRAIL</div>
+        <div class="settlement-row"><span>Payment Gateway:</span> <strong>${(invoice.provider || "M-Pesa / Paystack Integrated Gateway").toUpperCase()}</strong></div>
+        <div class="settlement-row"><span>Authorization Status:</span> <strong style="color: #007a4d;">CONFIRMED &amp; RECONCILED</strong></div>
+        <div class="settlement-row"><span>Clearance Reference:</span> <strong style="font-family: monospace; color: #855d14;">${refCode}</strong></div>
+        <div class="settlement-row"><span>Settlement Date:</span> <strong>${dateFormatted}</strong></div>
+      </div>
       <div class="totals-table">
         <div class="totals-row">
           <span>Gross Contribution:</span>
@@ -819,9 +940,34 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="invoice-footer-section">
+    <!-- Stewardship & Tax Exemption Certification Block -->
+    <div class="stewardship-cert-box">
+      <div class="cert-header">
+        <span class="cert-title">Official Tax Exemption &amp; Ministerial Stewardship Statement</span>
+        <span class="cert-badge">Section 13 Non-Profit Charter</span>
+      </div>
+      <div class="cert-body">
+        This official receipt verifies that the voluntary financial gift specified above has been directly received by <strong>Kingdom Missions Network Int'l</strong>. Under statutory non-profit religious stewardship provisions, all contributions qualify for religious tax exemption. No commercial goods, private equity, or personal benefits were provided in consideration for this charitable offering.
+      </div>
+      <div class="allocation-grid">
+        <div class="alloc-item">
+          <span class="alloc-pct">50%</span>
+          <div class="alloc-text"><strong>Frontline Gospel Crusades</strong>Church planting &amp; unreached missions</div>
+        </div>
+        <div class="alloc-item">
+          <span class="alloc-pct">30%</span>
+          <div class="alloc-text"><strong>Scripture Logistics</strong>Free Holy Bibles &amp; discipleship material</div>
+        </div>
+        <div class="alloc-item">
+          <span class="alloc-pct">20%</span>
+          <div class="alloc-text"><strong>Missionary Subsistence</strong>Missionary family welfare &amp; mercy relief</div>
+        </div>
+      </div>
+      <div class="cert-scripture">
+        "Now he that ministereth seed to the sower both minister bread for your food, and multiply your seed sown, and increase the fruits of your righteousness." — 2 Corinthians 9:10
+      </div>
+    </div>
     <!-- Security & Signatory Block -->
     <div class="security-section">
       <div class="qr-container">
@@ -845,7 +991,6 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
       KINGDOM MISSIONS NETWORK • OFFICIAL COVENANT RECORD • SECURE VERIFICATION • NOT TRANSFERABLE • INTEGRITY IN STEWARDSHIP
     </div>
   </div>
-</div>
 </body>
 </html>
   `;
