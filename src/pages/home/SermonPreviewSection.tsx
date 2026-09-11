@@ -12,7 +12,8 @@ export default function SermonPreviewSection() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    api.sermons.list().then((data) => {
+    // Fetch only what's shown: the list endpoint defaults to 50 rows.
+    api.sermons.list(undefined, undefined, 12).then((data) => {
       setSermons(data);
       setLoading(false);
     }).catch(() => setLoading(false));

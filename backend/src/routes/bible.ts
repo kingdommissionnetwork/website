@@ -5,6 +5,7 @@ import { getSupabase } from "../lib/supabase";
 import { requireAuth } from "../lib/jwt";
 import type { JwtPayload } from "../lib/jwt";
 import { rateLimit } from "../lib/rateLimiter";
+import { publicCache } from "../lib/httpCache";
 
 export const bibleRoutes = new Hono<{ Variables: { user: JwtPayload } }>();
 
@@ -239,11 +240,14 @@ async function fetchChapter(book: string, chapter: number, translationId: string
   return result;
 }
 
-bibleRoutes.get("/books", (c) => c.json({
-  books: BOOKS,
-  translations: TRANSLATION_IDS,
-  translationNames: TRANSLATION_NAMES,
-}));
+bibleRoutes.get("/books", (c) => {
+  publicCache(c, 3600, 86400);
+  return c.json({
+    books: BOOKS,
+    translations: TRANSLATION_IDS,
+    translationNames: TRANSLATION_NAMES,
+  });
+});
 
 bibleRoutes.get("/verses/:book/:chapter", rateLimit, async (c) => {
   const book = c.req.param("book");
@@ -253,6 +257,8 @@ bibleRoutes.get("/verses/:book/:chapter", rateLimit, async (c) => {
 
   try {
     const result = await fetchChapter(book, chapter, translationId);
+    // Scripture is immutable: safe for long edge/browser caching.
+    publicCache(c, 3600, 86400);
     if (!result) {
       return c.json({ verses: [], book, chapter, translation: translationId, translationName: TRANSLATION_NAMES[translationId] || translationId.toUpperCase() });
     }
@@ -347,6 +353,8 @@ bibleRoutes.get("/daily", rateLimit, async (c) => {
   const ref = dailyVerses[idx];
   try {
     const result = await fetchChapter(ref.book, ref.chapter, translation);
+    // Changes once a day at most.
+    publicCache(c, 3600, 86400);
     if (!result) {
       return c.json({ text: "The Lord is my shepherd; I shall not want.", reference: "Psalms 23:1 (KJV)", translation });
     }
@@ -377,6 +385,7 @@ bibleRoutes.get("/search", rateLimit, async (c) => {
   const cacheKey = `${query.toLowerCase().slice(0, 80)}:${translation}:${limit}:${offset}`;
   const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.time < 1000 * 60 * 60) {
+    publicCache(c, 60, 300);
     return c.json(cached.results);
   }
 
@@ -414,6 +423,7 @@ bibleRoutes.get("/search", rateLimit, async (c) => {
   const paginated = results.slice(offset, offset + limit);
   const payload = { results: paginated, total: results.length, query, translation, limit, offset };
   searchCache.set(cacheKey, { time: Date.now(), results: payload });
+  publicCache(c, 60, 300);
   return c.json(payload);
 });
 

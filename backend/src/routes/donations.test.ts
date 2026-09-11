@@ -1,6 +1,6 @@
-import { expect, test, describe, beforeAll, vi } from 'vitest';
+import { expect, test, describe, beforeAll, beforeEach, vi } from 'vitest';
 import { Hono } from 'hono';
-import { donationRoutes } from './donations';
+import { donationRoutes, clearVerifyCache } from './donations';
 import { getSupabase } from '../lib/supabase';
 
 vi.mock('../lib/supabase', () => ({
@@ -54,6 +54,11 @@ const subscriptionRow: Row = {
 
 beforeAll(() => {
   process.env.DISABLE_RATE_LIMIT = '1';
+});
+
+beforeEach(() => {
+  // The handler caches results per query — isolate cases from each other.
+  clearVerifyCache();
 });
 
 describe('Donation Routes', () => {

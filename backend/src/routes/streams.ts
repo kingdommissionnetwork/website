@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { getSupabase } from "../lib/supabase";
+import { publicCache } from "../lib/httpCache";
 
 export const streamRoutes = new Hono();
 
@@ -15,6 +16,7 @@ streamRoutes.get("/upcoming", async (c) => {
   if (error || !data) {
     return c.json([]);
   }
+  publicCache(c);
 
   const mapped = data.map(e => ({
     id: e.id.toString(),

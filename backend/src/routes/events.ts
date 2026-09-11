@@ -4,6 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { requireAdmin } from "../lib/jwt";
 import { rateLimit } from "../lib/rateLimiter";
+import { publicCache } from "../lib/httpCache";
 import { sendEventRsvpEmail } from "../lib/email";
 
 export const eventRoutes = new Hono();
@@ -21,6 +22,7 @@ eventRoutes.get("/", async (c) => {
     console.error("[EVENTS] list error:", error.message);
     return c.json({ error: "Failed to load events." }, 500);
   }
+  publicCache(c);
   return c.json(data);
 });
 

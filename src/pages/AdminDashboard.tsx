@@ -300,6 +300,27 @@ export default function AdminDashboard() {
     }
   };
 
+  // Quota guard: the dashboard fans out to 10 endpoints. Filter changes and
+  // single-record mutations must refetch only what they touch — never the
+  // whole board (each call is a Worker invocation + Supabase queries).
+  const loadPrayers = async (filter: string) => {
+    try {
+      const prData = await api.admin.prayers(filter).catch(() => []);
+      setPrayers(prData.map(normalizePrayer));
+    } catch {
+      // keep existing list on transient errors
+    }
+  };
+
+  const loadMembers = async () => {
+    try {
+      const membersData = await api.admin.members().catch(() => []);
+      setMembers(membersData);
+    } catch {
+      // keep existing list on transient errors
+    }
+  };
+
   // M-Pesa claim resolution handler
   const handleResolveClaim = async () => {
     if (!resolveModal) return;
@@ -315,7 +336,17 @@ export default function AdminDashboard() {
       setResolveModal(null);
       setResolveReceipt("");
       setResolveNotes("");
-      loadAllData();
+      // Refresh the affected queues only (pending list + stats), not all 10.
+      try {
+        const [mpesaData, statsData] = await Promise.all([
+          api.admin.pendingMpesa().catch(() => null),
+          api.admin.stats().catch(() => null),
+        ]);
+        if (mpesaData) setPendingMpesa(mpesaData);
+        if (statsData) setStats(statsData as typeof stats);
+      } catch {
+        // dashboard stays usable on refresh errors
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to process claim — check connection and try again.";
       showToast(msg, "error");
@@ -327,6 +358,10 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    loadPrayers(prayerFilter);
   }, [prayerFilter]);
 
   // Member Action Handler
@@ -356,7 +391,9 @@ export default function AdminDashboard() {
         setMembers((prev) => prev.map((m) => (String(m.id) === String(id) ? updated : m)));
       }
 
-      await loadAllData();
+      // Local state is already optimistically synced above; refetch the
+      // members list only instead of all 10 dashboard endpoints.
+      await loadMembers();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to perform member action";
       showToast(msg, "error");

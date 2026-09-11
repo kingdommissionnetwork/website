@@ -6,6 +6,7 @@ import { sendDonationEmail } from "../lib/email";
 import { fetchExchangeRate } from "../lib/exchangeRate";
 import { upsertPaymentClaim } from "../lib/paybill";
 import { rateLimit, strictRateLimit } from "../lib/rateLimiter";
+import { publicCache } from "../lib/httpCache";
 
 function getSecret(c: { env?: unknown }, key: string): string {
   const env = c.env as Record<string, string> | undefined;
@@ -243,6 +244,8 @@ paymentRoutes.get("/rate", async (c) => {
   const target = c.req.query("to") || "KES";
   const wiseToken = getSecret(c, "WISE_API_TOKEN");
   const result = await fetchExchangeRate(source, target, wiseToken);
+  // FX moves slowly; cache hard so repeat loads skip the external subrequests.
+  publicCache(c, 3600, 3600);
   return c.json({ rate: result.rate, source, target, provider: result.provider });
 });
 

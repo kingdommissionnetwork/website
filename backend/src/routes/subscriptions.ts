@@ -8,6 +8,7 @@ import { signToken } from "../lib/jwt";
 import { setCookie } from "hono/cookie";
 import { requireAdmin } from "../lib/jwt";
 import { rateLimit, strictRateLimit } from "../lib/rateLimiter";
+import { publicCache } from "../lib/httpCache";
 import {
   CLAIM_TTL_HOURS,
   consumeReceipt,
@@ -1268,11 +1269,12 @@ subscriptionRoutes.post("/mpesa/kcb-callback", async (c) => {
 
 
 
-// Pricing calculation endpoint
+// Pricing calculation endpoint (FX moves slowly — cache hard to skip subsrequests).
 subscriptionRoutes.get("/pricing", rateLimit, async (c) => {
   const wiseToken = getSecret(c, "WISE_API_TOKEN");
   const amountParam = Number(c.req.query("amount")) || 1000;
   const calculation = await computeKesToUsd(amountParam, wiseToken);
+  publicCache(c, 3600, 3600);
   return c.json({
     planName: "Kingdom Partner",
     kesAmount: calculation.kesAmount,

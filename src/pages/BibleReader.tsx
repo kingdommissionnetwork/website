@@ -163,6 +163,9 @@ export default function BibleReader() {
       return;
     }
     if (searchTimer) clearTimeout(searchTimer);
+    // 600ms debounce: each keystroke-settling search costs a Worker invocation
+    // plus up to 9 third-party subrequests server-side. Cached repeats (same
+    // query+translation within 5min) never hit the network via api SWR.
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
@@ -170,7 +173,7 @@ export default function BibleReader() {
         setSearchResults(data.results || []);
       } catch { setSearchResults([]); }
       setSearching(false);
-    }, 400);
+    }, 600);
     setSearchTimer(timer);
   };
 

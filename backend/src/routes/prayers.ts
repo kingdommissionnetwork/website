@@ -3,6 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { rateLimit } from "../lib/rateLimiter";
+import { publicCache } from "../lib/httpCache";
 
 export const prayerRoutes = new Hono();
 
@@ -26,6 +27,7 @@ prayerRoutes.get("/", async (c) => {
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) return c.json({ error: "Failed to load prayers." }, 500);
+  publicCache(c);
   return c.json(data);
 });
 
@@ -66,6 +68,7 @@ prayerRoutes.get("/:id/comments", async (c) => {
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) return c.json({ error: "Failed to load comments." }, 500);
+  publicCache(c);
   return c.json(data);
 });
 
@@ -90,8 +93,9 @@ prayerRoutes.post("/:id/comments", rateLimit, zValidator("json", commentSchema),
   return c.json(comment, 201);
 });
 
-prayerRoutes.get("/categories", async () => {
-  return Response.json([
+prayerRoutes.get("/categories", async (c) => {
+  publicCache(c, 3600, 86400);
+  return c.json([
     "All Prayers", "Healing", "Family", "Ministry", "Finances", "Guidance", "Salvation", "Relationships", "Other",
   ]);
 });

@@ -5,9 +5,21 @@ import { getSupabase } from "../lib/supabase";
 import { requireAdmin, verifyToken } from "../lib/jwt";
 import { getCookie } from "hono/cookie";
 import { rateLimit } from "../lib/rateLimiter";
+import { publicCache } from "../lib/httpCache";
 import { sendDonationEmail } from "../lib/email";
 
 export const donationRoutes = new Hono();
+
+// Quota guard: verification results change slowly (records are immutable once
+// written). Cache hits AND misses briefly so repeated scans and probing
+// floods don't each cost Supabase queries. 120s keeps fraud data fresh.
+const verifyCache = new Map<string, { time: number; status: number; body: unknown }>();
+const VERIFY_TTL_MS = 120_000;
+
+/** Test-only: reset the verification result cache between cases. */
+export function clearVerifyCache(): void {
+  verifyCache.clear();
+}
 
 const createDonationSchema = z.object({
   amount: z.number().positive().max(1_000_000),
@@ -66,13 +78,28 @@ donationRoutes.get("/verify-receipt", rateLimit, async (c) => {
     return c.json({ error: "Reference, invoice number, or partner ID is required." }, 400);
   }
 
-  const notVerified = (message: string) => c.json({ verified: false, message });
+  const cacheKey = `v:${ref}|${inv}|${partner}|${statement}`;
+  const cachedV = verifyCache.get(cacheKey);
+  if (cachedV && Date.now() - cachedV.time < VERIFY_TTL_MS) {
+    publicCache(c, 120, 120);
+    return c.json(cachedV.body, cachedV.status as 200 | 404);
+  }
+  // Cache genuine results (hits and not-founds). Transient registry errors
+  // bypass the cache so recovery is immediate.
+  const respond = (body: unknown, status?: 200 | 404) => {
+    if (verifyCache.size > 1000) verifyCache.clear();
+    verifyCache.set(cacheKey, { time: Date.now(), status: status ?? 200, body });
+    publicCache(c, 120, 120);
+    return c.json(body, status);
+  };
+  const notVerified = (message: string) => respond({ verified: false, message });
+  const registryDown = () => c.json({ verified: false, message: "Verification registry is temporarily unavailable. Please try again later." });
 
   let supabase = null;
   try {
     supabase = getSupabase(c.env as Record<string, string>);
   } catch {
-    return notVerified("Verification registry is temporarily unavailable. Please try again later.");
+    return registryDown();
   }
 
   // Exact-match subscription resolution for partner IDs and statements.
@@ -97,7 +124,7 @@ donationRoutes.get("/verify-receipt", rateLimit, async (c) => {
     try {
       const sub = await resolveSubscription(partner);
       if (sub) {
-        return c.json({
+        return respond({
           verified: true,
           type: "partner",
           partnerId: partner.toUpperCase(),
@@ -109,7 +136,7 @@ donationRoutes.get("/verify-receipt", rateLimit, async (c) => {
         });
       }
     } catch {
-      return notVerified("Verification registry is temporarily unavailable. Please try again later.");
+      return registryDown();
     }
     return notVerified("No matching partner credential found in the registry.");
   }
@@ -139,11 +166,11 @@ donationRoutes.get("/verify-receipt", rateLimit, async (c) => {
         }
       }
     } catch {
-      return notVerified("Verification registry is temporarily unavailable. Please try again later.");
+      return registryDown();
     }
 
     if (donation) {
-      return c.json({
+      return respond({
         verified: true,
         type: "invoice",
         reference: donation.payment_reference || ref,
@@ -172,7 +199,7 @@ donationRoutes.get("/verify-receipt", rateLimit, async (c) => {
     try {
       const sub = await resolveSubscription(partner);
       if (sub) {
-        return c.json({
+        return respond({
           verified: true,
           type: "statement",
           year: statement,
@@ -184,11 +211,11 @@ donationRoutes.get("/verify-receipt", rateLimit, async (c) => {
         });
       }
     } catch {
-      return notVerified("Verification registry is temporarily unavailable. Please try again later.");
+      return registryDown();
     }
     return notVerified("No matching partner record found for this statement.");
   }
 
-  return c.json({ verified: false, error: "Invalid verification parameters." }, 404);
+  return respond({ verified: false, error: "Invalid verification parameters." }, 404);
 });
 

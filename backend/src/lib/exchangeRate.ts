@@ -4,7 +4,10 @@ interface CachedRate {
 }
 
 const rateCache = new Map<string, CachedRate>();
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+// 60 minutes: FX drifts slowly intraday, and every miss costs external
+// subrequests (Wise + exchangerate-api) against the 50/invocation Worker cap.
+// Ledger rows stamp the rate at transaction time, so staleness is bounded.
+const CACHE_TTL_MS = 60 * 60 * 1000;
 
 // Fallback rates if external APIs fail
 const FALLBACK_RATES: Record<string, number> = {

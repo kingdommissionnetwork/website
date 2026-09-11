@@ -11,6 +11,33 @@ class ApiError extends Error {
   }
 }
 
+// ── Quota guard: SWR cache + in-flight dedupe ─────────────────────────────
+// Every GET here costs a Cloudflare Worker invocation (100k/day free) plus a
+// Supabase round-trip (5GB egress free). Repeat visits must not refetch.
+// GET-only: POST/PUT/PATCH/DELETE always hit the network.
+const swrCache = new Map<string, { time: number; data: unknown }>();
+const inflight = new Map<string, Promise<unknown>>();
+const DEFAULT_TTL_MS = 2 * 60 * 1000;
+
+function swrGet<T>(key: string, ttlMs: number, fetcher: () => Promise<T>): Promise<T> {
+  const hit = swrCache.get(key);
+  if (hit && Date.now() - hit.time < ttlMs) return Promise.resolve(hit.data as T);
+  const ongoing = inflight.get(key);
+  if (ongoing) return ongoing as Promise<T>;
+  const p = fetcher()
+    .then((data) => {
+      // Cap entries so long-lived tabs can't grow memory unbounded.
+      if (swrCache.size > 300) swrCache.clear();
+      swrCache.set(key, { time: Date.now(), data });
+      return data;
+    })
+    .finally(() => {
+      inflight.delete(key);
+    });
+  inflight.set(key, p);
+  return p;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = API_BASE ? `${API_BASE}/api${path}` : `/api${path}`;
   const res = await fetch(url, {
@@ -127,9 +154,15 @@ export const api = {
   },
 
   prayers: {
-    list: async (category?: string): Promise<PrayerRequest[]> => {
-      const params = category && category !== "All Prayers" ? `?category=${encodeURIComponent(category)}` : "";
-      const data = await request<(PrayerRequest & { created_at?: string })[]>(`/prayers${params}`);
+    list: async (category?: string, limit?: number): Promise<PrayerRequest[]> => {
+      const params = new URLSearchParams();
+      if (category && category !== "All Prayers") params.set("category", category);
+      if (limit) params.set("limit", String(limit));
+      const qs = params.toString();
+      const key = `prayers:list:${qs || "all"}`;
+      const data = await swrGet(key, DEFAULT_TTL_MS, () =>
+        request<(PrayerRequest & { created_at?: string })[]>(`/prayers${qs ? `?${qs}` : ""}`)
+      );
       return data.map((p) => ({ ...p, timestamp: p.created_at || "recent" }));
     },
     submit: async (prayer: { name?: string; category: string; text: string }): Promise<PrayerRequest> => {
@@ -143,20 +176,25 @@ export const api = {
       await request(`/prayers/${id}/pray`, { method: "POST" });
     },
     getCategories: async (): Promise<string[]> => {
-      return await request<string[]>("/prayers/categories");
+      return swrGet("prayers:categories", 60 * 60 * 1000, () => request<string[]>("/prayers/categories"));
     },
   },
 
   sermons: {
-    list: async (category?: string, query?: string): Promise<Sermon[]> => {
+    list: async (category?: string, query?: string, limit?: number): Promise<Sermon[]> => {
       const params = new URLSearchParams();
       if (category && category !== "All") params.set("category", category);
       if (query) params.set("q", query);
+      if (limit) params.set("limit", String(limit));
       const qs = params.toString();
-      return await request<Sermon[]>(`/sermons${qs ? `?${qs}` : ""}`);
+      // Search queries are user-specific; cache briefly. Plain lists cache longer.
+      const ttl = query ? 60 * 1000 : DEFAULT_TTL_MS;
+      return swrGet(`sermons:list:${qs || "all"}`, ttl, () =>
+        request<Sermon[]>(`/sermons${qs ? `?${qs}` : ""}`)
+      );
     },
     getCategories: async (): Promise<string[]> => {
-      return await request<string[]>("/sermons/categories");
+      return swrGet("sermons:categories", 60 * 60 * 1000, () => request<string[]>("/sermons/categories"));
     },
     create: async (data: Partial<Sermon>): Promise<Sermon> => {
       return request<Sermon>("/sermons", {
@@ -178,9 +216,12 @@ export const api = {
   },
 
   events: {
-    list: async (): Promise<Event[]> => {
+    list: async (limit?: number): Promise<Event[]> => {
+      const qs = limit ? `?limit=${limit}` : "";
       try {
-        const res = await request<Record<string, unknown>[]>("/events");
+        const res = await swrGet(`events:list:${qs || "all"}`, DEFAULT_TTL_MS, () =>
+          request<Record<string, unknown>[]>(`/events${qs}`)
+        );
         return Array.isArray(res) ? res.map(normalizeEvent) : [];
       } catch {
         return [];
@@ -217,27 +258,34 @@ export const api = {
 
   bible: {
     dailyVerse: async (translation = "kjv"): Promise<{ text: string; reference: string; translation: string }> => {
-      return await request(`/bible/daily?translation=${translation}`);
+      return swrGet(`bible:daily:${translation}`, 60 * 60 * 1000, () =>
+        request(`/bible/daily?translation=${translation}`)
+      );
     },
     books: async () => {
-      const data = await request<{ books: BibleBook[]; translations: string[]; translationNames: Record<string, string> }>("/bible/books");
-      return data;
+      return swrGet("bible:books", 60 * 60 * 1000, () =>
+        request<{ books: BibleBook[]; translations: string[]; translationNames: Record<string, string> }>("/bible/books")
+      );
     },
     verses: async (book: string, chapter: number, translation = "kjv") => {
-      return await request<{ verses: BibleVerse[]; book: string; chapter: number; translation: string; translationName: string }>(
-        `/bible/verses/${encodeURIComponent(book)}/${chapter}?translation=${translation}`
+      return swrGet(`bible:verses:${translation}:${book}:${chapter}`, 30 * 60 * 1000, () =>
+        request<{ verses: BibleVerse[]; book: string; chapter: number; translation: string; translationName: string }>(
+          `/bible/verses/${encodeURIComponent(book)}/${chapter}?translation=${translation}`
+        )
       );
     },
     search: async (query: string, translation = "kjv") => {
-      return await request<{ results: { book: string; chapter: number; verse: number; text: string }[]; query: string; translation: string }>(
-        `/bible/search?q=${encodeURIComponent(query)}&translation=${translation}`
+      return swrGet(`bible:search:${translation}:${query.toLowerCase().slice(0, 80)}`, 5 * 60 * 1000, () =>
+        request<{ results: { book: string; chapter: number; verse: number; text: string }[]; query: string; translation: string }>(
+          `/bible/search?q=${encodeURIComponent(query)}&translation=${translation}`
+        )
       );
     },
   },
 
   streams: {
     upcoming: async (): Promise<{ id: string; title: string; host: string; time: string }[]> => {
-      return await request("/streams/upcoming");
+      return swrGet("streams:upcoming", DEFAULT_TTL_MS, () => request("/streams/upcoming"));
     },
   },
 
@@ -267,7 +315,9 @@ export const api = {
       return request("/payments/paypal/capture", { method: "POST", body: JSON.stringify(data) });
     },
     getRate: async (from = "KES", to = "USD") => {
-      return request<{ rate: number; source: string; target: string; provider: string }>(`/payments/rate?from=${from}&to=${to}`);
+      return swrGet(`payments:rate:${from}:${to}`, 60 * 60 * 1000, () =>
+        request<{ rate: number; source: string; target: string; provider: string }>(`/payments/rate?from=${from}&to=${to}`)
+      );
     },
     reportOffline: async (data: {
       amount: number;
@@ -288,15 +338,17 @@ export const api = {
 
   subscriptions: {
     getPricing: async (amount: number = 1000) => {
-      return request<{
-        planName: string;
-        kesAmount: number;
-        usdAmount: number;
-        exchangeRate: number;
-        interval: string;
-        provider: string;
-        description: string;
-      }>(`/subscriptions/pricing?amount=${amount}`);
+      return swrGet(`subscriptions:pricing:${amount}`, 60 * 60 * 1000, () =>
+        request<{
+          planName: string;
+          kesAmount: number;
+          usdAmount: number;
+          exchangeRate: number;
+          interval: string;
+          provider: string;
+          description: string;
+        }>(`/subscriptions/pricing?amount=${amount}`)
+      );
     },
     initialize: async (data: { email: string; name?: string; interval?: "monthly" | "yearly"; currency?: "KES" | "USD"; planId?: string; planName?: string; amount?: number }) => {
       return request<{
@@ -411,11 +463,15 @@ export const api = {
       });
     },
     getStatus: async (email: string) => {
-      return request<{
-        hasActiveSubscription: boolean;
-        subscription?: Record<string, unknown>;
-        lifecycle?: { status: string; renewable: boolean; renewLink: string };
-      }>(`/subscriptions/status/${encodeURIComponent(email)}`);
+      // Short TTL: membership state changes slowly, and this fires on every
+      // dashboard mount. Claim/mutation flows refetch explicitly via request.
+      return swrGet(`subscriptions:status:${email.trim().toLowerCase()}`, 60 * 1000, () =>
+        request<{
+          hasActiveSubscription: boolean;
+          subscription?: Record<string, unknown>;
+          lifecycle?: { status: string; renewable: boolean; renewLink: string };
+        }>(`/subscriptions/status/${encodeURIComponent(email)}`)
+      );
     },
     // Progressive-identity account claiming (verify inbox ownership, then mint hub session)
     requestClaim: async (email: string) => {
@@ -476,7 +532,7 @@ export const api = {
       donorCount: number;
       pendingMpesaCount: number;
     }> => {
-      return await request("/admin/stats", { headers: authHeaders() });
+      return swrGet("admin:stats", 30 * 1000, () => request("/admin/stats", { headers: authHeaders() }));
     },
     pendingMpesa: async (): Promise<{
       id: string | number;
@@ -614,7 +670,8 @@ export const api = {
     if (params.inv) q.set("inv", params.inv);
     if (params.partner) q.set("partner", params.partner);
     if (params.statement) q.set("statement", params.statement);
-    return await request(`/donations/verify-receipt?${q.toString()}`);
+    const qs = q.toString();
+    return swrGet(`verify:${qs}`, DEFAULT_TTL_MS, () => request(`/donations/verify-receipt?${qs}`));
   },
 };
 

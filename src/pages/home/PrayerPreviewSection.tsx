@@ -14,7 +14,8 @@ export default function PrayerPreviewSection() {
   const { showToast } = useToast();
 
   useEffect(() => {
-    api.prayers.list().then((data) => {
+    // Fetch only what's shown: the list endpoint defaults to 50 rows.
+    api.prayers.list(undefined, 4).then((data) => {
       setPrayers(data.slice(0, 4));
       setLoading(false);
     }).catch(() => setLoading(false));

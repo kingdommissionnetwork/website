@@ -204,7 +204,11 @@ export default function GivePage() {
       });
       setStkStatusMessage("Prompt sent to your phone! Please enter your M-Pesa PIN now.");
       const checkoutId = res.checkoutRequestId;
+      // 4s cadence over the 60s window (15 polls, not 20): each poll is a
+      // Worker invocation + Supabase lookup. Skip while the tab is hidden —
+      // the server-side session TTL (180s) outlives the UI budget.
       const pollInterval = setInterval(async () => {
+        if (document.hidden) return;
         try {
           const pollRes = await api.subscriptions.queryMpesaStk(checkoutId);
           if (pollRes.status === "completed") {
@@ -216,7 +220,7 @@ export default function GivePage() {
             showToast("M-Pesa payment cancelled or failed. Please try again.", "error");
           }
         } catch { /* ignore polling errors */ }
-      }, 3000);
+      }, 4000);
       const timer = setInterval(() => {
         setStkSecondsLeft((prev) => {
           if (prev <= 1) {
@@ -286,8 +290,17 @@ export default function GivePage() {
       // Poll the claim; the code stays saved server-side meanwhile.
       const email = (donorEmail || "partner@kingdommissionnetwork.org").trim();
       setPaybillPending("Code received — waiting for Safaricom confirmation. Please keep this page open…");
+      let hiddenWaits = 0;
       for (let i = 0; i < 12; i++) {
         await new Promise((r) => setTimeout(r, 5000));
+        // Don't burn Worker + Supabase quota while the tab is backgrounded;
+        // the claim stays saved server-side (48h TTL) and resolves on return.
+        // Hidden cycles don't consume the attempt budget (capped at 12).
+        if (document.hidden && hiddenWaits < 12) {
+          hiddenWaits++;
+          i--;
+          continue;
+        }
         try {
           const s = await api.subscriptions.getClaimStatus(cleanRef, email);
           if (s.status === "matched") {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { requireAdmin } from "../lib/jwt";
+import { publicCache } from "../lib/httpCache";
 
 export const sermonRoutes = new Hono();
 
@@ -31,11 +32,13 @@ sermonRoutes.get("/", async (c) => {
     console.error("[SERMONS] list error:", error.message);
     return c.json({ error: "Failed to load sermons." }, 500);
   }
+  publicCache(c);
   return c.json(data);
 });
 
-sermonRoutes.get("/categories", async () => {
-  return Response.json([
+sermonRoutes.get("/categories", async (c) => {
+  publicCache(c, 3600, 86400);
+  return c.json([
     "All", "Faith", "Hope", "Love", "Discipleship", "Leadership", "Worship", "Prophecy", "Healing", "Finance", "Relationships",
   ]);
 });

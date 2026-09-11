@@ -266,7 +266,9 @@ export default function SubscriptionPortal() {
 
       const checkoutId = initRes.checkoutRequestId;
       let attempts = 0;
-      const maxAttempts = 30;
+      // 4s cadence over the same 60s budget (15 polls, not 30): each poll is
+      // a Worker invocation + Supabase lookup. Hidden-tab cycles are skipped.
+      const maxAttempts = 15;
 
       // Live countdown for the PIN window (matches the 60s poll budget)
       const countdownTimer = setInterval(() => {
@@ -279,6 +281,7 @@ export default function SubscriptionPortal() {
       };
 
       const pollTimer = setInterval(async () => {
+        if (document.hidden) return;
         attempts++;
         try {
           const qRes = await api.subscriptions.queryMpesaStk(checkoutId);
@@ -307,10 +310,10 @@ export default function SubscriptionPortal() {
             showToast("Transaction timeout. If you completed payment, you can enter the SMS receipt code below.", "info");
             setMpesaMode("manual");
           }
-        } catch {
+          } catch {
           // keep polling
         }
-      }, 2000);
+      }, 4000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to trigger M-Pesa STK Push.";
       showToast(msg, "error");
@@ -409,8 +412,16 @@ export default function SubscriptionPortal() {
   // Poll a pending Paybill claim until the provider confirms it (or timeout).
   // Returns the matched claim payload, or null when still pending/failed.
   const pollPaybillClaim = async (cleanRef: string, email: string) => {
+    let hiddenWaits = 0;
     for (let i = 0; i < 12; i++) {
       await new Promise((r) => setTimeout(r, 5000));
+      // Skip network polls while backgrounded (bounded): the claim persists
+      // server-side and resolves when the tab returns. Saves Worker + Supabase.
+      if (document.hidden && hiddenWaits < 12) {
+        hiddenWaits++;
+        i--;
+        continue;
+      }
       try {
         const s = await api.subscriptions.getClaimStatus(cleanRef, email);
         if (s.status === "matched") return s;

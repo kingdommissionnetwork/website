@@ -11,7 +11,9 @@ export default function EventsPreviewSection() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.events.list().then((data) => {
+    // Fetch a bounded window: the list endpoint defaults to 50 rows and this
+    // section only shows the next 6 upcoming events.
+    api.events.list(20).then((data) => {
       setEvents(getUpcomingEvents(Array.isArray(data) ? data : []).slice(0, 6));
       setLoading(false);
     }).catch(() => setLoading(false));
