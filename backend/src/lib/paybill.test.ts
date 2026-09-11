@@ -1,9 +1,12 @@
 import { expect, test, describe } from "vitest";
 import {
+  findStkSession,
   matchReceiptToClaim,
   normalizeDarajaConfirmation,
   normalizeKcbIpn,
   parseDarajaTime,
+  saveStkSession,
+  updateStkSession,
   OUR_ACCOUNT,
 } from "./paybill";
 
@@ -126,5 +129,76 @@ describe("Paybill ground-truth matching", () => {
     });
     expect(v.ok).toBe(false);
     if (!v.ok) expect(v.code).toBe("STALE_RECEIPT");
+  });
+
+  test("durable STK sessions round-trip via Supabase-shaped client", async () => {
+    const store = new Map<string, Record<string, unknown>>();
+    const db = {
+      from: (table: string) => {
+        if (table !== "mpesa_stk_sessions") throw new Error("unexpected table " + table);
+        return {
+          upsert: async (row: Record<string, unknown>) => {
+            store.set(row.checkout_request_id as string, {
+              ...row,
+              created_at: new Date().toISOString(),
+            });
+            return { data: null };
+          },
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: store.get("ws_CO_test123") || null }),
+            }),
+          }),
+          update: (patch: Record<string, unknown>) => ({
+            eq: () => {
+              const row = store.get("ws_CO_test123");
+              if (row) store.set("ws_CO_test123", { ...row, ...patch });
+              return Promise.resolve({ data: null });
+            },
+          }),
+        };
+      },
+    };
+    await saveStkSession(db, {
+      checkoutRequestId: "ws_CO_test123",
+      merchantRequestId: "m1",
+      name: "Test User",
+      email: "test@example.com",
+      phone: "254712345678",
+      amount: 3000,
+      planName: "Kingdom Ambassador",
+      planId: "ambassador",
+      interval: "monthly",
+    });
+    const found = await findStkSession(db, "ws_CO_test123");
+    expect(found?.checkout_request_id).toBe("ws_CO_test123");
+    expect(found?.status).toBe("pending");
+    await updateStkSession(db, "ws_CO_test123", { status: "completed", receipt_code: "QHX1" });
+    const updated = await findStkSession(db, "ws_CO_test123");
+    expect(updated?.status).toBe("completed");
+    expect(updated?.receipt_code).toBe("QHX1");
+  });
+
+  test("STK helpers never throw when the table is missing", async () => {
+    const broken = {
+      from: () => {
+        throw new Error("relation mpesa_stk_sessions does not exist");
+      },
+    };
+    await expect(
+      saveStkSession(broken, {
+        checkoutRequestId: "x",
+        merchantRequestId: "m",
+        name: "n",
+        email: "e@x.com",
+        phone: "2547",
+        amount: 100,
+        planName: "p",
+        planId: "ambassador",
+        interval: "monthly",
+      })
+    ).resolves.toBeUndefined();
+    await expect(findStkSession(broken, "x")).resolves.toBeNull();
+    await expect(updateStkSession(broken, "x", { status: "failed" })).resolves.toBeUndefined();
   });
 });

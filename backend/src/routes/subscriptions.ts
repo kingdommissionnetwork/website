@@ -13,11 +13,14 @@ import {
   consumeReceipt,
   findOpenClaimForReference,
   findReceiptByTransId,
+  findStkSession,
   matchReceiptToClaim,
   normalizeDarajaConfirmation,
   normalizeKcbIpn,
   recordPaybillReceipt,
+  saveStkSession,
   setClaimStatus,
+  updateStkSession,
   upsertPaymentClaim,
   type ClaimRow,
 } from "../lib/paybill";
@@ -838,9 +841,9 @@ const STK_SESSION_TTL_MS = 180_000;
 const STK_MAX_SESSIONS = 5000;
 
 /**
- * NOTE: in-memory sessions are per-isolate and do not survive Worker restarts
- * or share across instances. This sweep bounds memory; for multi-instance
- * production move sessions to KV / Durable Objects.
+ * L1 memory cache for STK sessions; `mpesa_stk_sessions` (Supabase) is the
+ * durable source of truth across isolates/restarts. This sweep only bounds
+ * memory — expiry/completion state is also persisted via setCheckoutStatus.
  */
 function sweepStkSessions(): void {
   const now = Date.now();
@@ -857,6 +860,71 @@ function sweepStkSessions(): void {
       activeMpesaCheckouts.delete(next.value);
     }
   }
+}
+
+/** Best-effort Supabase client — null when env/table unavailable (tests, local). */
+function getDbOrNull(c: import("hono").Context) {
+  try {
+    return getSupabase(c.env as Record<string, string>);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Durable session lookup: in-memory L1 first, then `mpesa_stk_sessions`.
+ * Hydrated DB rows are backfilled into memory so the hot path stays fast.
+ * Returns null when the id is unknown on both layers.
+ */
+async function getCheckoutSession(
+  c: import("hono").Context,
+  checkoutRequestId: string
+): Promise<MpesaCheckoutSession | null> {
+  const id = checkoutRequestId.trim().slice(0, 64);
+  if (!id) return null;
+  const cached = activeMpesaCheckouts.get(id);
+  if (cached) return cached;
+  const db = getDbOrNull(c);
+  if (!db) return null;
+  const row = await findStkSession(db, id);
+  if (!row) return null;
+  const session: MpesaCheckoutSession = {
+    checkoutRequestId: row.checkout_request_id,
+    merchantRequestId: row.merchant_request_id || "",
+    name: row.name,
+    email: row.email,
+    phoneNumber: row.phone,
+    amount: Number(row.amount),
+    planName: row.plan_name || "Kingdom Partner",
+    planId: row.plan_id || ONETIME_PLAN_ID,
+    interval: (row.interval === "yearly" ? "yearly" : "monthly") as "monthly" | "yearly",
+    status: (row.status === "completed" ? "completed" : row.status === "failed" ? "failed" : "pending") as MpesaCheckoutSession["status"],
+    receiptCode: row.receipt_code || undefined,
+    createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+    fulfilled: row.fulfilled || false,
+  };
+  if (!Number.isFinite(session.createdAt)) session.createdAt = Date.now();
+  sweepStkSessions();
+  if (activeMpesaCheckouts.size < STK_MAX_SESSIONS) activeMpesaCheckouts.set(id, session);
+  return session;
+}
+
+/** Persist status transitions to both layers (memory authoritative, DB durable). */
+async function setCheckoutStatus(
+  c: import("hono").Context,
+  session: MpesaCheckoutSession,
+  status: MpesaCheckoutSession["status"],
+  receiptCode?: string
+): Promise<void> {
+  session.status = status;
+  if (receiptCode !== undefined) session.receiptCode = receiptCode;
+  activeMpesaCheckouts.set(session.checkoutRequestId, session);
+  const db = getDbOrNull(c);
+  if (!db) return;
+  await updateStkSession(db, session.checkoutRequestId, {
+    status,
+    ...(receiptCode !== undefined ? { receipt_code: receiptCode } : {}),
+  });
 }
 
 // KCB Buni M-Pesa STK Push Trigger
@@ -907,7 +975,7 @@ subscriptionRoutes.post(
       });
 
       sweepStkSessions();
-      activeMpesaCheckouts.set(result.checkoutRequestId, {
+      const session: MpesaCheckoutSession = {
         checkoutRequestId: result.checkoutRequestId,
         merchantRequestId: result.merchantRequestId,
         name: name.trim(),
@@ -919,7 +987,23 @@ subscriptionRoutes.post(
         interval,
         status: "pending",
         createdAt: Date.now(),
-      });
+      };
+      activeMpesaCheckouts.set(result.checkoutRequestId, session);
+      // Durable copy so callbacks/queries on other isolates can resolve it.
+      const db = getDbOrNull(c);
+      if (db) {
+        await saveStkSession(db, {
+          checkoutRequestId: session.checkoutRequestId,
+          merchantRequestId: session.merchantRequestId,
+          name: session.name,
+          email: session.email,
+          phone: session.phoneNumber,
+          amount: session.amount,
+          planName: session.planName,
+          planId: session.planId,
+          interval: session.interval,
+        });
+      }
       await logBillingEvent(c.env as Record<string, string>, email.trim().toLowerCase(), "stk_push_initiated", "mpesa_checkout", result.checkoutRequestId, {
         planName: canonicalPlanName,
         amount: canonicalAmount,
@@ -1034,6 +1118,11 @@ async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCh
   };
   checkout.fulfilled = true;
   checkout.fulfilledResult = result;
+  activeMpesaCheckouts.set(checkout.checkoutRequestId, checkout);
+  const fulfillDb = getDbOrNull(c);
+  if (fulfillDb) {
+    await updateStkSession(fulfillDb, checkout.checkoutRequestId, { fulfilled: true });
+  }
   return result;
 }
 
@@ -1042,7 +1131,7 @@ async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCh
 // Pending sessions expire after STK_SESSION_TTL_MS — never auto-complete.
 subscriptionRoutes.get("/mpesa/query/:checkoutRequestId", rateLimit, async (c) => {
   const checkoutRequestId = c.req.param("checkoutRequestId").slice(0, 64);
-  const checkout = activeMpesaCheckouts.get(checkoutRequestId);
+  const checkout = await getCheckoutSession(c, checkoutRequestId);
 
   if (!checkout) {
     return c.json({ status: "not_found", message: "Checkout session not found." }, 404);
@@ -1058,7 +1147,7 @@ subscriptionRoutes.get("/mpesa/query/:checkoutRequestId", rateLimit, async (c) =
 
   const elapsed = Date.now() - checkout.createdAt;
   if (elapsed > STK_SESSION_TTL_MS) {
-    checkout.status = "failed";
+    await setCheckoutStatus(c, checkout, "failed");
     await logBillingEvent(c.env as Record<string, string>, checkout.email, "stk_push_expired", "mpesa_checkout", checkoutRequestId, {
       amount: checkout.amount,
     });
@@ -1087,13 +1176,13 @@ subscriptionRoutes.post("/mpesa/kcb-callback", async (c) => {
     const checkoutId = String(response.CheckoutRequestID || response.checkoutRequestId || "").trim();
     const resultCode = String(response.ResultCode ?? response.resultCode ?? "0");
 
-    if (!checkoutId || !activeMpesaCheckouts.has(checkoutId)) {
+    const checkout = await getCheckoutSession(c, checkoutId);
+    if (!checkoutId || !checkout) {
       console.warn("[KCB CALLBACK] unknown CheckoutRequestID:", checkoutId || "(missing)");
       await logBillingEvent(c.env as Record<string, string>, "kcb-callback", "stk_callback_unknown", "mpesa_checkout", checkoutId || "missing", {});
       return c.json({ statusCode: "0", statusDescription: "Callback received successfully" });
     }
 
-    const checkout = activeMpesaCheckouts.get(checkoutId)!;
     // Cross-check the callback amount when the provider includes one.
     const callbackAmount = Number(response.Amount ?? response.amount ?? checkout.amount);
     if (Number.isFinite(callbackAmount) && Math.round(callbackAmount) !== Math.round(checkout.amount)) {
@@ -1102,20 +1191,20 @@ subscriptionRoutes.post("/mpesa/kcb-callback", async (c) => {
         expected: checkout.amount,
         received: callbackAmount,
       });
-      checkout.status = "failed";
+      await setCheckoutStatus(c, checkout, "failed");
       return c.json({ statusCode: "0", statusDescription: "Callback received successfully" });
     }
 
     if (resultCode === "0") {
-      checkout.status = "completed";
-      checkout.receiptCode = String(
+      const receiptCode = String(
         response.MpesaReceiptNumber || response.receipt || `KCB${Date.now().toString().slice(-7)}`
       );
+      await setCheckoutStatus(c, checkout, "completed", receiptCode);
       await logBillingEvent(c.env as Record<string, string>, checkout.email, "stk_callback_completed", "mpesa_checkout", checkoutId, {
-        receiptCode: checkout.receiptCode,
+        receiptCode,
       });
     } else {
-      checkout.status = "failed";
+      await setCheckoutStatus(c, checkout, "failed");
       await logBillingEvent(c.env as Record<string, string>, checkout.email, "stk_callback_failed", "mpesa_checkout", checkoutId, { resultCode });
     }
   } catch (err) {

@@ -389,6 +389,100 @@ export async function setClaimStatus(
   }
 }
 
+// ── Durable M-Pesa STK checkout sessions ───────────────────────────────────
+// In-memory Maps are per-isolate on Cloudflare Workers: an STK callback can
+// land on a different isolate than the stkpush trigger, losing the session.
+// These helpers persist sessions to `mpesa_stk_sessions` (Supabase) so any
+// isolate can resolve query/callback. All best-effort: on missing table/env
+// they resolve null/void and callers fall back to the in-memory L1 cache.
+
+export interface StkSessionRow {
+  checkout_request_id: string;
+  merchant_request_id: string | null;
+  name: string;
+  email: string;
+  phone: string;
+  amount: number;
+  plan_name: string | null;
+  plan_id: string | null;
+  interval: string;
+  status: string;
+  receipt_code: string | null;
+  fulfilled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StkSessionInput {
+  checkoutRequestId: string;
+  merchantRequestId: string;
+  name: string;
+  email: string;
+  phone: string;
+  amount: number;
+  planName: string;
+  planId: string;
+  interval: string;
+}
+
+/** Insert (or refresh) a pending STK session. Never throws. */
+export async function saveStkSession(db: Db, s: StkSessionInput): Promise<void> {
+  try {
+    await db.from("mpesa_stk_sessions").upsert(
+      {
+        checkout_request_id: s.checkoutRequestId,
+        merchant_request_id: s.merchantRequestId,
+        name: s.name,
+        email: s.email,
+        phone: s.phone,
+        amount: Math.round(s.amount),
+        plan_name: s.planName,
+        plan_id: s.planId,
+        interval: s.interval,
+        status: "pending",
+        receipt_code: null,
+        fulfilled: false,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "checkout_request_id", ignoreDuplicates: false }
+    );
+  } catch {
+    // Table missing / offline — memory cache still serves single-isolate dev.
+  }
+}
+
+/** Fetch a session by checkoutRequestId. Returns null on miss or DB error. */
+export async function findStkSession(db: Db, checkoutRequestId: string): Promise<StkSessionRow | null> {
+  try {
+    const id = checkoutRequestId.trim().slice(0, 64);
+    if (!id) return null;
+    const { data } = await db
+      .from("mpesa_stk_sessions")
+      .select("*")
+      .eq("checkout_request_id", id)
+      .maybeSingle();
+    return (data as StkSessionRow | null) || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Patch status / receipt / fulfilled flag. Never throws. */
+export async function updateStkSession(
+  db: Db,
+  checkoutRequestId: string,
+  patch: Partial<Pick<StkSessionRow, "status" | "receipt_code" | "fulfilled">>
+): Promise<void> {
+  try {
+    await db
+      .from("mpesa_stk_sessions")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("checkout_request_id", checkoutRequestId.trim().slice(0, 64));
+  } catch {
+    // non-fatal bookkeeping
+  }
+}
+
 /** Latest open (awaiting_receipt) claim for a transaction code, any email. */
 export async function findOpenClaimForReference(db: Db, transId: string): Promise<ClaimRow | null> {
   try {
