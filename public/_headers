@@ -1,10 +1,10 @@
 /*
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
-  X-XSS-Protection: 1; mode=block
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(self "https://js.paystack.co" "https://www.paypal.com")
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://js.paystack.co https://www.paypal.com https://*.sentry.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://api.paystack.co https://api-m.paypal.com https://api.exchangerate-api.com https://api.wise.com https://bible-api.com https://cdn.jsdelivr.net https://bible-go-api.rkeplin.com https://*.ingest.sentry.io; frame-src 'self' https://js.paystack.co https://www.paypal.com; object-src 'none'; base-uri 'self'; form-action 'self'
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

@@ -24,7 +24,7 @@
 |---|---|
 | **Frontend** | React 19 + TypeScript 5.9 |
 | **Bundler** | Vite 7.2 |
-| **Routing** | react-router-dom v7 (HashRouter) |
+| **Routing** | react-router-dom v7 (BrowserRouter) |
 | **Styling** | Tailwind CSS v3.4 + shadcn/ui (New York) |
 | **Animation** | Framer Motion |
 | **Forms** | react-hook-form + zod |
@@ -33,7 +33,7 @@
 | **Database** | Supabase (PostgreSQL) |
 | **Auth** | Hono JWT (Web Crypto API) |
 | **Payments** | Paystack + PayPal + Wise FX |
-| **Deployment** | Cloudflare Pages (CI/CD via GitHub Actions) |
+| **Deployment** | Cloudflare Workers with assets (CI/CD via GitHub Actions) |
 | **Testing** | Vitest + React Testing Library + Playwright E2E |
 
 ## Bible Translations Available
@@ -73,20 +73,21 @@ npm run lint
 
 ```
 src/
-├── components/       # Shared UI components
-│   └── ui/           # 53 shadcn/ui primitives
+├── components/       # Shared UI components (shadcn-style, New York)
 ├── pages/            # Route pages
-│   └── home/         # Home page section components
 ├── hooks/            # Custom React hooks
 ├── lib/              # API client, auth, toast, utilities
 ├── data/             # Type definitions
 └── test/             # Vitest test files
 backend/
 ├── src/
+│   ├── app.ts        # Canonical Hono app (CORS, middleware, mounts)
+│   ├── index.ts      # Worker entry (wraps app.ts, canonical deploy)
 │   ├── routes/       # Hono route handlers
-│   ├── lib/          # Supabase client, JWT, rate limiter, env
-│   └── db/           # Database connection
-└── functions/api/    # Cloudflare Pages Functions entry
+│   └── lib/          # Supabase client, JWT, rate limiter, env
+├── drizzle/          # Replayable SQL migrations (canonical schema)
+└── docs/             # Rate-limiting production controls
+functions/api/        # Legacy Pages Functions wrapper (do not extend)
 ```
 
 ## Scripts
@@ -97,17 +98,18 @@ backend/
 | `npm run build` | TypeScript check + Vite production build |
 | `npm run lint` | Run ESLint across all source files |
 | `npm run test` | Run Vitest test suite |
+| `npm run test:e2e` | Run Playwright E2E suite |
 | `npm run preview` | Preview production build locally |
 
 ## Architecture
 
-- **Frontend:** React SPA with HashRouter, deployed to Cloudflare Pages
-- **Backend:** Hono REST API running on Cloudflare Pages Functions (`functions/api/[[path]].ts`)
-- **Database:** Supabase PostgreSQL; backend connects via service-role key; authorization enforced at API middleware layer (`requireAdmin`)
-- **Authentication:** JWT-based with Hono middleware, 7-day expiry
-- **Rate Limiting:** In-memory sliding window (20 req/min standard, 5 req/min for auth)
+- **Frontend:** React SPA with BrowserRouter, deployed as Worker assets
+- **Backend:** Hono REST API on Cloudflare Workers (`backend/src/app.ts` canonical; `functions/api/[[path]].ts` is a legacy Pages wrapper)
+- **Database:** Supabase PostgreSQL; replayable schema in `backend/drizzle/*.sql`; backend connects via service-role key; authorization at API layer (`requireAdmin` + `requireAdminScope`)
+- **Authentication:** JWT-based with Hono middleware (httpOnly cookie), 7-day expiry
+- **Rate Limiting:** In-memory per-isolate backstop (20 req/min standard, 5 req/min strict) + required Cloudflare WAF rules (see `docs/rate-limiting.md`)
 - **Payments:** Paystack for African currencies (M-Pesa + cards), PayPal for international, Wise for FX rates
-- **CI/CD:** GitHub Actions — lint → test → build → deploy to Cloudflare Pages via wrangler
+- **CI/CD:** GitHub Actions — lint → test → build → `wrangler deploy` (Worker with assets)
 
 ## License
 

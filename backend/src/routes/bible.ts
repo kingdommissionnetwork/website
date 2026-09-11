@@ -166,20 +166,77 @@ async function fetchFromRkeplin(book: string, chapter: number, translation: stri
   return { verses };
 }
 
-async function fetchChapter(book: string, chapter: number, translationId: string) {
+// Chapter cache: Cloudflare Cache API (shared across isolates) with in-memory
+// fallback for Node/tests. Scripture is immutable — cache 1h + SWR 24h so the
+// third-party APIs are neither a latency nor an availability SPOF.
+interface ChapterVerses {
+  verses: { verse: number; text: string }[];
+}
+const chapterMemoryCache = new Map<string, { time: number; value: ChapterVerses }>();
+const CHAPTER_TTL_MS = 60 * 60 * 1000;
+
+function chapterCacheKey(book: string, chapter: number, translationId: string): string {
+  return `bible:${translationId}:${book.toLowerCase()}:${chapter}`;
+}
+
+type CfCaches = { default: { match(r: string): Promise<Response | undefined>; put(r: string, res: Response): Promise<void> } };
+
+async function readCachedChapter(key: string): Promise<ChapterVerses | null> {
+  try {
+    const cache = (globalThis as unknown as { caches?: CfCaches }).caches?.default;
+    if (cache) {
+      const hit = await cache.match(`https://cache.local/${key}`);
+      if (hit) return (await hit.json()) as ChapterVerses;
+    }
+  } catch {
+    // Cache API unavailable — fall through to memory.
+  }
+  const mem = chapterMemoryCache.get(key);
+  if (mem && Date.now() - mem.time < CHAPTER_TTL_MS) return mem.value;
+  return null;
+}
+
+async function writeCachedChapter(key: string, value: ChapterVerses): Promise<void> {
+  chapterMemoryCache.set(key, { time: Date.now(), value });
+  if (chapterMemoryCache.size > 500) {
+    const oldest = chapterMemoryCache.keys().next();
+    if (!oldest.done) chapterMemoryCache.delete(oldest.value);
+  }
+  try {
+    const cache = (globalThis as unknown as { caches?: CfCaches }).caches?.default;
+    if (cache) {
+      await cache.put(
+        `https://cache.local/${key}`,
+        new Response(JSON.stringify(value), {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+          },
+        })
+      );
+    }
+  } catch {
+    // non-fatal
+  }
+}
+
+async function fetchChapter(book: string, chapter: number, translationId: string): Promise<ChapterVerses | null> {
   const info = TRANSLATIONS.find((t) => t.id === translationId);
   if (!info) return null;
+  const key = chapterCacheKey(book, chapter, translationId);
+  const cached = await readCachedChapter(key);
+  if (cached) return cached;
 
+  let result: ChapterVerses | null = null;
   if (info.source === "bible-api") {
-    return fetchFromBibleApi(book, chapter, translationId);
+    result = await fetchFromBibleApi(book, chapter, translationId);
+  } else if (info.source === "wldeh" && info.wldehVersion) {
+    result = await fetchFromWldeh(book, chapter, info.wldehVersion);
+  } else if (info.source === "rkeplin") {
+    result = await fetchFromRkeplin(book, chapter, translationId);
   }
-  if (info.source === "wldeh" && info.wldehVersion) {
-    return fetchFromWldeh(book, chapter, info.wldehVersion);
-  }
-  if (info.source === "rkeplin") {
-    return fetchFromRkeplin(book, chapter, translationId);
-  }
-  return null;
+  if (result) await writeCachedChapter(key, result);
+  return result;
 }
 
 bibleRoutes.get("/books", (c) => c.json({
@@ -188,7 +245,7 @@ bibleRoutes.get("/books", (c) => c.json({
   translationNames: TRANSLATION_NAMES,
 }));
 
-bibleRoutes.get("/verses/:book/:chapter", async (c) => {
+bibleRoutes.get("/verses/:book/:chapter", rateLimit, async (c) => {
   const book = c.req.param("book");
   const chapter = Number(c.req.param("chapter"));
   const translation = c.req.query("translation") || "kjv";
@@ -211,7 +268,7 @@ bibleRoutes.get("/verses/:book/:chapter", async (c) => {
   }
 });
 
-bibleRoutes.get("/daily", async (c) => {
+bibleRoutes.get("/daily", rateLimit, async (c) => {
   const translation = (c.req.query("translation") || "kjv") as string;
   const now = new Date();
   const startOfYear = new Date(now.getFullYear(), 0, 0);

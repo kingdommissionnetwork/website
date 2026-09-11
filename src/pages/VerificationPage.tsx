@@ -44,6 +44,24 @@ interface VerificationResult {
   error?: string;
 }
 
+// Real SHA-256 fingerprint over the canonical record fields so the
+// certificate hash is reproducible from the verified data itself.
+async function computeSecurityHash(result: VerificationResult): Promise<string> {
+  const canonical = [
+    result.type,
+    result.reference || result.invoiceNumber || result.partnerId || "",
+    result.amount ?? "",
+    result.currency || "",
+    result.date || result.joinedAt || "",
+  ].join("|");
+  if (!globalThis.crypto?.subtle) return "";
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
+  const hex = Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return `SHA256:${hex.slice(0, 32).toUpperCase()}`;
+}
+
 export default function VerificationPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const docParam = searchParams.get("doc") || "";
@@ -54,17 +72,9 @@ export default function VerificationPage() {
 
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<VerificationResult | null>(null);
+  const [securityHash, setSecurityHash] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [invoiceModal, setInvoiceModal] = useState<InvoiceDetails | null>(null);
-
-  // Compute security fingerprint
-  const securityHash = result
-    ? `SHA256:${Array.from((result.reference || "") + (result.invoiceNumber || result.partnerId || "KMN"))
-        .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))
-        .join("")
-        .slice(0, 32)
-        .toUpperCase()}`
-    : "SHA256:AUTHENTIC-KMN-SECURE";
 
   useEffect(() => {
     let isMounted = true;
@@ -86,40 +96,16 @@ export default function VerificationPage() {
         });
         if (isMounted) {
           setResult(data);
+          if (data.verified) {
+            setSecurityHash(await computeSecurityHash(data));
+          }
         }
       } catch (err) {
-        console.error("Verification error, using fallback cryptographic proof:", err);
-        // Fallback cryptographic certificate if backend API is temporarily offline or rate limited
+        console.error("Verification request failed:", err);
+        // Never fabricate a result client-side. Fail closed: show the
+        // unverified state so the visitor can retry the lookup.
         if (isMounted) {
-          if (partnerParam) {
-            setResult({
-              verified: true,
-              type: "partner",
-              partnerId: partnerParam.toUpperCase(),
-              name: "Kingdom Missions Partner",
-              tier: "Covenant Partner",
-              status: "Active",
-              joinedAt: new Date().toISOString(),
-              verifiedAt: new Date().toISOString(),
-              notice: "Verified via digital certificate registry.",
-            });
-          } else {
-            setResult({
-              verified: true,
-              type: "invoice",
-              reference: refParam || "REF-VERIFIED-01",
-              invoiceNumber: invParam || "KMN-REC-OFFICIAL",
-              amount: 5000,
-              currency: "KES",
-              donorName: "Kingdom Missions Donor",
-              donorEmail: "donor@kingdommissionsnetwork.org",
-              recurring: false,
-              provider: "Card / M-Pesa",
-              status: "completed",
-              date: new Date().toISOString(),
-              verifiedAt: new Date().toISOString(),
-            });
-          }
+          setResult({ verified: false, type: "invoice" });
         }
       } finally {
         if (isMounted) {
@@ -352,7 +338,7 @@ export default function VerificationPage() {
               <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
                 <div className="flex items-center gap-2">
                   <Lock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                  <span className="font-mono break-all">{securityHash}</span>
+                  <span className="font-mono break-all">{securityHash || "Registry-verified record"}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap">
                   <ShieldCheck className="w-4 h-4" />

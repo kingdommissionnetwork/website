@@ -158,23 +158,93 @@ export async function sendPastoralBroadcastEmail(
   const fromAddress =
     getSecret(c, "RESEND_FROM_EMAIL") ||
     "Kingdom Missions Network <bishop@kingdommissionsnetwork.org>";
+  const unsubscribeUrl = `https://kingdommissionsnetwork.org/unsubscribe?email=${encodeURIComponent(email)}`;
   const template = pastoralBroadcastEmail({
     recipientName,
     subject,
     body,
     audience,
+    unsubscribeUrl,
   });
   const res = await resend.emails.send({
     from: fromAddress,
     to: email,
     subject: template.subject,
     html: template.html,
+    headers: { "List-Unsubscribe": `<${unsubscribeUrl}>, <mailto:unsubscribe@kingdommissionsnetwork.org?subject=unsubscribe>` },
   });
   if (res.error) {
     console.error(`[EMAIL] Resend broadcast delivery error for ${email}:`, res.error);
     throw new Error(res.error.message || "Resend email delivery failed");
   }
   return res.data;
+}
+
+/**
+ * Batch fan-out for pastoral broadcasts (Resend batch endpoint, 100/recall).
+ * Falls back to individual sends when batch is unavailable. Every message
+ * carries a List-Unsubscribe header + footer link (mass-email compliance).
+ */
+export async function sendPastoralBroadcastBatch(
+  c: { env?: unknown },
+  recipients: { email: string; name: string }[],
+  subject: string,
+  body: string,
+  audience?: string
+): Promise<{ sent: number; failed: number; lastError: string | null }> {
+  const resend = getResendClient(c);
+  if (!resend) throw new Error("Email dispatcher is not configured: Missing RESEND_API_KEY.");
+  const fromAddress =
+    getSecret(c, "RESEND_FROM_EMAIL") ||
+    "Kingdom Missions Network <bishop@kingdommissionsnetwork.org>";
+  let sent = 0;
+  let failed = 0;
+  let lastError: string | null = null;
+  const CHUNK = 100;
+  for (let i = 0; i < recipients.length; i += CHUNK) {
+    const chunk = recipients.slice(i, i + CHUNK);
+    const payload = chunk.map((r) => {
+      const unsubscribeUrl = `https://kingdommissionsnetwork.org/unsubscribe?email=${encodeURIComponent(r.email)}`;
+      const template = pastoralBroadcastEmail({
+        recipientName: r.name,
+        subject,
+        body,
+        audience,
+        unsubscribeUrl,
+      });
+      return {
+        from: fromAddress,
+        to: r.email,
+        subject: template.subject,
+        html: template.html,
+        headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` },
+      };
+    });
+    try {
+      const batchApi = (resend as unknown as { batch?: { send: (p: unknown) => Promise<{ error?: { message?: string } }> } }).batch;
+      if (batchApi?.send) {
+        const res = await batchApi.send(payload);
+        if (res?.error) throw new Error(res.error.message || "Batch rejected");
+        sent += chunk.length;
+      } else {
+        throw new Error("batch unavailable");
+      }
+    } catch {
+      // Fallback: individual sends in parallel (bounded).
+      const results = await Promise.allSettled(
+        payload.map((p) => resend.emails.send(p as Parameters<typeof resend.emails.send>[0]))
+      );
+      for (const r of results) {
+        if (r.status === "fulfilled" && !(r.value as { error?: unknown }).error) sent++;
+        else {
+          failed++;
+          const err = r.status === "rejected" ? r.reason : (r.value as { error?: { message?: string } }).error;
+          lastError = err instanceof Error ? err.message : String((err as { message?: string })?.message || err);
+        }
+      }
+    }
+  }
+  return { sent, failed, lastError };
 }
 
 export async function sendClaimOtpEmail(

@@ -9,6 +9,68 @@ const ADMIN_ROLES = new Set([
   "marketing_admin", "analyst",
 ]);
 
+const SUPER_ROLES = new Set(["admin", "superadmin", "super_admin", "system_admin"]);
+
+/**
+ * Least-privilege map for admin routes. `requireAdmin` still gates "is staff",
+ * but mutations require a matching scope:
+ * - analyst: read-only (GET only, no role changes, no broadcasts, no finance approvals)
+ * - finance_admin: finance mutations (M-Pesa claim resolve) + read
+ * - content_admin: prayer moderation + read
+ * - support_admin: member suspend/reactivate/notify (never change_role) + read
+ * - marketing_admin: broadcast + read
+ * - super roles: everything, including change_role and invites
+ */
+function hasAdminScope(role: string, method: string, path: string): boolean {
+  if (SUPER_ROLES.has(role)) return true;
+  const m = method.toUpperCase();
+  const p = path;
+  if (m === "GET") return true; // all staff can read (analyst included)
+  if (role === "analyst") return false;
+  if (role === "finance_admin") {
+    return p.includes("/mpesa/claims/") || p.includes("/members/");
+  }
+  if (role === "content_admin") {
+    return p.includes("/prayers/");
+  }
+  if (role === "support_admin") {
+    return p.includes("/members/") && !p.includes("/invite");
+  }
+  if (role === "marketing_admin") {
+    return p.includes("/broadcast");
+  }
+  return false;
+}
+
+export async function requireAdminScope(c: Context, next: () => Promise<void>) {
+  const user = (c.get as unknown as (key: string) => JwtPayload | undefined)("user");
+  if (!user) return c.json({ error: "Forbidden" }, 403);
+  // change_role and invites are super-only regardless of scope above.
+  const path = c.req.path;
+  let bodyAction = "";
+  try {
+    if (c.req.method !== "GET") {
+      const clone = c.req.raw.clone();
+      const json = (await clone.json().catch(() => null)) as { action?: string; role?: string } | null;
+      bodyAction = String(json?.action || "");
+      if (bodyAction === "change_role") {
+        if (!SUPER_ROLES.has(user.role)) return c.json({ error: "Forbidden: role changes require a super admin." }, 403);
+        return next();
+      }
+    }
+  } catch {
+    // fall through to path-based check
+  }
+  if (path.includes("/invite")) {
+    if (!SUPER_ROLES.has(user.role)) return c.json({ error: "Forbidden: invites require a super admin." }, 403);
+    return next();
+  }
+  if (!hasAdminScope(user.role, c.req.method, path)) {
+    return c.json({ error: "Forbidden: insufficient admin scope." }, 403);
+  }
+  await next();
+}
+
 function getJwtSecret(env?: Record<string, string>): string {
   const secret =
     (env && env["JWT_SECRET"]) ||

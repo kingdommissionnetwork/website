@@ -53,6 +53,9 @@ donationRoutes.get("/history", rateLimit, async (c) => {
   return c.json(data);
 });
 
+// Fail-closed verification: only records present in the registry are ever
+// reported as verified. Unknown references, partners, and statements return
+// verified:false — never a synthetic "verified" payload.
 donationRoutes.get("/verify-receipt", rateLimit, async (c) => {
   const ref = (c.req.query("ref") || "").trim();
   const inv = (c.req.query("inv") || "").trim();
@@ -63,86 +66,80 @@ donationRoutes.get("/verify-receipt", rateLimit, async (c) => {
     return c.json({ error: "Reference, invoice number, or partner ID is required." }, 400);
   }
 
+  const notVerified = (message: string) => c.json({ verified: false, message });
+
   let supabase = null;
   try {
     supabase = getSupabase(c.env as Record<string, string>);
   } catch {
-    supabase = null;
+    return notVerified("Verification registry is temporarily unavailable. Please try again later.");
   }
 
-  // Partner Credential Verification
-  if (partner) {
-    if (supabase) {
-      try {
-        const rawId = partner.replace(/^HKN-PTN-/i, "").replace(/^HKN-/i, "").replace(/^PTN-/i, "");
-        let query = supabase.from("subscriptions").select("id, subscriber_name, subscriber_email, plan_name, status, created_at, billing_cycle");
-        if (/^[0-9a-fA-F-]{36}$/.test(rawId) || /^\d+$/.test(rawId)) {
-          query = query.or(`id.eq.${rawId},subscriber_email.ilike.%${partner}%`);
-        } else {
-          query = query.ilike("subscriber_email", `%${partner}%`);
-        }
-        const { data: subs } = await query.limit(1);
-        const sub = subs && subs[0];
-
-        if (sub) {
-          return c.json({
-            verified: true,
-            type: "partner",
-            partnerId: partner.toUpperCase(),
-            name: sub.subscriber_name || "Covenant Partner",
-            tier: sub.plan_name || "Kingdom Partner",
-            status: sub.status === "active" ? "Active" : sub.status,
-            joinedAt: sub.created_at,
-            verifiedAt: new Date().toISOString(),
-          });
-        }
-      } catch {
-        // Fallback to registry validation
-      }
+  // Exact-match subscription resolution for partner IDs and statements.
+  // Partial email matching is deliberately avoided: it would let anyone probe
+  // the registry for partner identities.
+  const resolveSubscription = async (partnerInput: string) => {
+    const rawId = partnerInput.replace(/^HKN-PTN-/i, "").replace(/^HKN-/i, "").replace(/^PTN-/i, "");
+    let query = supabase!.from("subscriptions").select("id, subscriber_name, subscriber_email, plan_name, status, created_at, billing_cycle");
+    if (/^[0-9a-fA-F-]{36}$/.test(rawId) || /^\d+$/.test(rawId)) {
+      query = query.or(`id.eq.${rawId},subscriber_email.eq.${partnerInput.toLowerCase()}`);
+    } else {
+      query = query.eq("subscriber_email", partnerInput.toLowerCase());
     }
+    const { data: subs, error } = await query.limit(1);
+    if (error) throw new Error("lookup failed");
+    return subs && subs[0];
+  };
 
-    // Algorithmic validation if mock or credential ID
-    return c.json({
-      verified: true,
-      type: "partner",
-      partnerId: partner.toUpperCase(),
-      name: "Kingdom Missions Partner",
-      tier: "Covenant Partner",
-      status: "Active",
-      joinedAt: new Date().toISOString(),
-      verifiedAt: new Date().toISOString(),
-      notice: "Credential verified via cryptographic registry certificate.",
-    });
+  // Partner Credential Verification (a statement QR carries both params, so
+  // the statement branch below takes precedence)
+  if (partner && !statement) {
+    try {
+      const sub = await resolveSubscription(partner);
+      if (sub) {
+        return c.json({
+          verified: true,
+          type: "partner",
+          partnerId: partner.toUpperCase(),
+          name: sub.subscriber_name || "Covenant Partner",
+          tier: sub.plan_name || "Kingdom Partner",
+          status: sub.status === "active" ? "Active" : sub.status,
+          joinedAt: sub.created_at,
+          verifiedAt: new Date().toISOString(),
+        });
+      }
+    } catch {
+      return notVerified("Verification registry is temporarily unavailable. Please try again later.");
+    }
+    return notVerified("No matching partner credential found in the registry.");
   }
 
   // Invoice / Receipt Verification
   if (ref || inv) {
     let donation = null;
-    if (supabase) {
-      try {
-        if (ref) {
+    try {
+      if (ref) {
+        const { data } = await supabase
+          .from("donations")
+          .select("id, amount, currency, donor_name, donor_email, recurring, payment_provider, payment_reference, status, created_at")
+          .eq("payment_reference", ref)
+          .limit(1);
+        if (data && data[0]) donation = data[0];
+      }
+
+      if (!donation && inv) {
+        const numericMatch = inv.match(/\d+/);
+        if (numericMatch) {
           const { data } = await supabase
             .from("donations")
             .select("id, amount, currency, donor_name, donor_email, recurring, payment_provider, payment_reference, status, created_at")
-            .eq("payment_reference", ref)
+            .eq("id", numericMatch[0])
             .limit(1);
           if (data && data[0]) donation = data[0];
         }
-
-        if (!donation && inv) {
-          const numericMatch = inv.match(/\d+/);
-          if (numericMatch) {
-            const { data } = await supabase
-              .from("donations")
-              .select("id, amount, currency, donor_name, donor_email, recurring, payment_provider, payment_reference, status, created_at")
-              .eq("id", numericMatch[0])
-              .limit(1);
-            if (data && data[0]) donation = data[0];
-          }
-        }
-      } catch {
-        // Fallback to cryptographic validation
       }
+    } catch {
+      return notVerified("Verification registry is temporarily unavailable. Please try again later.");
     }
 
     if (donation) {
@@ -163,34 +160,33 @@ donationRoutes.get("/verify-receipt", rateLimit, async (c) => {
       });
     }
 
-    // Cryptographic validation for newly generated or gateway receipt
-    return c.json({
-      verified: true,
-      type: "invoice",
-      reference: ref || `REF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      invoiceNumber: inv || `KMN-REC-${Date.now().toString().slice(-6)}`,
-      amount: 5000,
-      currency: "KES",
-      donorName: "Kingdom Covenant Giver",
-      recurring: false,
-      provider: "Verified Payment Gateway / M-Pesa",
-      status: "completed",
-      date: new Date().toISOString(),
-      verifiedAt: new Date().toISOString(),
-      notice: "Document verified via digital signature and ministry authorization registry.",
-    });
+    return notVerified("No matching donation record found in the registry. If you were given this document, please contact finance@kingdommissionsnetwork.org.");
   }
 
-  // Annual Statement Verification
+  // Annual Statement Verification — requires both the year and the partner
+  // credential the statement was issued for (both are embedded in the QR).
   if (statement) {
-    return c.json({
-      verified: true,
-      type: "statement",
-      year: statement,
-      partnerId: partner || "KMN-PARTNER",
-      status: "Certified & Audited",
-      verifiedAt: new Date().toISOString(),
-    });
+    if (!/^\d{4}$/.test(statement) || !partner) {
+      return notVerified("Statement verification requires a valid year and partner credential.");
+    }
+    try {
+      const sub = await resolveSubscription(partner);
+      if (sub) {
+        return c.json({
+          verified: true,
+          type: "statement",
+          year: statement,
+          partnerId: partner.toUpperCase(),
+          partnerName: sub.subscriber_name || "Covenant Partner",
+          tier: sub.plan_name || "Kingdom Partner",
+          status: sub.status === "active" ? "Certified & Audited" : `Certified (${sub.status})`,
+          verifiedAt: new Date().toISOString(),
+        });
+      }
+    } catch {
+      return notVerified("Verification registry is temporarily unavailable. Please try again later.");
+    }
+    return notVerified("No matching partner record found for this statement.");
   }
 
   return c.json({ verified: false, error: "Invalid verification parameters." }, 404);

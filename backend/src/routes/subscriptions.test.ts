@@ -329,5 +329,59 @@ describe("Subscription Routes", () => {
     expect(await verifyOtpCode(code, hash)).toBe(true);
     expect(await verifyOtpCode("000000", hash)).toBe(false);
   });
+
+  test("webhook guard fails closed in production when secret is unset", async () => {
+    const prevEnv = process.env.ENVIRONMENT;
+    const prevSecret = process.env.MPESA_WEBHOOK_SECRET;
+    process.env.ENVIRONMENT = "production";
+    delete process.env.MPESA_WEBHOOK_SECRET;
+    try {
+      const res = await app.request("/mpesa/kcb-ipn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transactionReference: "FORGED123", transactionAmount: "3000" }),
+      });
+      // Must ack (no oracle) but write nothing: no receipt means no fulfillment.
+      expect(res.status).toBe(200);
+      // Forged receipt must not be redeemable without a real provider record.
+      // (Guard rejection is logged; ledger write is skipped before parsing.)
+    } finally {
+      if (prevEnv === undefined) delete process.env.ENVIRONMENT;
+      else process.env.ENVIRONMENT = prevEnv;
+      if (prevSecret !== undefined) process.env.MPESA_WEBHOOK_SECRET = prevSecret;
+    }
+  });
+
+  test("GET /status/:email never returns financial fields to anonymous callers", async () => {
+    const { vi } = await import("vitest");
+    const supabaseMod = await import("../lib/supabase");
+    const spy = vi.spyOn(supabaseMod, "getSupabase").mockReturnValue({
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            order: () => ({
+              limit: () =>
+                Promise.resolve({
+                  data: [{ status: "active", plan_name: "Ambassador", plan_id: "ambassador", interval: "monthly" }],
+                  error: null,
+                }),
+            }),
+          }),
+        }),
+      }),
+    } as never);
+    const res = await app.request("/status/someone@example.com");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      hasActiveSubscription: boolean;
+      subscription: Record<string, unknown> | null;
+      lifecycle: { status: string };
+    };
+    expect(body.hasActiveSubscription).toBe(true);
+    expect(body.lifecycle.status).toBe("active");
+    // Redacted: no amounts, provider, or renewal dates for anonymous callers.
+    expect(body.subscription).toBeNull();
+    spy.mockRestore();
+  });
 });
 

@@ -16,8 +16,9 @@ function cleanup() {
 function getClientIp(c: { req: { header: (n: string) => string | undefined } }): string {
   // Prefer Cloudflare's verified client IP. Do NOT trust X-Forwarded-For
   // (client-spoofable). NOTE: this in-memory limiter is per-isolate and is a
-  // best-effort backstop — enforce real edge rate limiting in Cloudflare
-  // (WAF / Rate Limiting Rules) for production.
+  // best-effort backstop — production enforcement lives in Cloudflare WAF /
+  // Rate Limiting Rules (see docs/rate-limiting.md, required for login, STK,
+  // OTP, and webhook routes).
   return c.req.header("cf-connecting-ip") || c.req.header("x-real-ip") || "unknown";
 }
 

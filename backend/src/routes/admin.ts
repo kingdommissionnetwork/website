@@ -2,13 +2,13 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
-import { requireAdmin } from "../lib/jwt";
+import { requireAdmin, requireAdminScope } from "../lib/jwt";
 import { rateLimit } from "../lib/rateLimiter";
-import { sendAdminInviteEmail, sendPastoralBroadcastEmail } from "../lib/email";
+import { sendAdminInviteEmail, sendPastoralBroadcastBatch } from "../lib/email";
 import { fulfillPaybillRedemption } from "./subscriptions";
 
 export const adminRoutes = new Hono();
-adminRoutes.use("*", rateLimit, requireAdmin);
+adminRoutes.use("*", rateLimit, requireAdmin, requireAdminScope);
 
 // Structured audit logging helper.
 // Takes supabase directly — using module-level `c` was a ReferenceError.
@@ -35,64 +35,94 @@ async function logAuditEvent(
   }
 }
 
-// 1. EXECUTIVE DASHBOARD & OPERATIONAL STATS
+// 1. EXECUTIVE DASHBOARD & OPERATIONAL STATS (parallel queries + 60s cache)
+const statsCache = new Map<string, { time: number; payload: Record<string, unknown> }>();
+const STATS_TTL_MS = 60_000;
+
 adminRoutes.get("/stats", async (c) => {
+  const cached = statsCache.get("stats");
+  if (cached && Date.now() - cached.time < STATS_TTL_MS) {
+    return c.json(cached.payload);
+  }
   const supabase = getSupabase(c.env as Record<string, string>);
+  const env = (c.env as Record<string, string> | undefined) || {};
+  const wiseToken = env["WISE_API_TOKEN"] || (process.env as Record<string, string>)?.["WISE_API_TOKEN"] || "";
 
-  const { count: allPrayers } = await supabase.from("prayers").select("*", { count: "exact", head: true });
-  const { count: pendingPrayers } = await supabase.from("prayers").select("*", { count: "exact", head: true }).eq("status", "pending");
-  const { count: flaggedPrayers } = await supabase.from("prayers").select("*", { count: "exact", head: true }).eq("status", "flagged");
-  const { count: allEvents } = await supabase.from("events").select("*", { count: "exact", head: true });
-  const { count: totalUsers } = await supabase.from("users").select("*", { count: "exact", head: true });
-  const { count: totalSermons } = await supabase.from("sermons").select("*", { count: "exact", head: true });
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString();
+  const todayStr = new Date().toISOString().slice(0, 10);
 
-  // Subscriptions & MRR calculation
-  const { data: activeSubs } = await supabase
-    .from("subscriptions")
-    .select("amount, usd_amount, currency, status, plan_name");
-  
-  const activeSubscriptionsCount = (activeSubs || []).filter((s: { status?: string }) => s.status === "active").length;
-  const mrrKes = (activeSubs || [])
-    .filter((s: { status?: string }) => s.status === "active")
-    .reduce((sum: number, s: { amount?: number }) => sum + (Number(s.amount) || 0), 0);
-  const mrrUsd = Number((mrrKes * 0.00772).toFixed(2));
+  // Push filtering into SQL (eq status) and run everything concurrently.
+  const [
+    allPrayersRes,
+    pendingPrayersRes,
+    flaggedPrayersRes,
+    allEventsRes,
+    totalUsersRes,
+    totalSermonsRes,
+    activeSubsRes,
+    statusCountsRes,
+    failedPaymentsRes,
+    monthlyDonationsRes,
+    ytdDonationsRes,
+    eventDatesRes,
+    pendingClaimsRes,
+    pendingDonationsRes,
+  ] = await Promise.all([
+    supabase.from("prayers").select("*", { count: "exact", head: true }),
+    supabase.from("prayers").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("prayers").select("*", { count: "exact", head: true }).eq("status", "flagged"),
+    supabase.from("events").select("*", { count: "exact", head: true }),
+    supabase.from("users").select("*", { count: "exact", head: true }),
+    supabase.from("sermons").select("*", { count: "exact", head: true }),
+    supabase.from("subscriptions").select("amount").eq("status", "active"),
+    supabase.from("subscriptions").select("status"),
+    supabase.from("donations").select("*", { count: "exact", head: true }).eq("status", "failed"),
+    supabase.from("donations").select("amount").gte("created_at", startOfMonth),
+    supabase.from("donations").select("amount, donor_name").gte("created_at", startOfYear),
+    supabase.from("events").select("date, end_date"),
+    supabase.from("payment_claims").select("*", { count: "exact", head: true }).in("status", ["awaiting_receipt", "amount_mismatch"]),
+    supabase.from("donations").select("*", { count: "exact", head: true }).eq("payment_provider", "mpesa_paybill").eq("status", "pending_verification"),
+  ]);
+
+  const { count: allPrayers } = allPrayersRes;
+  const { count: pendingPrayers } = pendingPrayersRes;
+  const { count: flaggedPrayers } = flaggedPrayersRes;
+  const { count: allEvents } = allEventsRes;
+  const { count: totalUsers } = totalUsersRes;
+  const { count: totalSermons } = totalSermonsRes;
+
+  // Subscriptions & MRR calculation (active rows only — filtered in SQL).
+  const activeSubs = activeSubsRes.data || [];
+  const activeSubscriptionsCount = activeSubs.length;
+  const mrrKes = activeSubs.reduce((sum: number, s: { amount?: number }) => sum + (Number(s.amount) || 0), 0);
+  const { fetchExchangeRate } = await import("../lib/exchangeRate");
+  const { rate: kesToUsd } = await fetchExchangeRate("KES", "USD", wiseToken).catch(() => ({ rate: 0.00772, provider: "fallback" }));
+  const mrrUsd = Number((mrrKes * kesToUsd).toFixed(2));
   const arrKes = mrrKes * 12;
-  const arrUsd = Number((arrKes * 0.00772).toFixed(2));
+  const arrUsd = Number((arrKes * kesToUsd).toFixed(2));
 
   // Churn = canceled subscriptions as a share of all subscriptions on record.
-  // (Matches both "canceled" canonical and legacy "cancelled" spellings.)
-  const totalSubs = (activeSubs || []).length;
-  const cancelledSubs = (activeSubs || []).filter((s: { status?: string }) => s.status === "canceled" || s.status === "cancelled").length;
+  const statusRows = (statusCountsRes.data || []) as { status?: string }[];
+  const totalSubs = statusRows.length;
+  const cancelledSubs = statusRows.filter((s) => s.status === "canceled" || s.status === "cancelled").length;
   const churnRate = totalSubs > 0 ? `${((cancelledSubs / totalSubs) * 100).toFixed(1)}%` : "0.0%";
 
   // Failed payment attempts recorded in the donations ledger.
-  const { count: failedPayments } = await supabase
-    .from("donations")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "failed");
+  const { count: failedPayments } = failedPaymentsRes;
 
   // Monthly giving YTD
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const { data: monthlyDonations } = await supabase
-    .from("donations")
-    .select("amount")
-    .gte("created_at", startOfMonth);
-  const monthlyGiving = (monthlyDonations || []).reduce((sum: number, d: { amount: number }) => sum + Number(d.amount), 0);
+  const monthlyDonations = monthlyDonationsRes.data || [];
+  const monthlyGiving = monthlyDonations.reduce((sum: number, d: { amount: number }) => sum + Number(d.amount), 0);
 
-  const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString();
-  const { data: ytdDonations } = await supabase
-    .from("donations")
-    .select("amount, donor_name")
-    .gte("created_at", startOfYear);
-  const totalYtd = (ytdDonations || []).reduce((sum: number, d: { amount: number }) => sum + Number(d.amount), 0);
-  const donorNames = new Set((ytdDonations || []).map((d: { donor_name?: string }) => d.donor_name || "Anonymous"));
+  const ytdDonations = ytdDonationsRes.data || [];
+  const totalYtd = ytdDonations.reduce((sum: number, d: { amount: number }) => sum + Number(d.amount), 0);
+  const donorNames = new Set(ytdDonations.map((d: { donor_name?: string }) => d.donor_name || "Anonymous"));
 
   // Active events = gatherings whose last day has not passed yet.
-  // Falls back to the total count when the end_date column is unavailable.
   let activeEvents = allEvents || 0;
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const { data: eventDates } = await supabase.from("events").select("date, end_date");
+  const eventDates = eventDatesRes.data;
   if (eventDates) {
     activeEvents = eventDates.filter(
       (e: { date?: string; end_date?: string }) => String(e.end_date || e.date || "") >= todayStr
@@ -100,18 +130,11 @@ adminRoutes.get("/stats", async (c) => {
   }
 
   // Pending M-Pesa claims & donations
-  const { count: pendingClaimsCount } = await supabase
-    .from("payment_claims")
-    .select("*", { count: "exact", head: true })
-    .in("status", ["awaiting_receipt", "amount_mismatch"]);
-  const { count: pendingDonationsCount } = await supabase
-    .from("donations")
-    .select("*", { count: "exact", head: true })
-    .eq("payment_provider", "mpesa_paybill")
-    .eq("status", "pending_verification");
+  const { count: pendingClaimsCount } = pendingClaimsRes;
+  const { count: pendingDonationsCount } = pendingDonationsRes;
   const pendingMpesaCount = (pendingClaimsCount || 0) + (pendingDonationsCount || 0);
 
-  return c.json({
+  const payload = {
     totalUsers: totalUsers || 0,
     activeSubscriptions: activeSubscriptionsCount || 0,
     mrrKes,
@@ -129,7 +152,9 @@ adminRoutes.get("/stats", async (c) => {
     totalYtd,
     donorCount: donorNames.size,
     pendingMpesaCount,
-  });
+  };
+  statsCache.set("stats", { time: Date.now(), payload });
+  return c.json(payload);
 });
 
 // 2. ATTENTION CENTER ALERTS
@@ -967,32 +992,20 @@ adminRoutes.post(
       );
     }
 
-    // Fan-out dispatch in batches of 10 to protect Resend rate limits
+    // Fan-out via Resend batch endpoint (100/chunk) with unsubscribe headers.
+    // Avoids Worker duration limits from per-recipient sequential sends.
     let sent = 0;
     let failed = 0;
     let lastError: string | null = null;
-    const BATCH = 10;
-    for (let i = 0; i < uniqueRecipients.length; i += BATCH) {
-      const batch = uniqueRecipients.slice(i, i + BATCH);
-      await Promise.allSettled(
-        batch.map(async (recipient) => {
-          try {
-            await sendPastoralBroadcastEmail(
-              c,
-              recipient.email,
-              recipient.name,
-              subject,
-              body,
-              audience
-            );
-            sent++;
-          } catch (e: unknown) {
-            failed++;
-            lastError = e instanceof Error ? e.message : String(e);
-            console.error("[BROADCAST] Failed dispatching to", recipient.email, e);
-          }
-        })
-      );
+    try {
+      const result = await sendPastoralBroadcastBatch(c, uniqueRecipients, subject, body, audience);
+      sent = result.sent;
+      failed = result.failed;
+      lastError = result.lastError;
+    } catch (e: unknown) {
+      failed = uniqueRecipients.length;
+      lastError = e instanceof Error ? e.message : String(e);
+      console.error("[BROADCAST] Batch dispatch failed:", e);
     }
 
     await logAuditEvent(supabase, actor, "PASTORAL_BROADCAST_SENT", "broadcast", audience, {

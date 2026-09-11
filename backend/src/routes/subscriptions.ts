@@ -63,16 +63,30 @@ function timingSafeEqualHex(a: string, b: string): boolean {
   return diff === 0;
 }
 
+function isProductionEnv(c: import("hono").Context): boolean {
+  const env = (c.env as Record<string, string> | undefined) || {};
+  return env["ENVIRONMENT"] === "production" || (process.env as Record<string, string>)?.["ENVIRONMENT"] === "production";
+}
+
 /**
- * Optional shared-secret guard for provider callbacks (Daraja C2B, KCB IPN,
- * KCB STK callback). When MPESA_WEBHOOK_SECRET is configured, callers must
- * send it via `x-webhook-secret`. When unconfigured (local dev / tests) the
- * endpoints preserve legacy ack behaviour but log a warning. Configure the
- * secret in production and register it alongside the callback URLs.
+ * Shared-secret guard for provider callbacks (Daraja C2B, KCB IPN,
+ * KCB STK callback). Callers must send MPESA_WEBHOOK_SECRET via
+ * `x-webhook-secret`. Fail-closed in production: when the secret is
+ * unset in production the callback is rejected (nothing is written).
+ * In non-production the endpoints preserve legacy ack behaviour for
+ * local dev / tests but log a warning. Configure the secret in
+ * production and register it alongside the callback URLs.
  */
 function mpesaWebhookGuard(c: import("hono").Context): boolean {
   const expected = getSecret(c, "MPESA_WEBHOOK_SECRET");
-  if (!expected) return true;
+  if (!expected) {
+    if (isProductionEnv(c)) {
+      console.error("[WEBHOOK GUARD] MPESA_WEBHOOK_SECRET missing in production — rejecting callback (fail-closed)");
+      return false;
+    }
+    console.warn("[WEBHOOK GUARD] MPESA_WEBHOOK_SECRET unset — allowing callback for local dev/tests only");
+    return true;
+  }
   const provided = c.req.header("x-webhook-secret") || "";
   return timingSafeEqualHex(provided, expected);
 }
@@ -379,7 +393,15 @@ export async function fulfillPaybillRedemption(
 
   const periodEnd = new Date();
   periodEnd.setMonth(periodEnd.getMonth() + (r.interval === "yearly" ? 12 : 1));
-  const usdAmount = Number((r.amount * 0.00772).toFixed(2));
+  // Live FX via cached helper (falls back to 0.00772) — never hardcode drift.
+  let kesToUsdRate = 0.00772;
+  try {
+    const { fetchExchangeRate } = await import("../lib/exchangeRate");
+    kesToUsdRate = (await fetchExchangeRate("KES", "USD")).rate || kesToUsdRate;
+  } catch {
+    // fallback rate above
+  }
+  const usdAmount = Number((r.amount * kesToUsdRate).toFixed(2));
 
   const { data: subData, error: subError } = await supabase
     .from("subscriptions")
@@ -391,7 +413,7 @@ export async function fulfillPaybillRedemption(
       amount: r.amount,
       currency: "KES",
       usd_amount: usdAmount,
-      exchange_rate: 0.00772,
+      exchange_rate: kesToUsdRate,
       interval: r.interval,
       status: "active",
       retry_count: 0,
@@ -927,7 +949,28 @@ async function setCheckoutStatus(
   });
 }
 
+// Per-phone STK abuse backstop: M-Pesa PIN prompts to arbitrary numbers are a
+// harassment vector. Cap prompts per destination number (in-memory per isolate;
+// edge WAF rule is the durable control — see docs/rate-limiting.md).
+const stkPhoneBuckets = new Map<string, { count: number; resetAt: number }>();
+const STK_PHONE_MAX = 3;
+const STK_PHONE_WINDOW_MS = 60 * 60 * 1000;
+function checkStkPhoneLimit(phone: string): boolean {
+  const key = phone.replace(/\D/g, "").slice(-12) || "unknown";
+  const now = Date.now();
+  const entry = stkPhoneBuckets.get(key);
+  if (!entry || entry.resetAt < now) {
+    stkPhoneBuckets.set(key, { count: 1, resetAt: now + STK_PHONE_WINDOW_MS });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= STK_PHONE_MAX;
+}
+
 // KCB Buni M-Pesa STK Push Trigger
+// Unauthenticated by design (new partners have no session yet) but hardened:
+// strict IP limit + per-phone hourly cap. Add the Cloudflare WAF rule on this
+// route for durable edge enforcement (see docs/rate-limiting.md).
 subscriptionRoutes.post(
   "/mpesa/stkpush",
   strictRateLimit,
@@ -945,6 +988,9 @@ subscriptionRoutes.post(
   ),
   async (c) => {
     const { phoneNumber, name, email, amount, planName, planId, interval } = c.req.valid("json");
+    if (!checkStkPhoneLimit(normalizeKenyanPhone(phoneNumber))) {
+      return c.json({ error: "Too many payment prompts sent to this phone number. Please try again later.", code: "PHONE_RATE_LIMITED" }, 429);
+    }
 
     // Server-side price truth BEFORE touching the provider.
     const priceCheck = validatePaymentAmount({ planId, planName, interval, amount });
@@ -1033,6 +1079,13 @@ async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCh
 
   const periodEnd = new Date();
   periodEnd.setMonth(periodEnd.getMonth() + (checkout.interval === "yearly" ? 12 : 1));
+  let checkoutRate = 0.00772;
+  try {
+    const { fetchExchangeRate } = await import("../lib/exchangeRate");
+    checkoutRate = (await fetchExchangeRate("KES", "USD")).rate || checkoutRate;
+  } catch {
+    // fallback rate above
+  }
 
   // Register into subscriptions
   const { data: subData } = await supabase
@@ -1045,8 +1098,8 @@ async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCh
         plan_id: checkout.planId,
         amount: checkout.amount,
         currency: "KES",
-        usd_amount: Number((checkout.amount * 0.00772).toFixed(2)),
-        exchange_rate: 0.00772,
+        usd_amount: Number((checkout.amount * checkoutRate).toFixed(2)),
+        exchange_rate: checkoutRate,
         interval: checkout.interval,
         status: "active",
         retry_count: 0,
@@ -1711,16 +1764,19 @@ subscriptionRoutes.post("/webhook", async (c) => {
   return c.json({ received: true });
 });
 
-// Check Subscription Status (includes lifecycle + renewal pay-link)
-// Rate-limited and redacted: never returns payment references, customer
-// codes, metadata, or PII beyond what the caller already supplied.
+// Check Subscription Status (redacted by default).
+// Anonymous callers get only a boolean + lifecycle state — never amounts,
+// currency, provider, or renewal dates (prevents email enumeration of
+// giving levels). The full record is returned only to the owner (JWT email
+// match) or an admin; everyone else should use the OTP claim flow for
+// detailed Partner Hub access.
 subscriptionRoutes.get("/status/:email", rateLimit, async (c) => {
   const email = c.req.param("email");
   try {
     const supabase = getSupabase(c.env as Record<string, string>);
     const { data, error } = await supabase
       .from("subscriptions")
-      .select("status, plan_name, plan_id, amount, currency, interval, current_period_end, payment_provider, created_at")
+      .select("status, plan_name, plan_id, interval")
       .eq("subscriber_email", email)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -1734,16 +1790,44 @@ subscriptionRoutes.get("/status/:email", rateLimit, async (c) => {
     const isActive = status === "active" || status === "grace";
     const planId = String(sub.plan_id || "");
     const interval = String(sub.interval || "monthly");
+    const lifecycle = {
+      status,
+      renewable: ["past_due", "grace", "suspended", "paused"].includes(status),
+      renewLink: planId && planId !== ONETIME_PLAN_ID
+        ? `/subscribe?step=checkout&plan=${encodeURIComponent(planId)}&type=${encodeURIComponent(interval)}`
+        : "/subscribe?step=checkout",
+    };
+
+    // Owner/admin check for extended (still non-financial) details.
+    let isOwner = false;
+    try {
+      const { verifyToken } = await import("../lib/jwt");
+      const { getCookie } = await import("hono/cookie");
+      const authHeader = c.req.header("Authorization");
+      const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : getCookie(c, "token");
+      if (token) {
+        const payload = await verifyToken(token, c.env as Record<string, string>).catch(() => null);
+        const callerEmail = String((payload as { email?: string } | null)?.email || "").toLowerCase();
+        const role = String((payload as { role?: string } | null)?.role || "");
+        if (callerEmail && callerEmail === email.trim().toLowerCase()) isOwner = true;
+        if (["admin", "superadmin", "super_admin", "system_admin", "finance_admin"].includes(role)) isOwner = true;
+      }
+    } catch {
+      isOwner = false;
+    }
+
+    if (isOwner) {
+      return c.json({
+        hasActiveSubscription: isActive,
+        subscription: { status, plan_name: sub.plan_name, plan_id: sub.plan_id, interval },
+        lifecycle,
+      });
+    }
+    // Anonymous: boolean + lifecycle only (no tier/amount/provider/dates).
     return c.json({
       hasActiveSubscription: isActive,
-      subscription: sub,
-      lifecycle: {
-        status,
-        renewable: ["past_due", "grace", "suspended", "paused"].includes(status),
-        renewLink: planId && planId !== ONETIME_PLAN_ID
-          ? `/subscribe?step=checkout&plan=${encodeURIComponent(planId)}&type=${encodeURIComponent(interval)}`
-          : "/subscribe?step=checkout",
-      },
+      subscription: null,
+      lifecycle,
     });
   } catch {
     return c.json({ hasActiveSubscription: false, subscription: null });

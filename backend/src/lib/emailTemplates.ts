@@ -202,9 +202,9 @@ export function partnerWelcomeEmail(params: { name: string; planName: string; am
   return { subject: `Welcome, ${safePlan}! Your Kingdom partnership is active — ${BRAND_NAME}`, html: brandedWrapper(body, `Your ${safePlan} membership is now active. Partner ID: ${pid}`) };
 }
 
-export function pastoralBroadcastEmail(params: { recipientName: string; subject: string; body: string; audience?: string }): { subject: string; html: string } {
+export function pastoralBroadcastEmail(params: { recipientName: string; subject: string; body: string; audience?: string; unsubscribeUrl?: string }): { subject: string; html: string } {
 
-  const { recipientName, subject, body, audience } = params;
+  const { recipientName, subject, body, audience, unsubscribeUrl } = params;
   const safeRecipient = escapeHtml(recipientName);
   const safeSubject = escapeHtml(subject);
   const safeAudience = audience ? escapeHtml(audience) : "";
@@ -219,7 +219,8 @@ export function pastoralBroadcastEmail(params: { recipientName: string; subject:
       <tr><td style="background:${BRAND_COLOR};border-radius:8px;padding:14px 28px;">
         <a href="${DOMAIN}/prayer-wall" style="color:${BRAND_DARK};font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-decoration:none;">Join the Prayer Wall →</a>
       </td></tr>
-    </table>`;
+    </table>
+    <p style="font-family:Arial,sans-serif;font-size:11px;color:#999;margin-top:24px;border-top:1px solid #eee;padding-top:12px;">You receive pastoral updates as a Kingdom Missions Network partner/member. <a href="${unsubscribeUrl ? escapeHtml(unsubscribeUrl) : `${DOMAIN}/unsubscribe`}" style="color:#999;text-decoration:underline;">Unsubscribe</a> · <a href="mailto:${SUPPORT_EMAIL}" style="color:#999;">${SUPPORT_EMAIL}</a></p>`;
   return { subject: `${safeSubject} | ${BRAND_NAME}`, html: brandedWrapper(htmlBody, safeSubject) };
 }
 

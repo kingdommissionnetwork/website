@@ -25,16 +25,31 @@ function requirePublishableKey(env?: Record<string, string>): string {
   return val;
 }
 
+const clientCache = new Map<string, SupabaseClient>();
+
+function cachedClient(cacheKey: string, factory: () => SupabaseClient): SupabaseClient {
+  const hit = clientCache.get(cacheKey);
+  if (hit) return hit;
+  const client = factory();
+  // Bound the cache: isolates are long-lived; creds rarely rotate.
+  if (clientCache.size > 20) clientCache.clear();
+  clientCache.set(cacheKey, client);
+  return client;
+}
+
 /**
  * Returns a Supabase service-role client for the current request.
- * Pass `c.env` from the Hono context to guarantee the live Worker
- * bindings are used — this avoids stale module-level singletons that
- * could be built before env is injected.
+ * Memoized per isolate by URL+key (avoids reconstructing per request)
+ * while still keying on live Worker bindings — no stale singletons.
  */
 export function getSupabase(env?: Record<string, string>): SupabaseClient {
-  return createClient(requireUrl(env), requireSecretKey(env), {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const url = requireUrl(env);
+  const key = requireSecretKey(env);
+  return cachedClient(`svc:${url}:${key.slice(-8)}`, () =>
+    createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+  );
 }
 
 /**
@@ -42,9 +57,13 @@ export function getSupabase(env?: Record<string, string>): SupabaseClient {
  * Never falls back to the secret key.
  */
 export function createAuthClient(env?: Record<string, string>): SupabaseClient {
-  return createClient(requireUrl(env), requirePublishableKey(env), {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const url = requireUrl(env);
+  const key = requirePublishableKey(env);
+  return cachedClient(`pub:${url}:${key.slice(-8)}`, () =>
+    createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+  );
 }
 
 /** @deprecated No-op — kept for test compatibility only. */
