@@ -862,7 +862,7 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
           <span class="brand-subtitle">Official Giving Receipt & Tax Invoice</span>
           <div class="brand-details">
             Registered Non-Profit Faith Missions Organization • Section 13 Religious Exemption<br>
-            Secretariat: Nairobi, Kenya | Global Missions Headquarters | support@kingdommissions.org
+            Secretariat: Nairobi, Kenya | Global Missions Headquarters | support@kingdommissionsnetwork.org
           </div>
         </div>
       </div>
@@ -898,7 +898,7 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
         <div class="party-card-title">CONTRIBUTOR / COVENANT PARTNER</div>
         <div class="party-name">${invoice.name || "Faithful Covenant Partner"}</div>
         <div class="party-sub">
-          Email: ${invoice.email || "partner@kingdommissions.org"}<br>
+          Email: ${invoice.email || "partner@kingdommissionsnetwork.org"}<br>
           ${invoice.partnerId ? `Partner ID: <strong>${invoice.partnerId}</strong><br>` : ""}
           Covenant Tier: <strong>${invoice.planName || "Frontline Missions Partner"}</strong><br>
           Status: Verified Active Contributor
@@ -1556,7 +1556,7 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
     <div class="card-footer" style="margin-top: 2mm;">
       <div style="font-size: 4pt; color: rgba(12,27,51,0.65); line-height: 1.2;">
         <strong>Secretariat:</strong> Nairobi, Kenya<br>
-        <strong>Hotline:</strong> ${PARTNERSHIP_SUPPORT_PHONE_DISPLAY} | kingdommissions.org
+        <strong>Hotline:</strong> ${PARTNERSHIP_SUPPORT_PHONE_DISPLAY} | kingdommissionsnetwork.org
       </div>
       <div style="text-align: right;">
         ${getBarcodeSvg(displayId)}

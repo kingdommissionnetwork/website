@@ -56,7 +56,7 @@ describe("buildPartnerIdCardHtml (partner ID back side)", () => {
     expect(html).toContain("COVENANT DEPLOYMENT STATEMENT:");
     expect(html).toContain("church planting, and humanitarian relief");
     expect(html).toContain("Luke 8:1-3");
-    expect(html).toContain("+254 792 373 015 | kingdommissions.org");
+    expect(html).toContain("+254 792 373 015 | kingdommissionsnetwork.org");
     expect(html).not.toContain("700 000 000");
   });
 });

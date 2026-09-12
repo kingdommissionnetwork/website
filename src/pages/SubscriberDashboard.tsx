@@ -142,7 +142,7 @@ export default function SubscriberDashboard() {
   // Target identity for this partner dashboard:
   // Priority: 1. Verified payment state from checkout -> 2. Authenticated user profile -> 3. Fallback
   const partnerName = navState?.partnerName || user?.name || "Faithful Covenant Partner";
-  const partnerEmail = navState?.partnerEmail || user?.email || "partner@kingdommissions.org";
+  const partnerEmail = navState?.partnerEmail || user?.email || "partner@kingdommissionsnetwork.org";
   const targetEmail = navState?.partnerEmail || user?.email || "";
 
   // Subscription state initialized from verified payment or active tier
@@ -527,14 +527,14 @@ export default function SubscriberDashboard() {
   };
 
   return (
-    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#071324] text-white flex flex-col font-outfit">
+    <div className="subscriber-dashboard pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#f4f7fb] dark:bg-[#071324] text-[#0c1b33] dark:text-white flex flex-col font-outfit transition-colors duration-300">
       <SEO
         title="Covenant Partner Hub — Kingdom Missions Network"
         description="Subscriber & Partner Portal: access official credentials, giving statements, prophetic briefings, mission delegations, and the 24/7 prayer altar."
       />
 
       {/* Hero / Partner Header Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#0c1b33] via-[#09182d] to-[#1a1107] border-b border-white/10 px-4 sm:px-6 lg:px-8 py-8">
+      <section className="relative overflow-hidden bg-gradient-to-r from-white via-[#f5f0e8] to-[#e6eef7] dark:from-[#0c1b33] dark:via-[#09182d] dark:to-[#1a1107] border-b border-black/10 dark:border-white/10 px-4 sm:px-6 lg:px-8 py-8 transition-colors duration-300">
         <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.15)_0%,transparent_65%)] pointer-events-none blur-3xl" />
         <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
         <AmbientParticles />
@@ -549,27 +549,27 @@ export default function SubscriberDashboard() {
                     <img src={brandLogo} alt="" className="w-10 h-10 object-contain" />
                   </div>
                 </div>
-                <div className="absolute -bottom-1 -right-1 p-1 bg-emerald-500 rounded-full border-2 border-[#071324]" title="Active Covenant">
+                <div className="absolute -bottom-1 -right-1 p-1 bg-emerald-500 rounded-full border-2 border-white dark:border-[#071324]" title="Active Covenant">
                   <ShieldCheck className="w-3.5 h-3.5 text-white" />
                 </div>
               </div>
 
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/50 text-[#fbf5b7] text-[11px] font-bold tracking-wide flex items-center gap-1">
-                    <Crown className="w-3 h-3 text-[#d4af37]" />
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/50 text-[#996515] dark:text-[#fbf5b7] text-[11px] font-bold tracking-wide flex items-center gap-1">
+                    <Crown className="w-3 h-3 text-[#996515] dark:text-[#d4af37]" />
                     {currentTier.badge}
                   </span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
                     Active Covenant
                   </span>
-                  <span className="text-white/40 text-xs">• ID: {partnerIdNumber}</span>
+                  <span className="text-[#0c1b33]/60 dark:text-white/40 text-xs">• ID: {partnerIdNumber}</span>
                 </div>
 
-                <h1 className="font-brand text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight">
-                  Welcome back, <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">{partnerName}</span>
+                <h1 className="font-brand text-xl sm:text-2xl lg:text-3xl font-bold text-[#0c1b33] dark:text-white tracking-tight">
+                  Welcome back, <span className="bg-gradient-to-r from-[#996515] via-[#d4af37] to-[#b38318] dark:from-[#d4af37] dark:via-[#f5e6b3] dark:to-[#c5961d] bg-clip-text text-transparent">{partnerName}</span>
                 </h1>
-                <p className="text-white/70 text-xs sm:text-sm mt-0.5">
+                <p className="text-[#0c1b33]/70 dark:text-white/70 text-xs sm:text-sm mt-0.5">
                   Standing with Bishop Dr. George Githinji to reach the unreached and feed the nations.
                 </p>
               </div>
@@ -580,15 +580,15 @@ export default function SubscriberDashboard() {
               <button
                 type="button"
                 onClick={() => setActiveTab("credentials")}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all"
+                className="px-4 py-2.5 rounded-xl bg-white hover:bg-black/5 dark:bg-white/10 dark:hover:bg-white/15 border border-black/10 dark:border-white/15 text-[#0c1b33] dark:text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-sm"
               >
-                <Award className="w-4 h-4 text-[#d4af37]" />
+                <Award className="w-4 h-4 text-[#996515] dark:text-[#d4af37]" />
                 <span className="hidden sm:inline">Official ID Seal</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("prayer")}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:brightness-110 transition-all"
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] text-[#0c1b33] font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:brightness-105 transition-all"
               >
                 <Heart className="w-4 h-4 text-[#0c1b33] fill-current" />
                 <span>Submit Altar Prayer</span>
@@ -603,8 +603,8 @@ export default function SubscriberDashboard() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Subscriber Navigation Sidebar */}
           <aside className="w-full lg:w-64 shrink-0">
-            <div className="bg-[#09182d] rounded-2xl border border-white/10 p-3 static lg:sticky lg:top-28 space-y-1 shadow-lg">
-              <div className="px-3 py-2 text-[10px] uppercase font-bold text-white/40 tracking-[0.2em]">
+            <div className="bg-white dark:bg-[#09182d] rounded-2xl border border-black/10 dark:border-white/10 p-3 static lg:sticky lg:top-28 space-y-1 shadow-md dark:shadow-xl transition-colors">
+              <div className="px-3 py-2 text-[10px] uppercase font-bold text-[#0c1b33]/50 dark:text-white/40 tracking-[0.2em]">
                 Partner Portal Navigation
               </div>
 
@@ -627,11 +627,11 @@ export default function SubscriberDashboard() {
                     className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                       isActive
                         ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-bold"
-                        : "text-white/70 hover:text-white hover:bg-white/5"
+                        : "text-[#0c1b33]/75 dark:text-white/70 hover:text-[#0c1b33] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-4 h-4 ${isActive ? "text-[#0c1b33]" : "text-[#d4af37]"}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? "text-[#0c1b33]" : "text-[#996515] dark:text-[#d4af37]"}`} />
                       <span>{item.label}</span>
                     </div>
                     {isActive && <ChevronRight className="w-3.5 h-3.5" />}
@@ -639,15 +639,15 @@ export default function SubscriberDashboard() {
                 );
               })}
 
-              <div className="pt-4 mt-4 border-t border-white/10 px-2 space-y-2">
-                <div className="text-[11px] text-white/50 px-2">
+              <div className="pt-4 mt-4 border-t border-black/10 dark:border-white/10 px-2 space-y-2">
+                <div className="text-[11px] text-[#0c1b33]/60 dark:text-white/50 px-2">
                   <span>Signed in as:</span>
-                  <span className="block font-semibold text-white truncate">{partnerEmail}</span>
+                  <span className="block font-semibold text-[#0c1b33] dark:text-white truncate">{partnerEmail}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => logout()}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Sign Out</span>
@@ -666,13 +666,13 @@ export default function SubscriberDashboard() {
                 {needsClaim && claimEmail && (
                   <div className="p-6 rounded-3xl bg-amber-500/10 border border-amber-400/40 space-y-4" role="status" aria-live="polite">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0">
                         <KeyRound className="w-5 h-5" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-white text-sm">Secure your Partner Hub — one quick step</h3>
-                        <p className="text-xs text-white/65">
-                          Your payment is confirmed. We sent a 6-digit code to <strong className="text-white">{claimEmail}</strong> to
+                        <h3 className="font-bold text-[#0c1b33] dark:text-white text-sm">Secure your Partner Hub — one quick step</h3>
+                        <p className="text-xs text-[#0c1b33]/70 dark:text-white/65">
+                          Your payment is confirmed. We sent a 6-digit code to <strong className="text-[#0c1b33] dark:text-white">{claimEmail}</strong> to
                           prove this hub belongs to you. {claimSending ? "Sending…" : "It expires in 10 minutes."}
                         </p>
                       </div>
@@ -686,12 +686,12 @@ export default function SubscriberDashboard() {
                         onChange={(e) => setClaimCode(e.target.value.replace(/\D/g, ""))}
                         placeholder="Enter 6-digit code"
                         aria-label="Verification code"
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-black/40 border border-amber-400/40 text-white font-mono font-bold tracking-[0.3em] text-center focus:outline-none focus:border-amber-300 placeholder:text-white/30 placeholder:font-sans placeholder:tracking-normal"
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-black/40 border border-amber-400/50 text-[#0c1b33] dark:text-white font-mono font-bold tracking-[0.3em] text-center focus:outline-none focus:border-amber-500 dark:focus:border-amber-300 placeholder:text-[#0c1b33]/40 dark:placeholder:text-white/30 placeholder:font-sans placeholder:tracking-normal shadow-sm dark:shadow-none"
                       />
                       <button
                         type="submit"
                         disabled={claimVerifying}
-                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs disabled:opacity-60 flex items-center justify-center gap-1.5"
+                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-sm"
                       >
                         {claimVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                         <span>{claimVerifying ? "Verifying…" : "Verify & Unlock"}</span>
@@ -707,7 +707,7 @@ export default function SubscriberDashboard() {
                             .catch(() => showToast("Could not resend code. Try again.", "error"))
                             .finally(() => setClaimSending(false));
                         }}
-                        className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs disabled:opacity-60"
+                        className="px-4 py-2.5 rounded-xl bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 text-[#0c1b33] dark:text-white font-bold text-xs disabled:opacity-60 border border-black/10 dark:border-transparent transition-colors"
                       >
                         Resend code
                       </button>
@@ -718,18 +718,18 @@ export default function SubscriberDashboard() {
                 {/* Overdue / grace renewal nudge */}
                 {lifecycle?.renewable && subscriptionData && (
                   <div className="p-5 rounded-3xl bg-blue-500/10 border border-blue-400/40 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                    <AlertTriangle className="w-5 h-5 text-blue-300 shrink-0" />
+                    <AlertTriangle className="w-5 h-5 text-blue-600 dark:text-blue-300 shrink-0" />
                     <div className="flex-1">
-                      <p className="text-sm font-bold text-white">
+                      <p className="text-sm font-bold text-[#0c1b33] dark:text-white">
                         Your partnership is {lifecycle.status.replace("_", " ")} — renew to restore full access.
                       </p>
-                      <p className="text-xs text-white/65">
+                      <p className="text-xs text-[#0c1b33]/70 dark:text-white/65">
                         M-Pesa needs your PIN each cycle, so renewals are one tap. No back-charges are ever made silently.
                       </p>
                     </div>
                     <a
                       href={lifecycle.renewLink}
-                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs shrink-0"
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs shrink-0 shadow-sm"
                     >
                       Renew now →
                     </a>
@@ -737,7 +737,7 @@ export default function SubscriberDashboard() {
                 )}
 
                 {/* Kingdom Impact Banner */}
-                <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#0e213d] via-[#102444] to-[#1f170b] border border-[#d4af37]/30 shadow-xl relative overflow-hidden">
+                <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#0e213d] via-[#102444] to-[#1f170b] border border-[#d4af37]/30 shadow-xl relative overflow-hidden text-white">
                   <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
                     <img src={brandLogo} alt="" className="w-64 h-64 object-contain" />
                   </div>
@@ -765,7 +765,7 @@ export default function SubscriberDashboard() {
                       <button
                         type="button"
                         onClick={() => setActiveTab("devotionals")}
-                        className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs border border-white/15 transition-all flex items-center gap-1.5"
+                        className="px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs border border-white/20 transition-all flex items-center gap-1.5"
                       >
                         <BookOpen className="w-3.5 h-3.5 text-[#d4af37]" />
                         <span>Latest Prophetic Briefing</span>
@@ -776,25 +776,25 @@ export default function SubscriberDashboard() {
 
                 {/* KPI Metrics Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                  <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/10 space-y-2">
-                    <div className="flex items-center justify-between text-white/50 text-xs font-semibold">
+                  <div className="p-5 rounded-2xl bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 space-y-2 shadow-sm dark:shadow-none transition-colors">
+                    <div className="flex items-center justify-between text-[#0c1b33]/60 dark:text-white/50 text-xs font-semibold">
                       <span>MONTHLY COVENANT SEED</span>
-                      <CreditCard className="w-4 h-4 text-[#d4af37]" />
+                      <CreditCard className="w-4 h-4 text-[#996515] dark:text-[#d4af37]" />
                     </div>
-                    <div className="text-2xl font-brand font-extrabold text-white">
+                    <div className="text-2xl font-brand font-extrabold text-[#0c1b33] dark:text-white">
                       KES {subscriptionData?.amount.toLocaleString() || "3,000"}
                     </div>
-                    <div className="text-xs text-white/60">
+                    <div className="text-xs text-[#0c1b33]/60 dark:text-white/60">
                       ≈ ${(Number(subscriptionData?.amount || 3000) * 0.00772).toFixed(2)} USD / month
                     </div>
                   </div>
 
-                  <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/10 space-y-2">
-                    <div className="flex items-center justify-between text-white/50 text-xs font-semibold">
+                  <div className="p-5 rounded-2xl bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 space-y-2 shadow-sm dark:shadow-none transition-colors">
+                    <div className="flex items-center justify-between text-[#0c1b33]/60 dark:text-white/50 text-xs font-semibold">
                       <span>NEXT COVENANT RENEWAL</span>
-                      <Calendar className="w-4 h-4 text-emerald-400" />
+                      <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <div className="text-xl sm:text-2xl font-brand font-bold text-emerald-400">
+                    <div className="text-xl sm:text-2xl font-brand font-bold text-emerald-600 dark:text-emerald-400">
                       {subscriptionData?.current_period_end
                         ? new Date(subscriptionData.current_period_end).toLocaleDateString("en-US", {
                             month: "short",
@@ -803,34 +803,34 @@ export default function SubscriberDashboard() {
                           })
                         : "Active & Current"}
                     </div>
-                    <div className="text-xs text-white/60">Auto-billed via {subscriptionData?.payment_provider || "Paystack"}</div>
+                    <div className="text-xs text-[#0c1b33]/60 dark:text-white/60">Auto-billed via {subscriptionData?.payment_provider || "Paystack"}</div>
                   </div>
 
-                  <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/10 space-y-2">
-                    <div className="flex items-center justify-between text-white/50 text-xs font-semibold">
+                  <div className="p-5 rounded-2xl bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 space-y-2 shadow-sm dark:shadow-none transition-colors">
+                    <div className="flex items-center justify-between text-[#0c1b33]/60 dark:text-white/50 text-xs font-semibold">
                       <span>ALTAR PRAYER LINE</span>
-                      <Flame className="w-4 h-4 text-amber-400" />
+                      <Flame className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     </div>
-                    <div className="text-xl sm:text-2xl font-brand font-bold text-amber-300">
+                    <div className="text-xl sm:text-2xl font-brand font-bold text-amber-600 dark:text-amber-300">
                       {prayerRequests.length} Requests
                     </div>
-                    <div className="text-xs text-emerald-400 font-semibold">● Intercessory Team Active</div>
+                    <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">● Intercessory Team Active</div>
                   </div>
                 </div>
 
                 {/* Tier Perks & Endorsements */}
-                <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/10 space-y-4">
+                <div className="p-6 rounded-3xl bg-white dark:bg-white/[0.03] border border-black/10 dark:border-white/10 space-y-4 shadow-sm dark:shadow-none transition-colors">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-brand text-lg font-bold text-white">
+                      <h3 className="font-brand text-lg font-bold text-[#0c1b33] dark:text-white">
                         Your {currentTier.name} Privileges & Ministry Backing
                       </h3>
-                      <p className="text-xs text-white/60">Exclusive privileges granted to your partnership covenant level.</p>
+                      <p className="text-xs text-[#0c1b33]/60 dark:text-white/60">Exclusive privileges granted to your partnership covenant level.</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setActiveTab("settings")}
-                      className="text-xs text-[#d4af37] font-bold hover:underline"
+                      className="text-xs text-[#996515] dark:text-[#d4af37] font-bold hover:underline"
                     >
                       Change Plan →
                     </button>
@@ -838,24 +838,24 @@ export default function SubscriberDashboard() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {currentTier.perks.map((perk, idx) => (
-                      <div key={idx} className="flex items-start gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/5">
-                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <div key={idx} className="flex items-start gap-3 p-3.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/5 dark:border-white/5">
+                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
                           <Check className="w-3 h-3" />
                         </div>
-                        <span className="text-xs sm:text-sm text-white/80">{perk}</span>
+                        <span className="text-xs sm:text-sm text-[#0c1b33]/85 dark:text-white/80">{perk}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Recent Giving Snapshot */}
-                <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/10 space-y-4">
+                <div className="p-6 rounded-3xl bg-white dark:bg-white/[0.03] border border-black/10 dark:border-white/10 space-y-4 shadow-sm dark:shadow-none transition-colors">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-brand text-lg font-bold text-white">Recent Partnership Contributions</h3>
+                    <h3 className="font-brand text-lg font-bold text-[#0c1b33] dark:text-white">Recent Partnership Contributions</h3>
                     <button
                       type="button"
                       onClick={() => setActiveTab("giving")}
-                      className="text-xs text-[#d4af37] font-bold hover:underline"
+                      className="text-xs text-[#996515] dark:text-[#d4af37] font-bold hover:underline"
                     >
                       View All Records & Receipts →
                     </button>
@@ -864,27 +864,27 @@ export default function SubscriberDashboard() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs sm:text-sm">
                       <thead>
-                        <tr className="border-b border-white/10 text-white/50 text-[11px] uppercase tracking-wider">
+                        <tr className="border-b border-black/10 dark:border-white/10 text-[#0c1b33]/60 dark:text-white/50 text-[11px] uppercase tracking-wider">
                           <th className="pb-3 font-semibold">Date</th>
                           <th className="pb-3 font-semibold">Description</th>
                           <th className="pb-3 font-semibold">Amount</th>
                           <th className="pb-3 font-semibold">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/5">
+                      <tbody className="divide-y divide-black/5 dark:divide-white/5">
                         {donations.slice(0, 3).map((d, idx) => (
-                          <tr key={idx} className="hover:bg-white/[0.02]">
-                            <td className="py-3 text-white/70">
+                          <tr key={idx} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                            <td className="py-3 text-[#0c1b33]/70 dark:text-white/70">
                               {new Date(d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                             </td>
-                            <td className="py-3 font-medium text-white">
+                            <td className="py-3 font-medium text-[#0c1b33] dark:text-white">
                               {d.recurring ? "Monthly Covenant Seed" : "One-Time Mission Seed"}
                             </td>
-                            <td className="py-3 font-bold text-[#fbf5b7]">
+                            <td className="py-3 font-bold text-[#996515] dark:text-[#fbf5b7]">
                               {d.currency} {Number(d.amount).toLocaleString()}
                             </td>
                             <td className="py-3">
-                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
                                 Completed
                               </span>
                             </td>
@@ -901,8 +901,8 @@ export default function SubscriberDashboard() {
             {activeTab === "credentials" && (
               <div className="space-y-8">
                 <div>
-                  <h2 className="font-brand text-2xl font-bold text-white">Official Partner Credential & ID Card</h2>
-                  <p className="text-white/70 text-xs sm:text-sm mt-1">
+                  <h2 className="font-brand text-2xl font-bold text-[#0c1b33] dark:text-white">Official Partner Credential & ID Card</h2>
+                  <p className="text-[#0c1b33]/70 dark:text-white/70 text-xs sm:text-sm mt-1">
                     Your authenticated digital credential issued by Kingdom Missions Network under the oversight of Bishop Dr. George Githinji.
                   </p>
                 </div>
@@ -931,8 +931,8 @@ export default function SubscriberDashboard() {
               <div className="space-y-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="font-brand text-2xl font-bold text-white">Giving History & Official Statements</h2>
-                    <p className="text-white/70 text-xs sm:text-sm mt-1">
+                    <h2 className="font-brand text-2xl font-bold text-[#0c1b33] dark:text-white">Giving History & Official Statements</h2>
+                    <p className="text-[#0c1b33]/70 dark:text-white/70 text-xs sm:text-sm mt-1">
                       Download tax receipts, giving summaries, and track your kingdom stewardship.
                     </p>
                   </div>
@@ -947,17 +947,17 @@ export default function SubscriberDashboard() {
                 </div>
 
                 {/* Ledger Table & Mobile Cards */}
-                <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-4 sm:p-6 space-y-4">
+                <div className="rounded-3xl bg-white dark:bg-white/[0.03] border border-black/10 dark:border-white/10 p-4 sm:p-6 space-y-4 shadow-sm dark:shadow-none transition-colors">
                   {/* Mobile Card List (< sm) */}
                   <div className="sm:hidden space-y-3">
                     {donations.map((d, index) => (
-                      <div key={index} className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 space-y-2.5">
+                      <div key={index} className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/10 dark:border-white/10 space-y-2.5">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="font-semibold text-white text-sm">
+                            <p className="font-semibold text-[#0c1b33] dark:text-white text-sm">
                               {d.recurring ? "Covenant Monthly Partnership Seed" : "Kingdom Mission Offering"}
                             </p>
-                            <p className="text-white/50 text-xs mt-0.5">
+                            <p className="text-[#0c1b33]/60 dark:text-white/50 text-xs mt-0.5">
                               {new Date(d.created_at).toLocaleDateString("en-US", {
                                 month: "short",
                                 day: "numeric",
@@ -965,14 +965,14 @@ export default function SubscriberDashboard() {
                               })}
                             </p>
                           </div>
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold shrink-0">
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold shrink-0">
                             Verified
                           </span>
                         </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                        <div className="flex items-center justify-between pt-2 border-t border-black/10 dark:border-white/10">
                           <div>
-                            <span className="text-xs text-white/50 block">Amount</span>
-                            <span className="font-bold text-[#fbf5b7] text-sm">
+                            <span className="text-xs text-[#0c1b33]/60 dark:text-white/50 block">Amount</span>
+                            <span className="font-bold text-[#996515] dark:text-[#fbf5b7] text-sm">
                               {d.currency} {Number(d.amount).toLocaleString()}
                             </span>
                           </div>
@@ -994,7 +994,7 @@ export default function SubscriberDashboard() {
                                 status: "completed",
                               });
                             }}
-                            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+                            className="px-3 py-1.5 rounded-lg bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 text-[#0c1b33] dark:text-white text-xs font-semibold inline-flex items-center gap-1.5 border border-black/10 dark:border-transparent transition-colors"
                           >
                             <Download className="w-3.5 h-3.5" />
                             <span>Receipt</span>
@@ -1008,7 +1008,7 @@ export default function SubscriberDashboard() {
                   <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-left text-xs sm:text-sm">
                       <thead>
-                        <tr className="border-b border-white/10 text-white/50 text-[11px] uppercase tracking-wider">
+                        <tr className="border-b border-black/10 dark:border-white/10 text-[#0c1b33]/60 dark:text-white/50 text-[11px] uppercase tracking-wider">
                           <th className="pb-3 font-semibold">Transaction Date</th>
                           <th className="pb-3 font-semibold">Contribution Category</th>
                           <th className="pb-3 font-semibold">Amount</th>
@@ -1017,25 +1017,25 @@ export default function SubscriberDashboard() {
                           <th className="pb-3 font-semibold text-right">Receipt</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/5">
+                      <tbody className="divide-y divide-black/5 dark:divide-white/5">
                         {donations.map((d, index) => (
-                          <tr key={index} className="hover:bg-white/[0.02]">
-                            <td className="py-4 text-white/80">
+                          <tr key={index} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                            <td className="py-4 text-[#0c1b33]/70 dark:text-white/80">
                               {new Date(d.created_at).toLocaleDateString("en-US", {
                                 month: "short",
                                 day: "numeric",
                                 year: "numeric",
                               })}
                             </td>
-                            <td className="py-4 font-medium text-white">
+                            <td className="py-4 font-medium text-[#0c1b33] dark:text-white">
                               {d.recurring ? "Covenant Monthly Partnership Seed" : "Kingdom Mission Offering"}
                             </td>
-                            <td className="py-4 font-bold text-[#fbf5b7]">
+                            <td className="py-4 font-bold text-[#996515] dark:text-[#fbf5b7]">
                               {d.currency} {Number(d.amount).toLocaleString()}
                             </td>
-                            <td className="py-4 text-white/60">Paystack / Card</td>
+                            <td className="py-4 text-[#0c1b33]/60 dark:text-white/60">Paystack / Card</td>
                             <td className="py-4">
-                              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
                                 Verified
                               </span>
                             </td>
@@ -1058,7 +1058,7 @@ export default function SubscriberDashboard() {
                                     status: "completed",
                                   });
                                 }}
-                                className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                                className="px-3 py-1 rounded-lg bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 text-[#0c1b33] dark:text-white text-xs font-semibold inline-flex items-center gap-1 border border-black/10 dark:border-transparent transition-colors"
                               >
                                 <Download className="w-3 h-3" />
                                 <span>Receipt</span>
@@ -1077,10 +1077,10 @@ export default function SubscriberDashboard() {
             {activeTab === "devotionals" && (
               <div className="space-y-8">
                 <div>
-                  <h2 className="font-brand text-2xl font-bold text-white">
+                  <h2 className="font-brand text-2xl font-bold text-[#0c1b33] dark:text-white">
                     Exclusive Prophetic Briefings & Partner Resources
                   </h2>
-                  <p className="text-white/70 text-xs sm:text-sm mt-1">
+                  <p className="text-[#0c1b33]/70 dark:text-white/70 text-xs sm:text-sm mt-1">
                     Monthly live impartations, spiritual teachings, and missionary intelligence from Bishop Dr. George Githinji.
                   </p>
                 </div>
@@ -1089,33 +1089,33 @@ export default function SubscriberDashboard() {
                   {DEVOTIONAL_RESOURCES.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-3xl bg-white/[0.04] border border-white/10 p-6 flex flex-col justify-between hover:border-[#d4af37]/50 transition-all group"
+                      className="rounded-3xl bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 p-6 flex flex-col justify-between hover:border-[#d4af37]/50 shadow-sm dark:shadow-none transition-all group"
                     >
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="px-2.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#fbf5b7] text-[10px] font-bold">
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#996515] dark:text-[#fbf5b7] text-[10px] font-bold">
                             {item.tag}
                           </span>
-                          <span className="text-xs text-white/40">{item.duration}</span>
+                          <span className="text-xs text-[#0c1b33]/60 dark:text-white/40">{item.duration}</span>
                         </div>
 
-                        <h3 className="font-brand text-lg font-bold text-white group-hover:text-[#fbf5b7] transition-colors">
+                        <h3 className="font-brand text-lg font-bold text-[#0c1b33] dark:text-white group-hover:text-[#996515] dark:group-hover:text-[#fbf5b7] transition-colors">
                           {item.title}
                         </h3>
 
-                        <div className="text-xs text-white/60 space-y-1">
+                        <div className="text-xs text-[#0c1b33]/70 dark:text-white/60 space-y-1">
                           <p>Oversight: {item.speaker}</p>
-                          <p className="text-white/40">{item.date}</p>
+                          <p className="text-[#0c1b33]/50 dark:text-white/40">{item.date}</p>
                         </div>
                       </div>
 
-                      <div className="pt-5 mt-5 border-t border-white/10">
+                      <div className="pt-5 mt-5 border-t border-black/10 dark:border-white/10">
                         <button
                           type="button"
                           onClick={() => {
                             showToast(`Opening "${item.title}"...`, "info");
                           }}
-                          className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-gradient-to-r hover:from-[#d4af37] hover:to-[#c5961d] hover:text-[#0c1b33] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow"
+                          className="w-full py-2.5 rounded-xl bg-black/5 hover:bg-gradient-to-r hover:from-[#d4af37] hover:to-[#c5961d] hover:!text-[#0c1b33] text-[#0c1b33] dark:bg-white/10 dark:hover:bg-gradient-to-r dark:hover:from-[#d4af37] dark:hover:to-[#c5961d] dark:hover:!text-[#0c1b33] dark:text-white font-bold text-xs flex items-center justify-center gap-2 border border-black/10 dark:border-transparent transition-all shadow-sm"
                         >
                           <Headphones className="w-4 h-4" />
                           <span>Access Partner Resource</span>
@@ -1131,8 +1131,8 @@ export default function SubscriberDashboard() {
             {activeTab === "delegations" && (
               <div className="space-y-8">
                 <div>
-                  <h2 className="font-brand text-2xl font-bold text-white">Mission Delegations & Itinerary Facilitation</h2>
-                  <p className="text-white/70 text-xs sm:text-sm mt-1">
+                  <h2 className="font-brand text-2xl font-bold text-[#0c1b33] dark:text-white">Mission Delegations & Itinerary Facilitation</h2>
+                  <p className="text-[#0c1b33]/70 dark:text-white/70 text-xs sm:text-sm mt-1">
                     Join frontline crusade teams, receive pastoral endorsement, or request overseas preaching itinerary support.
                   </p>
                 </div>
@@ -1141,24 +1141,24 @@ export default function SubscriberDashboard() {
                   {UPCOMING_DELEGATIONS.map((trip) => (
                     <div
                       key={trip.id}
-                      className="p-6 rounded-3xl bg-white/[0.04] border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-[#d4af37]/40 transition-all"
+                      className="p-6 rounded-3xl bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-[#d4af37]/40 shadow-sm dark:shadow-none transition-all"
                     >
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
                             {trip.status}
                           </span>
-                          <span className="text-xs text-[#d4af37] font-semibold">{trip.slots}</span>
+                          <span className="text-xs text-[#996515] dark:text-[#d4af37] font-semibold">{trip.slots}</span>
                         </div>
-                        <h3 className="font-brand text-xl font-bold text-white">{trip.title}</h3>
-                        <p className="text-xs sm:text-sm text-white/70">{trip.focus}</p>
-                        <div className="flex flex-wrap items-center gap-4 text-xs text-white/50 pt-1">
+                        <h3 className="font-brand text-xl font-bold text-[#0c1b33] dark:text-white">{trip.title}</h3>
+                        <p className="text-xs sm:text-sm text-[#0c1b33]/70 dark:text-white/70">{trip.focus}</p>
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-[#0c1b33]/60 dark:text-white/50 pt-1">
                           <span className="flex items-center gap-1.5">
-                            <Globe className="w-3.5 h-3.5 text-[#d4af37]" />
+                            <Globe className="w-3.5 h-3.5 text-[#996515] dark:text-[#d4af37]" />
                             {trip.location}
                           </span>
                           <span className="flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5 text-sky-400" />
+                            <Calendar className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
                             {trip.dates}
                           </span>
                         </div>
@@ -1177,7 +1177,7 @@ export default function SubscriberDashboard() {
                 </div>
 
                 {/* Preaching Abroad Request Card */}
-                <div className="p-7 rounded-3xl bg-gradient-to-br from-[#0c1b33] to-[#17263d] border border-white/15 space-y-4">
+                <div className="p-7 rounded-3xl bg-gradient-to-br from-[#0c1b33] to-[#17263d] border border-white/15 space-y-4 text-white">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 text-[#d4af37] flex items-center justify-center font-bold">
                       <Globe className="w-5 h-5" />
@@ -1208,29 +1208,29 @@ export default function SubscriberDashboard() {
             {activeTab === "prayer" && (
               <div className="space-y-8">
                 <div>
-                  <h2 className="font-brand text-2xl font-bold text-white">24/7 Priority Pastoral Prayer Altar</h2>
-                  <p className="text-white/70 text-xs sm:text-sm mt-1">
+                  <h2 className="font-brand text-2xl font-bold text-[#0c1b33] dark:text-white">24/7 Priority Pastoral Prayer Altar</h2>
+                  <p className="text-[#0c1b33]/70 dark:text-white/70 text-xs sm:text-sm mt-1">
                     Your prayer requests are placed directly before the 24/7 Global Intercessory Council and Bishop Dr. George Githinji.
                   </p>
                 </div>
 
                 {/* Submit New Request Form */}
-                <div className="p-6 sm:p-8 rounded-3xl bg-white/[0.04] border border-white/10 space-y-6">
-                  <h3 className="font-brand text-lg font-bold text-white flex items-center gap-2">
-                    <Flame className="w-5 h-5 text-[#d4af37]" />
+                <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 space-y-6 shadow-sm dark:shadow-none transition-colors">
+                  <h3 className="font-brand text-lg font-bold text-[#0c1b33] dark:text-white flex items-center gap-2">
+                    <Flame className="w-5 h-5 text-[#996515] dark:text-[#d4af37]" />
                     <span>Send Urgent Prayer Request to the Altar</span>
                   </h3>
 
                   <form onSubmit={handlePrayerSubmit} className="space-y-5">
                     <div>
-                      <label htmlFor="prayerCategorySelect" className="block text-xs uppercase font-bold text-white/70 mb-2">
+                      <label htmlFor="prayerCategorySelect" className="block text-xs uppercase font-bold text-[#0c1b33]/75 dark:text-white/70 mb-2">
                         Urgency & Spiritual Focus
                       </label>
                       <select
                         id="prayerCategorySelect"
                         value={prayerUrgency}
                         onChange={(e) => setPrayerUrgency(e.target.value)}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#09182d] border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#d4af37]"
+                        className="w-full px-4 py-3 rounded-2xl bg-black/[0.03] dark:bg-[#09182d] border border-black/15 dark:border-white/15 text-[#0c1b33] dark:text-white text-xs sm:text-sm focus:outline-none focus:border-[#d4af37]"
                       >
                         <option value="Urgent Pastoral Intercession">Urgent Pastoral Intercession</option>
                         <option value="Health, Healing & Miracle">Health, Healing & Miracle</option>
@@ -1241,7 +1241,7 @@ export default function SubscriberDashboard() {
                     </div>
 
                     <div>
-                      <label htmlFor="prayerSubjectInput" className="block text-xs uppercase font-bold text-white/70 mb-2">Prayer Subject</label>
+                      <label htmlFor="prayerSubjectInput" className="block text-xs uppercase font-bold text-[#0c1b33]/75 dark:text-white/70 mb-2">Prayer Subject</label>
                       <input
                         id="prayerSubjectInput"
                         type="text"
@@ -1249,12 +1249,12 @@ export default function SubscriberDashboard() {
                         onChange={(e) => setPrayerSubject(e.target.value)}
                         placeholder="e.g. Divine Favor in Ministry Crusade & Health Miracle"
                         required
-                        className="w-full px-4 py-3 rounded-2xl bg-[#09182d] border border-white/15 text-white placeholder:text-white/40 text-xs sm:text-sm focus:outline-none focus:border-[#d4af37]"
+                        className="w-full px-4 py-3 rounded-2xl bg-black/[0.03] dark:bg-[#09182d] border border-black/15 dark:border-white/15 text-[#0c1b33] dark:text-white placeholder:text-[#0c1b33]/40 dark:placeholder:text-white/40 text-xs sm:text-sm focus:outline-none focus:border-[#d4af37]"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="prayerDetailsInput" className="block text-xs uppercase font-bold text-white/70 mb-2">
+                      <label htmlFor="prayerDetailsInput" className="block text-xs uppercase font-bold text-[#0c1b33]/75 dark:text-white/70 mb-2">
                         Specific Intercession Details
                       </label>
                       <textarea
@@ -1264,7 +1264,7 @@ export default function SubscriberDashboard() {
                         rows={4}
                         placeholder="Write your personal petitions. All partner submissions remain strictly confidential with the bishop and intercessors."
                         required
-                        className="w-full px-4 py-3 rounded-2xl bg-[#09182d] border border-white/15 text-white placeholder:text-white/40 text-xs sm:text-sm focus:outline-none focus:border-[#d4af37]"
+                        className="w-full px-4 py-3 rounded-2xl bg-black/[0.03] dark:bg-[#09182d] border border-black/15 dark:border-white/15 text-[#0c1b33] dark:text-white placeholder:text-[#0c1b33]/40 dark:placeholder:text-white/40 text-xs sm:text-sm focus:outline-none focus:border-[#d4af37]"
                       />
                     </div>
 
@@ -1290,28 +1290,28 @@ export default function SubscriberDashboard() {
 
                 {/* Tracking Submitted Prayers */}
                 <div className="space-y-4">
-                  <h3 className="font-brand text-lg font-bold text-white">Your Intercession History</h3>
+                  <h3 className="font-brand text-lg font-bold text-[#0c1b33] dark:text-white">Your Intercession History</h3>
                   <div className="space-y-3">
                     {prayerRequests.map((req) => (
                       <div
                         key={req.id}
-                        className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-between gap-4"
+                        className="p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-black/10 dark:border-white/10 flex items-center justify-between gap-4 shadow-sm dark:shadow-none transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+                          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0">
                             <Heart className="w-4 h-4" />
                           </div>
                           <div>
-                            <span className="font-bold text-white text-xs sm:text-sm block">{req.subject}</span>
-                            <span className="text-[11px] text-white/50">Submitted: {req.date}</span>
+                            <span className="font-bold text-[#0c1b33] dark:text-white text-xs sm:text-sm block">{req.subject}</span>
+                            <span className="text-[11px] text-[#0c1b33]/60 dark:text-white/50">Submitted: {req.date}</span>
                           </div>
                         </div>
 
                         <span
                           className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
                             req.status === "Prayed Over"
-                              ? "bg-emerald-500/20 text-emerald-400"
-                              : "bg-amber-500/20 text-amber-300"
+                              ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                              : "bg-amber-500/20 text-amber-700 dark:text-amber-300"
                           }`}
                         >
                           ● {req.status}
@@ -1327,26 +1327,26 @@ export default function SubscriberDashboard() {
             {activeTab === "settings" && (
               <div className="space-y-8">
                 <div>
-                  <h2 className="font-brand text-2xl font-bold text-white">Covenant Partnership & Billing Settings</h2>
-                  <p className="text-white/70 text-xs sm:text-sm mt-1">
+                  <h2 className="font-brand text-2xl font-bold text-[#0c1b33] dark:text-white">Covenant Partnership & Billing Settings</h2>
+                  <p className="text-[#0c1b33]/70 dark:text-white/70 text-xs sm:text-sm mt-1">
                     Manage your partnership tier, billing preferences, and currency options.
                   </p>
                 </div>
 
                 {/* Plan Switcher */}
-                <div className="p-6 rounded-3xl bg-white/[0.04] border border-white/10 space-y-6">
+                <div className="p-6 rounded-3xl bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 space-y-6 shadow-sm dark:shadow-none transition-colors">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <h3 className="font-brand text-lg font-bold text-white">Adjust Your Covenant Tier</h3>
+                    <h3 className="font-brand text-lg font-bold text-[#0c1b33] dark:text-white">Adjust Your Covenant Tier</h3>
                     {subscriptionData && (
                       <span
                         className={`px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider ${
                           subscriptionData.status === "active"
-                            ? "bg-emerald-500/20 text-emerald-300"
+                            ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
                             : subscriptionData.status === "past_due" || subscriptionData.status === "grace"
-                              ? "bg-amber-500/20 text-amber-300"
+                              ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
                               : subscriptionData.status === "paused"
-                                ? "bg-blue-500/20 text-blue-300"
-                                : "bg-white/10 text-white/60"
+                                ? "bg-blue-500/20 text-blue-700 dark:text-blue-300"
+                                : "bg-black/10 dark:bg-white/10 text-[#0c1b33]/60 dark:text-white/60"
                         }`}
                       >
                         {subscriptionData.status.replace("_", " ")}
@@ -1368,25 +1368,25 @@ export default function SubscriberDashboard() {
                           }}
                           className={`p-5 rounded-2xl border cursor-pointer transition-all text-left w-full ${
                             isSelected
-                              ? "bg-[#d4af37]/10 border-[#d4af37] shadow-[0_0_20px_rgba(212,175,55,0.2)]"
-                              : "bg-white/[0.02] border-white/10 hover:bg-white/[0.05]"
+                              ? "bg-[#d4af37]/15 border-[#d4af37] shadow-[0_0_20px_rgba(212,175,55,0.2)]"
+                              : "bg-black/[0.02] dark:bg-white/[0.02] border-black/10 dark:border-white/10 hover:bg-black/[0.05] dark:hover:bg-white/[0.05]"
                           }`}
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-bold text-sm text-white">{plan.badge}</span>
+                            <span className="font-bold text-sm text-[#0c1b33] dark:text-white">{plan.badge}</span>
                             {isSelected && (
                               <span className="px-2 py-0.5 rounded-full bg-[#d4af37] text-[#0c1b33] text-[10px] font-extrabold">
                                 Active
                               </span>
                             )}
                           </div>
-                          <div className="text-lg font-brand font-bold text-[#fbf5b7] mb-1">
+                          <div className="text-lg font-brand font-bold text-[#996515] dark:text-[#fbf5b7] mb-1">
                             KES {plan.kesMonthly.toLocaleString()} / month
-                            <span className="text-xs text-white/50 block font-normal">
+                            <span className="text-xs text-[#0c1b33]/60 dark:text-white/50 block font-normal">
                               ≈ ${plan.usdMonthly.toFixed(2)} USD
                             </span>
                           </div>
-                          <p className="text-xs text-white/70">{plan.tagline}</p>
+                          <p className="text-xs text-[#0c1b33]/70 dark:text-white/70">{plan.tagline}</p>
                         </button>
                       );
                     })}
@@ -1394,21 +1394,21 @@ export default function SubscriberDashboard() {
 
                   {/* Proration preview (server-computed, honest before/after) */}
                   {planPreviewBusy && (
-                    <p className="text-xs text-white/60 flex items-center gap-2">
+                    <p className="text-xs text-[#0c1b33]/70 dark:text-white/60 flex items-center gap-2">
                       <Loader2 className="w-3.5 h-3.5 animate-spin" /> Computing fair proration…
                     </p>
                   )}
                   {planPreview && !planPreviewBusy && (
-                    <div className="p-4 rounded-2xl bg-black/30 border border-[#d4af37]/30 text-xs space-y-2" aria-live="polite">
-                      <p className="text-white/80">
-                        <strong className="text-white">{planPreview.from.planName}</strong> (KES {planPreview.from.amount.toLocaleString()})
+                    <div className="p-4 rounded-2xl bg-black/[0.03] dark:bg-black/30 border border-[#d4af37]/30 text-xs space-y-2" aria-live="polite">
+                      <p className="text-[#0c1b33]/85 dark:text-white/80">
+                        <strong className="text-[#0c1b33] dark:text-white">{planPreview.from.planName}</strong> (KES {planPreview.from.amount.toLocaleString()})
                         {" → "}
-                        <strong className="text-[#fbf5b7]">{planPreview.to.planName}</strong> (KES {planPreview.to.amount.toLocaleString()}/{planPreview.to.interval === "yearly" ? "yr" : "mo"})
+                        <strong className="text-[#996515] dark:text-[#fbf5b7]">{planPreview.to.planName}</strong> (KES {planPreview.to.amount.toLocaleString()}/{planPreview.to.interval === "yearly" ? "yr" : "mo"})
                       </p>
-                      <p className="text-white/65">
+                      <p className="text-[#0c1b33]/70 dark:text-white/65">
                         {planPreview.remainingDays} days left this cycle · unused credit KES {planPreview.unusedCredit.toLocaleString()}
                         {planPreview.immediateBalance > 0 ? (
-                          <> · balance due <strong className="text-white">KES {planPreview.immediateBalance.toLocaleString()}</strong> via checkout (M-Pesa needs your PIN — never silent)</>
+                          <> · balance due <strong className="text-[#0c1b33] dark:text-white">KES {planPreview.immediateBalance.toLocaleString()}</strong> via checkout (M-Pesa needs your PIN — never silent)</>
                         ) : (
                           <> · no balance due, takes effect at next renewal</>
                         )}
@@ -1423,7 +1423,7 @@ export default function SubscriberDashboard() {
                           Confirm tier change
                         </button>
                         {planPreview.immediateBalance > 0 && (
-                          <a href={planPreview.payLink} className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs">
+                          <a href={planPreview.payLink} className="px-4 py-2 rounded-xl bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 text-[#0c1b33] dark:text-white font-bold text-xs border border-black/10 dark:border-transparent">
                             Pay balance via checkout →
                           </a>
                         )}
@@ -1433,15 +1433,15 @@ export default function SubscriberDashboard() {
                 </div>
 
                 {/* Partnership lifecycle: pause / resume / cancel (self-serve, FTC-friendly) */}
-                <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/10 space-y-4">
+                <div className="p-6 rounded-3xl bg-white dark:bg-white/[0.03] border border-black/10 dark:border-white/10 space-y-4 shadow-sm dark:shadow-none transition-colors">
                   <div>
-                    <h3 className="font-brand text-lg font-bold text-white">Partnership Lifecycle</h3>
-                    <p className="text-xs text-white/60">
+                    <h3 className="font-brand text-lg font-bold text-[#0c1b33] dark:text-white">Partnership Lifecycle</h3>
+                    <p className="text-xs text-[#0c1b33]/60 dark:text-white/60">
                       Pause, resume, or cancel anytime — no calls, no retention traps. Canceling stops future renewals; your giving history stays intact.
                     </p>
                   </div>
                   {subscriptionData?.next_retry_at && ["past_due", "grace"].includes(subscriptionData.status) && (
-                    <p className="text-xs text-amber-300 flex items-center gap-1.5">
+                    <p className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
                       <AlertTriangle className="w-3.5 h-3.5" />
                       <span>
                         Next gentle retry: {new Date(subscriptionData.next_retry_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -1461,13 +1461,13 @@ export default function SubscriberDashboard() {
                             <span>Confirm pause</span>
                           </button>
                           <button type="button" onClick={() => setConfirmAction(null)}
-                            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs">
+                            className="px-4 py-2.5 rounded-xl bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 text-[#0c1b33] dark:text-white font-bold text-xs border border-black/10 dark:border-transparent">
                             Keep partnership
                           </button>
                         </>
                       ) : (
                         <button type="button" onClick={() => setConfirmAction("pause")}
-                          className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center gap-1.5">
+                          className="px-4 py-2.5 rounded-xl bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 text-[#0c1b33] dark:text-white font-bold text-xs flex items-center gap-1.5 border border-black/10 dark:border-transparent">
                           <Pause className="w-3.5 h-3.5" />
                           <span>Pause partnership</span>
                         </button>
@@ -1488,13 +1488,13 @@ export default function SubscriberDashboard() {
                             {manageBusy === "cancel" ? "Canceling…" : "Yes, cancel renewals"}
                           </button>
                           <button type="button" onClick={() => setConfirmAction(null)}
-                            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs">
+                            className="px-4 py-2.5 rounded-xl bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 text-[#0c1b33] dark:text-white font-bold text-xs border border-black/10 dark:border-transparent">
                             Keep partnership
                           </button>
                         </>
                       ) : (
                         <button type="button" onClick={() => setConfirmAction("cancel")}
-                          className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-red-500/20 border border-white/10 hover:border-red-400/50 text-white/70 hover:text-red-300 font-bold text-xs">
+                          className="px-4 py-2.5 rounded-xl bg-black/[0.03] hover:bg-red-500/15 border border-black/10 dark:bg-white/[0.04] dark:hover:bg-red-500/20 dark:border-white/10 hover:border-red-400/50 text-[#0c1b33]/70 dark:text-white/70 hover:text-red-700 dark:hover:text-red-300 font-bold text-xs">
                           Cancel renewals
                         </button>
                       )
@@ -1503,23 +1503,23 @@ export default function SubscriberDashboard() {
                 </div>
 
                 {/* Payment Gateway Information */}
-                <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/10 space-y-4">
-                  <h3 className="font-brand text-lg font-bold text-white">Payment Method & Security</h3>
-                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.03] border border-white/10">
+                <div className="p-6 rounded-3xl bg-white dark:bg-white/[0.03] border border-black/10 dark:border-white/10 space-y-4 shadow-sm dark:shadow-none transition-colors">
+                  <h3 className="font-brand text-lg font-bold text-[#0c1b33] dark:text-white">Payment Method & Security</h3>
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/10 dark:border-white/10">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
                         <ShieldCheck className="w-5 h-5" />
                       </div>
                       <div>
-                        <span className="font-bold text-white text-sm block">
+                        <span className="font-bold text-[#0c1b33] dark:text-white text-sm block">
                           {subscriptionData?.payment_provider === "paypal" ? "PayPal Express Checkout" : "Paystack M-Pesa / Card Gateway"}
                         </span>
-                        <span className="text-xs text-white/50">
+                        <span className="text-xs text-[#0c1b33]/60 dark:text-white/50">
                           Ref: {subscriptionData?.payment_reference || "KMN-SUB-84920"}
                         </span>
                       </div>
                     </div>
-                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold">
+                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
                       Protected & Encrypted
                     </span>
                   </div>

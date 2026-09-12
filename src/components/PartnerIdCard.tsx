@@ -377,7 +377,7 @@ export default function PartnerIdCard({
               <div className="border-t border-[#0c1b33]/15 pt-3 flex items-center justify-between">
                 <div className="text-[9px] text-[#0c1b33]/60 leading-relaxed">
                   <span><strong>Secretariat:</strong> Nairobi, Kenya</span><br />
-                  <span><strong>Hotline:</strong> {PARTNERSHIP_SUPPORT_PHONE_DISPLAY} | kingdommissions.org</span>
+                  <span><strong>Hotline:</strong> {PARTNERSHIP_SUPPORT_PHONE_DISPLAY} | kingdommissionsnetwork.org</span>
                 </div>
                 <div dangerouslySetInnerHTML={{ __html: getBarcodeSvg(displayId) }} className="bg-white p-1 rounded-md border border-[#0c1b33]/10" />
               </div>

@@ -464,6 +464,76 @@ html:not(.dark) .admin-dashboard textarea::placeholder {
   color: #94a3b8 !important;
 }
 
+/* 1b. Normal / Light Mode for Subscriber Dashboard */
+html:not(.dark) .subscriber-dashboard {
+  background-color: #f4f7fb !important;
+  color: #0c1b33 !important;
+}
+
+html:not(.dark) .subscriber-dashboard aside {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0c1b33 !important;
+}
+
+html:not(.dark) .subscriber-dashboard table thead tr {
+  background-color: #f8fafc !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .subscriber-dashboard table thead th {
+  color: #64748b !important;
+}
+
+html:not(.dark) .subscriber-dashboard table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .subscriber-dashboard input,
+html:not(.dark) .subscriber-dashboard select,
+html:not(.dark) .subscriber-dashboard textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0c1b33 !important;
+}
+
+html:not(.dark) .subscriber-dashboard input::placeholder,
+html:not(.dark) .subscriber-dashboard textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html:not(.dark) .subscriber-dashboard .text-\[\#fbf5b7\] {
+  color: #996515 !important;
+}
+
+html:not(.dark) .subscriber-dashboard .text-\[\#d4af37\] {
+  color: #996515 !important;
+}
+
+html:not(.dark) .subscriber-dashboard .text-emerald-400 {
+  color: #047857 !important;
+}
+
+html:not(.dark) .subscriber-dashboard .text-amber-300,
+html:not(.dark) .subscriber-dashboard .text-amber-200 {
+  color: #92400e !important;
+}
+
+html:not(.dark) .subscriber-dashboard .bg-emerald-500\/20 {
+  background-color: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
+}
+
+html:not(.dark) .subscriber-dashboard .bg-amber-500\/20 {
+  background-color: #fef3c7 !important;
+  border-color: #fcd34d !important;
+}
+
+html:not(.dark) .subscriber-dashboard .bg-\[\#d4af37\]\/20 {
+  background-color: #fef9e7 !important;
+  border-color: #eab308 !important;
+}
+
 /* 2. Dark Mode for Public Portal & Pages */
 html.dark .bg-\[\#FAF7F2\],
 html.dark .bg-\[\#f5f0e8\],
