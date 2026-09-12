@@ -166,7 +166,10 @@ export default function TrackPaymentPage() {
     }
   };
 
-  const status = (result?.status || "") as ClaimStatus | string;
+  // The API normalizes terminal success to "matched"; "approved" is tolerated
+  // for legacy rows written before the vocabulary was unified.
+  const rawStatus = result?.status || "";
+  const status = (rawStatus === "approved" ? "matched" : rawStatus) as ClaimStatus | string;
   const claim = (result?.claim || {}) as Record<string, unknown>;
   const subscription = result?.subscription as Record<string, unknown> | null | undefined;
   const reason =

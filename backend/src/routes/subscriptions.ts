@@ -2109,6 +2109,12 @@ subscriptionRoutes.post(
 );
 
 // Poll a Paybill claim (frontend waits on provider confirmation after 202).
+// LIVE-SYNC READ: the claim row is not the only writer — subscriptions can be
+// created via provider auto-fulfill, admin approval (possibly under a manual
+// receipt code), or member management. Every lookup reconciles claim +
+// subscription + donation so the track page, in-checkout polling, and emails
+// converge on one truth, and heals a stuck open claim the moment its ledger
+// record exists. Admin rejections/expiries are terminal and never resurrected.
 subscriptionRoutes.get("/mpesa/claim/:reference", rateLimit, async (c) => {
   const cleanRef = c.req.param("reference").trim().toUpperCase();
   const email = (c.req.query("email") || "").trim().toLowerCase();
@@ -2123,18 +2129,81 @@ subscriptionRoutes.get("/mpesa/claim/:reference", rateLimit, async (c) => {
     if (email) q = q.eq("email", email);
     const { data } = await q.maybeSingle();
     const claim = data as ClaimRow | null;
-    if (!claim) {
-      return c.json({ status: "not_found", message: "No claim found for this code." }, 404);
+
+    // Ledger truth for this reference. Scoped by email when supplied so a
+    // bare code guess cannot enumerate someone else's subscription.
+    const findSubscription = async () => {
+      let sq = supabase.from("subscriptions").select("*").eq("payment_reference", cleanRef);
+      if (email) sq = sq.eq("subscriber_email", email);
+      const { data: byRef } = await sq.maybeSingle();
+      if (byRef) return byRef as Record<string, unknown>;
+      // Fallback for admin approvals recorded under a manual receipt code:
+      // only valid when the claim already ties this (reference, email) pair.
+      if (claim && email) {
+        const { data: byEmail } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("subscriber_email", email)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return (byEmail as Record<string, unknown> | null) || null;
+      }
+      return null;
+    };
+    const findCompletedDonation = async () => {
+      let dq = supabase.from("donations").select("*").eq("payment_reference", cleanRef).eq("status", "completed");
+      if (email) dq = dq.eq("donor_email", email);
+      const { data: don } = await dq.maybeSingle();
+      return (don as Record<string, unknown> | null) || null;
+    };
+    const healOpenClaim = async (id: number) => {
+      await setClaimStatus(supabase, id, "matched", { note: "Reconciled at lookup: ledger record exists." });
+    };
+    const asMatched = (claimRow: ClaimRow | null, sub: unknown, extra?: Record<string, unknown>) =>
+      c.json({ status: "matched", claim: claimRow ? { ...claimRow, status: "matched" } : null, subscription: sub || null, ...(extra || {}) });
+
+    // Terminal success, incl. legacy "approved" rows written by admin resolve.
+    if (claim && (claim.status === "matched" || claim.status === "approved")) {
+      const sub = await findSubscription();
+      return asMatched(claim, sub);
     }
-    if (claim.status === "matched") {
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("payment_reference", cleanRef)
-        .maybeSingle();
-      return c.json({ status: "matched", claim, subscription: sub || null });
+    // Open claims heal the moment the ledger catches up (the screenshot bug:
+    // subscription ACTIVE while the claim still said "awaiting").
+    if (claim && (claim.status === "awaiting_receipt" || claim.status === "amount_mismatch")) {
+      const sub = await findSubscription();
+      if (sub) {
+        await healOpenClaim(claim.id);
+        return asMatched(claim, sub);
+      }
+      const don = await findCompletedDonation();
+      if (don) {
+        await healOpenClaim(claim.id);
+        return asMatched(claim, null, { donation: don });
+      }
+      return c.json({ status: claim.status, claim });
     }
-    return c.json({ status: claim.status, claim });
+    if (claim) return c.json({ status: claim.status, claim }); // rejected / expired stand
+    // No claim row (e.g. admin-created subscription): resolve from the ledger.
+    const sub = await findSubscription();
+    if (sub && email) {
+      const created = await upsertPaymentClaim(supabase, {
+        paymentReference: cleanRef,
+        email,
+        name: String((sub as Record<string, unknown>).subscriber_name || "Kingdom Partner"),
+        amount: Number((sub as Record<string, unknown>).amount) || 0,
+        planId: String((sub as Record<string, unknown>).plan_id || ONETIME_PLAN_ID),
+        planName: String((sub as Record<string, unknown>).plan_name || "Kingdom Partner"),
+        interval: String((sub as Record<string, unknown>).interval || "monthly"),
+      });
+      if (created) await setClaimStatus(supabase, created.id, "matched", { note: "Reconciled at lookup: ledger record exists." });
+      return asMatched(created, sub);
+    }
+    if (sub) return asMatched(null, sub);
+    const don = await findCompletedDonation();
+    if (don) return asMatched(null, null, { donation: don });
+    return c.json({ status: "not_found", message: "No claim found for this code." }, 404);
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : "Lookup failed." }, 500);
   }

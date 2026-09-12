@@ -303,7 +303,7 @@ export default function GivePage() {
         }
         try {
           const s = await api.subscriptions.getClaimStatus(cleanRef, email);
-          if (s.status === "matched") {
+          if (s.status === "matched" || s.status === "approved") {
             setPaybillPending(null);
             completeTransaction(cleanRef, "M-Pesa Paybill 522522", null);
             return;

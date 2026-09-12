@@ -761,7 +761,9 @@ adminRoutes.post(
         });
 
         if (result.subData) {
-          await supabase.from("payment_claims").update({ status: "approved", note: resolvedNotes || "Admin-approved" }).eq("id", claimId);
+          // Canonical "matched" (not "approved"): the claim lookup treats it
+          // as terminal success and reconciles the subscription for display.
+          await supabase.from("payment_claims").update({ status: "matched", note: resolvedNotes || "Admin-approved" }).eq("id", claimId);
         }
 
         await logAuditEvent(supabase, actor, "MPESA_CLAIM_APPROVED", type, claimId, { receipt, notes: resolvedNotes });

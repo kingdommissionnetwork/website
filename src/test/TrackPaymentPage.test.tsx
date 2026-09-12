@@ -76,6 +76,24 @@ describe("TrackPaymentPage", () => {
     expect(screen.getByText(/Claim My Partner Hub/i)).toBeDefined();
   });
 
+  it("treats legacy approved rows as matched", async () => {
+    mockedStatus.mockResolvedValue({
+      status: "approved",
+      claim: { payment_reference: "TK78AB12CD" },
+      subscription: { plan_name: "Kingdom Ambassador" },
+    });
+    render(
+      <MemoryRouter initialEntries={["/track"]}>
+        <TrackPaymentPage />
+      </MemoryRouter>
+    );
+    fireEvent.change(screen.getByPlaceholderText(/TK78AB12CD/i), { target: { value: "TK78AB12CD" } });
+    fireEvent.change(screen.getByPlaceholderText(/your.email@example.com/i), { target: { value: "jane@example.com" } });
+    fireEvent.click(screen.getByText(/Check Payment Status/i));
+    expect(await screen.findByText(/Your receipt was emailed/i)).toBeDefined();
+    expect(screen.getByText(/Claim My Partner Hub/i)).toBeDefined();
+  });
+
   it("shows rejection reason with resubmit path for rejected claims", async () => {
     mockedStatus.mockResolvedValue({
       status: "rejected",

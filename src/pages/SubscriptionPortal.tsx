@@ -424,7 +424,10 @@ export default function SubscriptionPortal() {
       }
       try {
         const s = await api.subscriptions.getClaimStatus(cleanRef, email);
-        if (s.status === "matched") return s;
+        if (s.status === "matched" || s.status === "approved") {
+          if (s.status === "approved") s.status = "matched";
+          return s;
+        }
         if (s.status === "amount_mismatch" || s.status === "rejected" || s.status === "expired") {
           showToast(
             s.status === "amount_mismatch"

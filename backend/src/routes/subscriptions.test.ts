@@ -383,5 +383,81 @@ describe("Subscription Routes", () => {
     expect(body.subscription).toBeNull();
     spy.mockRestore();
   });
+
+  describe("GET /mpesa/claim/:reference live-sync reconciliation", () => {
+    // Table-aware Supabase stub: resolves rows per most-recent from() table.
+    async function stubDb(opts: { claim?: Record<string, unknown> | null; subscription?: Record<string, unknown> | null; donation?: Record<string, unknown> | null; createdClaim?: Record<string, unknown> }) {
+      const { vi } = await import("vitest");
+      const supabaseMod = await import("../lib/supabase");
+      let table = "";
+      const chain: Record<string, unknown> = {};
+      chain.select = vi.fn(() => chain);
+      chain.eq = vi.fn(() => chain);
+      chain.order = vi.fn(() => chain);
+      chain.limit = vi.fn(() => chain);
+      chain.update = vi.fn(() => chain);
+      chain.insert = vi.fn(() => chain);
+      chain.single = vi.fn(async () => ({ data: opts.createdClaim || { id: 99, status: "awaiting_receipt", attempts: 1 }, error: null }));
+      chain.maybeSingle = vi.fn(async () => {
+        if (table === "payment_claims") return { data: opts.claim ?? null };
+        if (table === "subscriptions") return { data: opts.subscription ?? null };
+        if (table === "donations") return { data: opts.donation ?? null };
+        return { data: null };
+      });
+      const spy = vi.spyOn(supabaseMod, "getSupabase").mockReturnValue({
+        from: (t: string) => {
+          table = t;
+          return chain;
+        },
+      } as never);
+      return spy;
+    }
+
+    const openClaim = { id: 7, payment_reference: "UIBLD5PQ3Z", email: "abazion230@gmail.com", name: "Abazion", amount: 7500, status: "awaiting_receipt", attempts: 1, created_at: new Date().toISOString() };
+    const activeSub = { id: 3, payment_reference: "UIBLD5PQ3Z", subscriber_email: "abazion230@gmail.com", subscriber_name: "Abazion", plan_name: "Global Harvest Partner", status: "active" };
+
+    test("stuck open claim with an ACTIVE subscription returns matched (screenshot bug)", async () => {
+      const spy = await stubDb({ claim: openClaim, subscription: activeSub });
+      const res = await app.request("/mpesa/claim/UIBLD5PQ3Z?email=abazion230@gmail.com");
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { status: string; subscription: Record<string, unknown> | null };
+      expect(body.status).toBe("matched");
+      expect(body.subscription?.plan_name).toBe("Global Harvest Partner");
+      spy.mockRestore();
+    });
+
+    test("legacy admin-approved claim rows resolve as matched", async () => {
+      const spy = await stubDb({ claim: { ...openClaim, status: "approved" }, subscription: activeSub });
+      const res = await app.request("/mpesa/claim/UIBLD5PQ3Z?email=abazion230@gmail.com");
+      const body = (await res.json()) as { status: string };
+      expect(body.status).toBe("matched");
+      spy.mockRestore();
+    });
+
+    test("open claim with no ledger record stays awaiting (no false match)", async () => {
+      const spy = await stubDb({ claim: openClaim });
+      const res = await app.request("/mpesa/claim/UIBLD5PQ3Z?email=abazion230@gmail.com");
+      const body = (await res.json()) as { status: string };
+      expect(body.status).toBe("awaiting_receipt");
+      spy.mockRestore();
+    });
+
+    test("rejected verdicts stand even when a subscription exists", async () => {
+      const spy = await stubDb({ claim: { ...openClaim, status: "rejected" }, subscription: activeSub });
+      const res = await app.request("/mpesa/claim/UIBLD5PQ3Z?email=abazion230@gmail.com");
+      const body = (await res.json()) as { status: string };
+      expect(body.status).toBe("rejected");
+      spy.mockRestore();
+    });
+
+    test("no claim row but ledger subscription resolves as matched", async () => {
+      const spy = await stubDb({ claim: null, subscription: activeSub });
+      const res = await app.request("/mpesa/claim/UIBLD5PQ3Z?email=abazion230@gmail.com");
+      const body = (await res.json()) as { status: string; subscription: Record<string, unknown> | null };
+      expect(body.status).toBe("matched");
+      expect(body.subscription?.plan_name).toBe("Global Harvest Partner");
+      spy.mockRestore();
+    });
+  });
 });
 
