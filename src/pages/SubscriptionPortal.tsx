@@ -15,6 +15,8 @@ import {
   ArrowRight,
   ArrowLeft,
   Zap,
+  Award,
+  CheckCircle2,
 } from "lucide-react";
 import ScrollReveal from "../components/ScrollReveal";
 import AmbientParticles from "../components/AmbientParticles";
@@ -54,8 +56,73 @@ declare global {
 
 import { PARTNER_PLANS } from "../data/plans";
 
-
 const showStkPush = import.meta.env.VITE_ENABLE_STK_PUSH === "true";
+
+function OnboardingStepper({ activeStep }: { activeStep: 1 | 2 | 3 | 4 }) {
+  const steps = [
+    { num: 1, label: "Select Tier", desc: "Choose Plan" },
+    { num: 2, label: "Details & Seed", desc: "M-Pesa / Card" },
+    { num: 3, label: "Mint ID", desc: "Digital Credential" },
+    { num: 4, label: "Partner Hub", desc: "Instant Access" },
+  ];
+
+  return (
+    <div className="w-full max-w-2xl mx-auto mb-5 px-3">
+      <div className="flex items-center justify-between relative">
+        {/* Connecting progress line */}
+        <div className="absolute top-4 left-6 right-6 h-[2px] bg-white/15 -z-0">
+          <div
+            className="h-full bg-gradient-to-r from-[#d4af37] via-emerald-400 to-emerald-500 transition-all duration-500"
+            style={{
+              width:
+                activeStep === 1
+                  ? "0%"
+                  : activeStep === 2
+                  ? "33%"
+                  : activeStep === 3
+                  ? "66%"
+                  : "100%",
+            }}
+          />
+        </div>
+
+        {steps.map((step) => {
+          const isDone = step.num < activeStep;
+          const isCurrent = step.num === activeStep;
+          return (
+            <div key={step.num} className="flex flex-col items-center text-center relative z-10">
+              <div
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-brand font-extrabold text-xs sm:text-sm transition-all duration-300 shadow-md ${
+                  isDone
+                    ? "bg-emerald-500 text-white ring-2 ring-emerald-400"
+                    : isCurrent
+                    ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] ring-2 ring-[#d4af37] ring-offset-2 ring-offset-[#071324] scale-110 shadow-[0_0_15px_rgba(212,175,55,0.6)]"
+                    : "bg-[#0c1b33] text-white/50 border border-white/20"
+                }`}
+              >
+                {isDone ? <Check className="w-4 h-4 stroke-[3]" /> : step.num}
+              </div>
+              <span
+                className={`text-[11px] sm:text-xs font-bold mt-1.5 transition-colors ${
+                  isCurrent
+                    ? "text-[#fbf5b7]"
+                    : isDone
+                    ? "text-emerald-300"
+                    : "text-white/50"
+                }`}
+              >
+                {step.label}
+              </span>
+              <span className="text-[9px] text-white/40 hidden sm:block">
+                {step.desc}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function SubscriptionPortal() {
   const { user, setSession } = useAuth();
@@ -592,12 +659,41 @@ export default function SubscriptionPortal() {
           <AmbientParticles />
 
           <div className="container-main mx-auto relative z-10 max-w-7xl w-full">
+            {/* Global 4-Stage Onboarding Stepper */}
+            <OnboardingStepper activeStep={1} />
+
+            {/* How Covenant Onboarding Works Guidance Strip */}
+            <div className="max-w-3xl mx-auto mb-4 p-2.5 sm:p-3 rounded-2xl bg-white/[0.04] border border-[#d4af37]/30 backdrop-blur-md shadow-sm">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-[#fbf5b7] font-semibold text-[11px] sm:text-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-[#d4af37] shrink-0" />
+                  <span>Subscriber Roadmap: 3 Simple Steps</span>
+                </div>
+                <div className="flex items-center gap-3 text-white/75 text-[10px] sm:text-[11px]">
+                  <span className="flex items-center gap-1">
+                    <span className="w-4 h-4 rounded-full bg-[#d4af37]/25 text-[#fbf5b7] font-extrabold text-[9px] flex items-center justify-center">1</span>
+                    Select Covenant Tier
+                  </span>
+                  <span className="text-white/30">→</span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-4 h-4 rounded-full bg-[#d4af37]/25 text-[#fbf5b7] font-extrabold text-[9px] flex items-center justify-center">2</span>
+                    M-Pesa / Card Seed
+                  </span>
+                  <span className="text-white/30">→</span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-4 h-4 rounded-full bg-emerald-500/25 text-emerald-300 font-extrabold text-[9px] flex items-center justify-center">3</span>
+                    Instant Digital ID &amp; Portal
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Ultra-compact Header to maximize space for cards */}
             <div className="text-center max-w-4xl mx-auto mb-4 sm:mb-6">
               <ScrollReveal>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-[11px] font-semibold mb-2 backdrop-blur-md">
                   <Sparkles className="w-3 h-3 text-[#d4af37]" />
-                  <span>Kingdom Missions Network Covenant Partnership</span>
+                  <span>Step 1 of 4: Kingdom Covenant Partnership</span>
                 </div>
 
                 <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d4af37] mb-1">
@@ -885,8 +981,11 @@ export default function SubscriptionPortal() {
       {currentStep === "checkout" && (
         <section className="py-8 sm:py-12 px-4 sm:px-6 min-h-[calc(100vh-64px)] md:min-h-[calc(100vh-92px)] supports-[height:100dvh]:min-h-[calc(100dvh-64px)] md:supports-[height:100dvh]:min-h-[calc(100dvh-92px)] flex flex-col justify-start" id="checkout">
           <div className="container-main mx-auto max-w-3xl w-full">
+            {/* Global 4-Stage Onboarding Stepper */}
+            <OnboardingStepper activeStep={2} />
+
             {/* Step Navigation & Breadcrumbs */}
-            <div className="flex items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
+            <div className="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-white/10">
               <button
                 type="button"
                 onClick={() => {
@@ -900,11 +999,30 @@ export default function SubscriptionPortal() {
               </button>
 
               <div className="inline-flex items-center gap-2 text-xs">
-                <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#fbf5b7] font-bold">
-                  Step 2 of 2
+                <span className="px-2.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#fbf5b7] font-bold">
+                  Step 2 of 4: Enter Details &amp; Seed
                 </span>
-                <span className="text-white/60">Payment &amp; Activation</span>
               </div>
+            </div>
+
+            {/* Proactive Next Step Assurance Banner */}
+            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-[#d4af37]/15 via-white/[0.04] to-emerald-500/10 border border-[#d4af37]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center shrink-0">
+                  <Award className="w-5 h-5 text-[#d4af37]" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-white">
+                    What happens next after completing your seed?
+                  </h4>
+                  <p className="text-[11px] text-white/70">
+                    Your official Digital Partner ID Card is instantly minted and your 24/7 Covenant Hub is unlocked immediately.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                Instant Handshake
+              </span>
             </div>
 
             <div className="p-6 sm:p-9 rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/15 shadow-2xl">
@@ -1178,26 +1296,50 @@ export default function SubscriptionPortal() {
                       </div>
 
                       {stkPending && (
-                        <div className="p-4 rounded-2xl bg-amber-900/30 border border-amber-500/40 flex items-center gap-4" role="status" aria-live="polite">
-                          <div className="relative w-14 h-14 shrink-0" aria-hidden="true">
-                            <span className="absolute inset-0 rounded-full bg-amber-400/25 animate-ping" />
-                            <span className="absolute inset-2 rounded-full border border-amber-400/50 animate-ping [animation-delay:300ms]" />
-                            <span className="absolute inset-4 rounded-full border border-amber-400/70 animate-ping [animation-delay:600ms]" />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <Smartphone className="w-5 h-5 text-amber-300" />
+                        <div className="space-y-3">
+                          <div className="p-4 rounded-2xl bg-amber-900/30 border border-amber-500/40 flex items-center gap-4" role="status" aria-live="polite">
+                            <div className="relative w-14 h-14 shrink-0" aria-hidden="true">
+                              <span className="absolute inset-0 rounded-full bg-amber-400/25 animate-ping" />
+                              <span className="absolute inset-2 rounded-full border border-amber-400/50 animate-ping [animation-delay:300ms]" />
+                              <span className="absolute inset-4 rounded-full border border-amber-400/70 animate-ping [animation-delay:600ms]" />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <Smartphone className="w-5 h-5 text-amber-300" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-bold text-amber-300">
+                                {stkPromptSent ? "Check your phone — enter your M-Pesa PIN" : "Contacting Safaricom…"}
+                              </p>
+                              <p className="text-xs text-amber-300/70 mt-0.5">{stkStatusMessage}</p>
+                            </div>
+                            <div className="text-center shrink-0" aria-label={`${stkSecondsLeft} seconds remaining`}>
+                              <div className="font-mono text-lg font-extrabold text-amber-200">
+                                00:{stkSecondsLeft < 10 ? `0${stkSecondsLeft}` : stkSecondsLeft}
+                              </div>
+                              <div className="text-[10px] text-amber-300/60 uppercase font-bold">waiting</div>
                             </div>
                           </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-bold text-amber-300">
-                              {stkPromptSent ? "Check your phone — enter your M-Pesa PIN" : "Contacting Safaricom…"}
-                            </p>
-                            <p className="text-xs text-amber-300/70 mt-0.5">{stkStatusMessage}</p>
-                          </div>
-                          <div className="text-center shrink-0" aria-label={`${stkSecondsLeft} seconds remaining`}>
-                            <div className="font-mono text-lg font-extrabold text-amber-200">
-                              00:{stkSecondsLeft < 10 ? `0${stkSecondsLeft}` : stkSecondsLeft}
+
+                          {/* 3-Step Live Guidance While Waiting for Phone PIN */}
+                          <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs space-y-2">
+                            <div className="text-[11px] font-bold text-[#fbf5b7] uppercase tracking-wide flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
+                              <span>Live Action Required on Your Phone:</span>
                             </div>
-                            <div className="text-[10px] text-amber-300/60 uppercase font-bold">waiting</div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-white/85">
+                              <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-start gap-2">
+                                <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+                                <span>Unlock phone when Safaricom PIN prompt appears</span>
+                              </div>
+                              <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-start gap-2">
+                                <span className="w-4 h-4 rounded-full bg-[#d4af37]/20 text-[#d4af37] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+                                <span>Enter your Safaricom M-Pesa PIN and press OK</span>
+                              </div>
+                              <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-start gap-2">
+                                <span className="w-4 h-4 rounded-full bg-blue-500/20 text-blue-400 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+                                <span>Screen auto-detects payment &amp; opens Partner Hub</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -1507,22 +1649,75 @@ export default function SubscriptionPortal() {
 
       {/* Onboarding Transition Modal */}
       {onboardingStage !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="w-full max-w-md p-8 rounded-3xl bg-[#0c1b33] border border-[#d4af37]/50 text-center text-white shadow-2xl">
-            <Loader2 className="w-12 h-12 text-[#d4af37] animate-spin mx-auto mb-4" />
-            <h4 className="font-brand text-2xl font-bold mb-2">Activating Your Covenant Partnership</h4>
-            <p className="text-white/70 text-xs sm:text-sm mb-6">
-              {onboardingStage === 1 && "Verifying contribution transaction..."}
-              {onboardingStage === 2 && "Registering membership on the global covenant ledger..."}
-              {onboardingStage === 3 && "Generating your official digital Partner ID Card..."}
-              {onboardingStage === 4 && "Provisioning your partner covenant dashboard..."}
-            </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-[#0c1b33] border-2 border-[#d4af37]/60 text-center text-white shadow-2xl space-y-4">
+            <OnboardingStepper activeStep={onboardingStage >= 3 ? 4 : 3} />
+
+            <div className="relative w-14 h-14 mx-auto my-1">
+              <div className="absolute inset-0 rounded-2xl bg-[#d4af37]/20 border border-[#d4af37]/40 animate-ping [animation-duration:2s]" />
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#d4af37] to-[#8b5e3c] p-0.5 shadow-xl flex items-center justify-center relative z-10">
+                <Award className="w-7 h-7 text-[#0c1b33]" />
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-brand text-xl sm:text-2xl font-bold mb-1">
+                Activating Covenant Partnership
+              </h4>
+              <p className="text-xs text-[#d4af37] font-semibold tracking-wider">
+                {credentialIds.partnerNumber ? `Partner Number: ${credentialIds.partnerNumber}` : "Minting Official Credential..."}
+              </p>
+            </div>
+
+            <div className="space-y-2 text-left bg-white/[0.04] p-3.5 rounded-2xl border border-white/10 text-xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${onboardingStage >= 1 ? "text-emerald-400" : "text-white/30"}`} />
+                <span className={onboardingStage >= 1 ? "text-white font-medium" : "text-white/40"}>Contribution transaction verified</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${onboardingStage >= 2 ? "text-emerald-400" : "text-white/30"}`} />
+                <span className={onboardingStage >= 2 ? "text-white font-medium" : "text-white/40"}>Inscribed on global covenant ledger</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${onboardingStage >= 3 ? "text-emerald-400" : "text-white/30"}`} />
+                <span className={onboardingStage >= 3 ? "text-white font-medium" : "text-white/40"}>Digital Partner ID Card &amp; QR seal generated</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${onboardingStage >= 4 ? "text-emerald-400" : "text-white/30"}`} />
+                <span className={onboardingStage >= 4 ? "text-white font-medium" : "text-white/40"}>Launching your personalized Partner Hub...</span>
+              </div>
+            </div>
+
             <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-[#d4af37] to-emerald-400 h-2 transition-all duration-500"
+                className="bg-gradient-to-r from-[#d4af37] via-emerald-400 to-emerald-500 h-2 transition-all duration-500"
                 style={{ width: `${(onboardingStage / 4) * 100}%` }}
               />
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                navigate("/partner-portal", {
+                  state: {
+                    justSubscribed: true,
+                    planName: activePlan.name,
+                    partnerName: subscriberName.trim() || user?.name || "Kingdom Partner",
+                    partnerEmail: subscriberEmail.trim() || user?.email || "",
+                    paymentReference: mpesaRefCode || "",
+                    paymentProvider: "mpesa_paybill",
+                    amount: activeAmountKes,
+                    currency: "KES",
+                    partnerNumber: credentialIds.partnerNumber || null,
+                    verifyToken: credentialIds.verifyToken || null,
+                  },
+                });
+              }}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] font-bold text-xs flex items-center justify-center gap-2 shadow-lg hover:brightness-110 active:scale-[0.98] transition-all"
+            >
+              <span>Enter Partner Hub Now</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       )}

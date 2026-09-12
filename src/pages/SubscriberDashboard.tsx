@@ -221,6 +221,15 @@ export default function SubscriberDashboard() {
   } | null>(null);
   const [planPreviewBusy, setPlanPreviewBusy] = useState(false);
 
+  const [dismissChecklist, setDismissChecklist] = useState<boolean>(() => {
+    return localStorage.getItem("kmn_partner_checklist_dismissed") === "true";
+  });
+
+  const handleDismissChecklist = () => {
+    setDismissChecklist(true);
+    localStorage.setItem("kmn_partner_checklist_dismissed", "true");
+  };
+
   const needsClaim = Boolean(navState?.claimRequired) && !claimDone && !user;
   const claimEmail = navState?.partnerEmail || targetEmail;
 
@@ -855,6 +864,122 @@ export default function SubscriberDashboard() {
             {/* TAB 1: OVERVIEW & KINGDOM IMPACT */}
             {activeTab === "overview" && (
               <div className="space-y-8">
+                {/* New Partner Onboarding Guided Checklist (Top-Tier SaaS/Ministry Benchmark) */}
+                {!dismissChecklist && (
+                  <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#0c1b33] via-[#102447] to-[#1c1208] border-2 border-[#d4af37]/50 text-white shadow-xl relative overflow-hidden">
+                    <div className="flex items-start justify-between gap-4 pb-3 border-b border-white/10 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#d4af37] to-[#8b5e3c] p-0.5 shadow-md flex items-center justify-center shrink-0">
+                          <Sparkles className="w-5 h-5 text-[#0c1b33]" />
+                        </div>
+                        <div>
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#fbf5b7] text-[10px] font-bold uppercase tracking-wider mb-0.5">
+                            Partner Onboarding Guide
+                          </div>
+                          <h3 className="font-brand text-base sm:text-lg font-bold text-white">
+                            What to Do Next as an Active Kingdom Partner
+                          </h3>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleDismissChecklist}
+                        className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+                        title="Dismiss onboarding checklist"
+                        aria-label="Dismiss onboarding checklist"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                      {/* Item 1: Activated */}
+                      <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3">
+                        <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                          <Check className="w-4 h-4 stroke-[3]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-emerald-300">Covenant Partnership Activated</div>
+                          <div className="text-[11px] text-white/70 mt-0.5">
+                            Tier: <strong className="text-white">{currentTier.name}</strong> · Ref: {subscriptionData?.payment_reference || "KMN-ACTIVE"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Item 2: ID Card */}
+                      <div className="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/15 flex items-start justify-between gap-3 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="w-7 h-7 rounded-xl bg-[#d4af37]/20 text-[#d4af37] flex items-center justify-center shrink-0 mt-0.5">
+                            <Award className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-[#fbf5b7]">Download Your Digital ID Card</div>
+                            <div className="text-[11px] text-white/70 mt-0.5">Official pass with verified partner QR code.</div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("credentials")}
+                          className="px-2.5 py-1 rounded-lg bg-[#d4af37]/20 hover:bg-[#d4af37] text-[#fbf5b7] hover:text-[#0c1b33] text-[11px] font-bold shrink-0 transition-colors"
+                        >
+                          View ID →
+                        </button>
+                      </div>
+
+                      {/* Item 3: Prayer Altar */}
+                      <div className="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/15 flex items-start justify-between gap-3 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="w-7 h-7 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <Heart className="w-4 h-4 fill-current" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-white">Place Prayer on 24/7 Altar</div>
+                            <div className="text-[11px] text-white/70 mt-0.5">Pastoral intercession by Bishop Dr. George Githinji.</div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("prayer")}
+                          className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold shrink-0 transition-colors"
+                        >
+                          Pray →
+                        </button>
+                      </div>
+
+                      {/* Item 4: Devotionals / Prophetic Briefings */}
+                      <div className="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/15 flex items-start justify-between gap-3 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="w-7 h-7 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <BookOpen className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-white">Prophetic Audio Briefings</div>
+                            <div className="text-[11px] text-white/70 mt-0.5">Exclusive teachings &amp; frontline crusade digests.</div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("devotionals")}
+                          className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold shrink-0 transition-colors"
+                        >
+                          Listen →
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-white/60 pt-2 border-t border-white/10">
+                      <span>Need personal assistance? Contact our partner oversight team at <strong className="text-white">partners@kingdommissionsnetwork.org</strong></span>
+                      <button
+                        type="button"
+                        onClick={handleDismissChecklist}
+                        className="text-[#d4af37] hover:underline font-semibold"
+                      >
+                        Dismiss Guide
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Email-ownership claim (progressive identity): payment succeeded for a
                     known email — verify the inbox code to mint the hub session. */}
                 {needsClaim && claimEmail && (
@@ -1819,7 +1944,7 @@ export default function SubscriberDashboard() {
               </p>
 
               {/* Apostolic Blessing Note */}
-              <div className="p-4 rounded-2xl bg-white/[0.04] border border-[#d4af37]/30 text-left space-y-2 mb-6">
+              <div className="p-4 rounded-2xl bg-white/[0.04] border border-[#d4af37]/30 text-left space-y-2 mb-4">
                 <div className="flex items-center gap-2">
                   <Crown className="w-4 h-4 text-[#d4af37]" />
                   <span className="text-xs font-bold text-[#fbf5b7] uppercase tracking-wider">Apostolic Blessing</span>
@@ -1830,6 +1955,28 @@ export default function SubscriberDashboard() {
                 <p className="text-[11px] font-semibold text-white/60 text-right">
                   &mdash; Bishop Dr. George Githinji, General Overseer
                 </p>
+              </div>
+
+              {/* Immediate Next Steps in Portal */}
+              <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 text-left space-y-1.5 mb-6">
+                <div className="text-[11px] font-bold text-[#fbf5b7] uppercase tracking-wide flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
+                  <span>Your Partner Privileges Are Active:</span>
+                </div>
+                <div className="space-y-1 text-xs text-white/80">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Digital ID Card &amp; QR verification seal generated</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>24/7 Priority Pastoral Prayer Altar ready for your petitions</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Prophetic audio briefings &amp; mission field digests unlocked</span>
+                  </div>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
