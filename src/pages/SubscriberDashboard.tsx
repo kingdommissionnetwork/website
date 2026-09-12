@@ -26,10 +26,13 @@ import {
   Pause,
   Play,
   AlertTriangle,
+  Menu,
+  ArrowLeft,
 } from "lucide-react";
 import SEO from "../components/SEO";
 import AmbientParticles from "../components/AmbientParticles";
 import PartnershipSupportCard from "../components/PartnershipSupportCard";
+import ThemeToggle from "../components/ThemeToggle";
 import brandLogo from "../assets/logo.png";
 import { api, normalizeAuthUser } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -132,6 +135,7 @@ export default function SubscriberDashboard() {
   } | null;
 
   const [activeTab, setActiveTab] = useState<SubscriberTab>("overview");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [, setLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState<boolean>(
     Boolean(navState?.justSubscribed)
@@ -527,14 +531,203 @@ export default function SubscriberDashboard() {
   };
 
   return (
-    <div className="subscriber-dashboard pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#f4f7fb] dark:bg-[#071324] text-[#0c1b33] dark:text-white flex flex-col font-outfit transition-colors duration-300">
+    <div className="subscriber-dashboard min-h-screen bg-[#f4f7fb] dark:bg-[#071324] text-[#0c1b33] dark:text-white flex flex-col font-outfit transition-colors duration-300">
       <SEO
         title="Covenant Partner Hub — Kingdom Missions Network"
         description="Subscriber & Partner Portal: access official credentials, giving statements, prophetic briefings, mission delegations, and the 24/7 prayer altar."
       />
 
+      {/* Dedicated Sticky Partner Hub Top Bar */}
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#071324]/95 backdrop-blur-md border-b border-black/10 dark:border-white/10 px-4 sm:px-6 lg:px-8 py-3 transition-colors duration-300 shadow-sm">
+        <div className="container-main mx-auto flex items-center justify-between gap-4">
+          {/* Left: Mobile Navigation Trigger + Brand Identity + Main Site Return Link */}
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <button
+              type="button"
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="lg:hidden p-2 -ml-2 rounded-xl text-[#0c1b33] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+              aria-label="Open portal navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            <Link
+              to="/"
+              className="flex items-center gap-2.5 group focus:outline-none focus:ring-2 focus:ring-[#d4af37] rounded-lg shrink-0"
+              title="Return to Kingdom Missions Network main website"
+            >
+              <div className="w-9 h-9 rounded-xl bg-[#0c1b33] p-1 border border-[#d4af37]/40 flex items-center justify-center shadow-sm">
+                <img src={brandLogo} alt="KMN Logo" className="w-6 h-6 object-contain" />
+              </div>
+              <div className="hidden sm:block leading-tight">
+                <div className="text-xs font-bold font-brand text-[#0c1b33] dark:text-white tracking-wide group-hover:text-[#d4af37] transition-colors">
+                  KINGDOM MISSIONS
+                </div>
+                <div className="text-[10px] tracking-wider text-[#0c1b33]/60 dark:text-white/50 uppercase font-semibold">
+                  Partner Portal
+                </div>
+              </div>
+            </Link>
+
+            <div className="h-5 w-px bg-black/10 dark:bg-white/10 hidden md:block" />
+
+            <Link
+              to="/"
+              className="hidden md:inline-flex items-center gap-1.5 text-xs font-medium text-[#0c1b33]/70 dark:text-white/70 hover:text-[#d4af37] dark:hover:text-[#d4af37] transition-colors px-2.5 py-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Main Ministry Website</span>
+            </Link>
+          </div>
+
+          {/* Right: Active Covenant Status, Theme Toggle, Quick Actions & User Profile */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Active Covenant status badge */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#996515] dark:text-[#fbf5b7] text-[11px] font-bold">
+              <Crown className="w-3 h-3 text-[#996515] dark:text-[#d4af37]" />
+              <span>{currentTier.badge}</span>
+            </div>
+
+            {/* Quick Action: Partner Credential */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("credentials")}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 border border-black/10 dark:border-white/10 text-xs font-semibold text-[#0c1b33] dark:text-white transition-colors"
+            >
+              <Award className="w-3.5 h-3.5 text-[#996515] dark:text-[#d4af37]" />
+              <span>Partner Credential</span>
+            </button>
+
+            {/* Quick Action: Prayer Altar */}
+            <button
+              type="button"
+              onClick={() => setActiveTab("prayer")}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] text-xs font-bold shadow-sm hover:brightness-105 transition-all"
+            >
+              <Heart className="w-3.5 h-3.5 fill-current" />
+              <span>Altar Prayer</span>
+            </button>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
+            {/* User Profile Avatar & Sign Out */}
+            <div className="flex items-center gap-2 pl-2 border-l border-black/10 dark:border-white/10">
+              <div
+                className="w-8 h-8 rounded-full bg-gradient-to-br from-[#d4af37] to-[#8b5e3c] p-0.5 shadow-sm"
+                title={`Signed in as ${partnerName}`}
+              >
+                <div className="w-full h-full rounded-full bg-[#0c1b33] text-[#fbf5b7] flex items-center justify-center text-xs font-bold">
+                  {partnerName.charAt(0).toUpperCase()}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => logout()}
+                className="p-1.5 rounded-lg text-[#0c1b33]/60 dark:text-white/60 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title="Sign Out"
+                aria-label="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Portal Navigation Drawer */}
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsMobileSidebarOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Drawer Content */}
+          <div className="relative w-72 max-w-[85vw] bg-white dark:bg-[#09182d] border-r border-black/10 dark:border-white/10 shadow-2xl p-4 flex flex-col z-10">
+            <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10 mb-3">
+              <div className="flex items-center gap-2">
+                <img src={brandLogo} alt="" className="w-6 h-6 object-contain" />
+                <span className="font-bold text-xs uppercase tracking-wider text-[#0c1b33] dark:text-white font-brand">
+                  Partner Navigation
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-[#0c1b33] dark:text-white"
+                aria-label="Close navigation menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <nav className="flex-1 space-y-1 overflow-y-auto">
+              {[
+                { id: "overview" as SubscriberTab, label: "Overview & Impact", icon: Sparkles },
+                { id: "credentials" as SubscriberTab, label: "Partner ID & Seal", icon: Award },
+                { id: "giving" as SubscriberTab, label: "Giving & Tax Statements", icon: FileText },
+                { id: "devotionals" as SubscriberTab, label: "Prophetic Briefings", icon: BookOpen },
+                { id: "delegations" as SubscriberTab, label: "Mission Delegations", icon: Compass },
+                { id: "prayer" as SubscriberTab, label: "24/7 Prayer Altar", icon: Heart },
+                { id: "settings" as SubscriberTab, label: "Covenant & Billing", icon: Settings },
+              ].map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setIsMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+                      isActive
+                        ? "bg-gradient-to-r from-[#d4af37] to-[#c5961d] text-[#0c1b33] shadow-md font-bold"
+                        : "text-[#0c1b33]/75 dark:text-white/70 hover:text-[#0c1b33] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-4 h-4 ${isActive ? "text-[#0c1b33]" : "text-[#996515] dark:text-[#d4af37]"}`} />
+                      <span>{item.label}</span>
+                    </div>
+                    {isActive && <ChevronRight className="w-3.5 h-3.5" />}
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="pt-4 mt-2 border-t border-black/10 dark:border-white/10 space-y-2">
+              <Link
+                to="/"
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-[#0c1b33]/80 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Return to Main Website</span>
+              </Link>
+              <div className="text-[11px] text-[#0c1b33]/60 dark:text-white/50 px-2">
+                <span>Signed in:</span>
+                <span className="block font-semibold text-[#0c1b33] dark:text-white truncate">{partnerEmail}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => logout()}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero / Partner Header Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-white via-[#f5f0e8] to-[#e6eef7] dark:from-[#0c1b33] dark:via-[#09182d] dark:to-[#1a1107] border-b border-black/10 dark:border-white/10 px-4 sm:px-6 lg:px-8 py-8 transition-colors duration-300">
+      <section className="relative overflow-hidden bg-gradient-to-r from-white via-[#f5f0e8] to-[#e6eef7] dark:from-[#0c1b33] dark:via-[#09182d] dark:to-[#1a1107] border-b border-black/10 dark:border-white/10 px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300">
         <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.15)_0%,transparent_65%)] pointer-events-none blur-3xl" />
         <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
         <AmbientParticles />
@@ -543,14 +736,14 @@ export default function SubscriberDashboard() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             {/* Identity & Status */}
             <div className="flex items-center gap-4 sm:gap-5">
-              <div className="relative">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-[#d4af37] to-[#8b5e3c] p-0.5 shadow-xl">
+              <div className="relative shrink-0">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-[#d4af37] to-[#8b5e3c] p-0.5 shadow-xl">
                   <div className="w-full h-full rounded-2xl bg-[#0c1b33] flex items-center justify-center overflow-hidden">
-                    <img src={brandLogo} alt="" className="w-10 h-10 object-contain" />
+                    <img src={brandLogo} alt="" className="w-8 h-8 sm:w-10 sm:h-10 object-contain" />
                   </div>
                 </div>
                 <div className="absolute -bottom-1 -right-1 p-1 bg-emerald-500 rounded-full border-2 border-white dark:border-[#071324]" title="Active Covenant">
-                  <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                  <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
                 </div>
               </div>
 
@@ -583,7 +776,8 @@ export default function SubscriberDashboard() {
                 className="px-4 py-2.5 rounded-xl bg-white hover:bg-black/5 dark:bg-white/10 dark:hover:bg-white/15 border border-black/10 dark:border-white/15 text-[#0c1b33] dark:text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-sm"
               >
                 <Award className="w-4 h-4 text-[#996515] dark:text-[#d4af37]" />
-                <span className="hidden sm:inline">Official ID Seal</span>
+                <span className="hidden sm:inline">Partner ID &amp; Seal</span>
+                <span className="sm:hidden">ID Seal</span>
               </button>
               <button
                 type="button"
@@ -603,7 +797,7 @@ export default function SubscriberDashboard() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Subscriber Navigation Sidebar */}
           <aside className="w-full lg:w-64 shrink-0">
-            <div className="bg-white dark:bg-[#09182d] rounded-2xl border border-black/10 dark:border-white/10 p-3 static lg:sticky lg:top-28 space-y-1 shadow-md dark:shadow-xl transition-colors">
+            <div className="bg-white dark:bg-[#09182d] rounded-2xl border border-black/10 dark:border-white/10 p-3 static lg:sticky lg:top-20 space-y-1 shadow-md dark:shadow-xl transition-colors">
               <div className="px-3 py-2 text-[10px] uppercase font-bold text-[#0c1b33]/50 dark:text-white/40 tracking-[0.2em]">
                 Partner Portal Navigation
               </div>

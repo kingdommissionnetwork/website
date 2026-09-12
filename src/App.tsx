@@ -44,6 +44,8 @@ export default function App() {
   const location = useLocation();
   const isAdminDomain = typeof window !== "undefined" && window.location.hostname.startsWith("admin.");
   const isAdminRoute = location.pathname.startsWith("/admin") || isAdminDomain;
+  const isPortalRoute = location.pathname.startsWith("/partner-portal") || location.pathname.startsWith("/subscriber-dashboard");
+  const isStandaloneApp = isAdminRoute || isPortalRoute;
 
   useEffect(() => {
     if (toast) {
@@ -62,8 +64,8 @@ export default function App() {
         <ToastContext.Provider value={{ showToast }}>
           <div className="min-h-screen bg-cloud-blue dark:bg-[#071324] text-[#0c1b33] dark:text-[#f8f6f3] transition-colors duration-300">
             <ScrollToTop />
-            {!isAdminRoute && <ScrollProgress />}
-            {!isAdminRoute && <Navigation />}
+            {!isStandaloneApp && <ScrollProgress />}
+            {!isStandaloneApp && <Navigation />}
           <main>
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
@@ -109,7 +111,7 @@ export default function App() {
               </Suspense>
             </ErrorBoundary>
           </main>
-          {!isAdminRoute && <Footer />}
+          {!isStandaloneApp && <Footer />}
           {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </div>
       </ToastContext.Provider>
