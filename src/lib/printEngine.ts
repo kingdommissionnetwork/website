@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import brandLogo from "../assets/logo.png";
 import { BISHOP_SIGNATURE_BASE64 } from "./signatureData";
+import { PARTNERSHIP_SUPPORT_PHONE_DISPLAY } from "./support";
 
 function escapeHtmlAttr(input: unknown): string {
   return String(input ?? "")
@@ -1555,7 +1556,7 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
     <div class="card-footer" style="margin-top: 2mm;">
       <div style="font-size: 4pt; color: rgba(12,27,51,0.65); line-height: 1.2;">
         <strong>Secretariat:</strong> Nairobi, Kenya<br>
-        <strong>Hotline:</strong> +254 700 000 000 | kingdommissions.org
+        <strong>Hotline:</strong> ${PARTNERSHIP_SUPPORT_PHONE_DISPLAY} | kingdommissions.org
       </div>
       <div style="text-align: right;">
         ${getBarcodeSvg(displayId)}
