@@ -2,6 +2,14 @@ import QRCode from "qrcode";
 import brandLogo from "../assets/logo.png";
 import { BISHOP_SIGNATURE_BASE64 } from "./signatureData";
 
+function escapeHtmlAttr(input: unknown): string {
+  return String(input ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export interface InvoiceDetails {
   id?: string | number;
   reference?: string;
@@ -1002,7 +1010,9 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
  */
 export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<string> {
   const cardId = card.id ? String(card.id).toUpperCase() : `PTN-${Math.floor(1000 + Math.random() * 9000)}`;
-  const displayId = cardId.startsWith("HKN-") ? cardId : `HKN-${cardId.slice(0, 8)}`;
+  // Keep the FULL credential id — truncating the suffix gave every member the same card number.
+  const displayId = cardId.startsWith("HKN-") ? cardId : `HKN-${cardId}`;
+  const holderName = (card.name || "Covenant Partner").trim();
   
   const verifyUrl = `${window.location.origin}/verify?partner=${encodeURIComponent(displayId)}`;
   const qrDataUri = await generateQrDataUrl(verifyUrl);
@@ -1364,13 +1374,28 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
       border-radius: 1mm;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: space-between;
+      gap: 2mm;
       padding: 0 2mm;
-      color: #333;
+      margin-bottom: 2mm;
+    }
+    .sig-holder {
+      font-family: 'Brush Script MT', 'Segoe Script', 'Snell Roundhand', 'Apple Chancery', cursive;
+      font-style: italic;
+      font-size: 9pt;
+      line-height: 1;
+      color: #16294d;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 62%;
+    }
+    .sig-id {
       font-family: 'Courier New', monospace;
       font-size: 5pt;
       font-weight: 700;
-      margin-bottom: 2mm;
+      color: #333;
+      white-space: nowrap;
     }
 
     .covenant-terms {
@@ -1494,7 +1519,8 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
         Authorized Holder Signature:
       </div>
       <div class="sig-panel">
-        ${displayId}
+        <span class="sig-holder">${escapeHtmlAttr(holderName)}</span>
+        <span class="sig-id">${displayId}</span>
       </div>
 
       <div class="covenant-terms">

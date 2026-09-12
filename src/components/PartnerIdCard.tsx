@@ -58,7 +58,9 @@ export default function PartnerIdCard({
   });
 
   const cardId = card.id ? String(card.id).toUpperCase() : `PTN-001`;
-  const displayId = cardId.startsWith("HKN-") ? cardId : `HKN-${cardId.slice(0, 8)}`;
+  // Keep the FULL credential id — truncating the suffix gave every member the same card number.
+  const displayId = cardId.startsWith("HKN-") ? cardId : `HKN-${cardId}`;
+  const holderName = (card.name || "Covenant Partner").trim();
   const expiry = card.expiryYear || "2027";
   const joined = card.joinedAt || "2026";
 
@@ -340,22 +342,27 @@ export default function PartnerIdCard({
             <div className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-br from-[#060e1a] via-[#0c1b33] to-[#081225] border-2 border-[#d4af37] p-5 sm:p-7 shadow-[0_0_50px_rgba(212,175,55,0.3)] text-white select-none space-y-4">
               <div className="h-8 bg-[#111111] border-y border-white/10 -mx-5 sm:-mx-7 mb-2" />
               <div>
-                <span className="text-[8px] uppercase tracking-widest text-white/50 block mb-1">Authorized Cardholder Signature</span>
-                <div className="h-9 bg-white rounded-lg flex items-center justify-between px-3 text-[#0c1b33] font-mono text-xs font-bold">
-                  <span className="italic">{card.name}</span>
-                  <span className="text-gray-400 text-[10px]">{displayId}</span>
+                <span className="text-[8px] uppercase tracking-widest text-white/50 block mb-1">Authorized Holder Signature:</span>
+                <div className="h-9 bg-white rounded-lg flex items-center justify-between gap-2 px-3">
+                  <span
+                    className="text-[#16294d] text-lg leading-none italic truncate"
+                    style={{ fontFamily: "'Brush Script MT','Segoe Script','Snell Roundhand','Apple Chancery',cursive" }}
+                  >
+                    {holderName}
+                  </span>
+                  <span className="text-gray-500 text-[10px] font-mono font-bold whitespace-nowrap">{displayId}</span>
                 </div>
               </div>
               <div className="text-[10px] text-white/70 leading-relaxed space-y-1.5">
-                <p><strong>COVENANT CLEARANCE & GLOBAL ACCESS:</strong> This credential certifies that the bearer is a recognized covenant partner of Kingdom Missions Network, actively supporting frontline apostolic evangelism, missionary deployments, and humanitarian aid.</p>
+                <p><strong>COVENANT DEPLOYMENT STATEMENT:</strong> This credential certifies that the bearer is a fully consecrated global covenant partner supporting frontline evangelism, church planting, and humanitarian relief under Kingdom Missions Network.</p>
                 <blockquote className="italic text-[#fbf5b7] text-[10px] border-l-2 border-[#d4af37] pl-2 my-1">
                   "And the twelve were with him, and certain women... which ministered unto him of their substance." — Luke 8:1-3
                 </blockquote>
               </div>
               <div className="border-t border-white/10 pt-3 flex items-center justify-between">
-                <div className="text-[9px] text-white/60">
-                  <span>Secretariat: P.O. Box Nairobi, Kenya</span><br />
-                  <span>Support: support@kingdommissions.org</span>
+                <div className="text-[9px] text-white/60 leading-relaxed">
+                  <span><strong>Secretariat:</strong> Nairobi, Kenya</span><br />
+                  <span><strong>Hotline:</strong> +254 700 000 000 | kingdommissions.org</span>
                 </div>
                 <div dangerouslySetInnerHTML={{ __html: getBarcodeSvg(displayId) }} className="bg-white p-1 rounded-md" />
               </div>
