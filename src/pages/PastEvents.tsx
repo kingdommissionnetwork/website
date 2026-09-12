@@ -26,7 +26,7 @@ export default function PastEvents() {
   const past = useMemo(() => getPastEvents(events), [events]);
 
   return (
-    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-white">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-white dark:bg-[#071324] text-[#0c1b33] dark:text-white">
       <SEO
         title="Recent & Past Gatherings"
         description="Browse recently concluded Kingdom gatherings, conferences, and missions. Relive what God did — and partner with the next one."
@@ -104,15 +104,15 @@ export default function PastEvents() {
                 const d = parseEventDate(event.date);
                 return (
                   <ScrollReveal key={event.id} delay={Math.min(index, 4) * 60}>
-                    <article className="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_180px_1fr] items-center gap-4 bg-[#f8f6f3] rounded-2xl border border-[#0c1b33]/5 p-4 sm:p-5">
-                      <div className="bg-white rounded-xl px-3 py-2 text-center min-w-[62px] border border-[#0c1b33]/10 shadow-sm">
-                        <p className="text-[10px] font-bold text-[#8b5e3c] uppercase">
+                    <article className="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_180px_1fr] items-center gap-4 bg-[#f8f6f3] dark:bg-[#0c1c33] rounded-2xl border border-[#0c1b33]/5 dark:border-white/10 p-4 sm:p-5">
+                      <div className="bg-white dark:bg-[#071324] rounded-xl px-3 py-2 text-center min-w-[62px] border border-[#0c1b33]/10 dark:border-white/10 shadow-sm">
+                        <p className="text-[10px] font-bold text-[#8b5e3c] dark:text-[#d4af37] uppercase">
                           {event.month || format(d, "MMM").toUpperCase()}
                         </p>
-                        <p className="text-2xl font-bold text-[#0c1b33] font-display leading-tight">
+                        <p className="text-2xl font-bold text-[#0c1b33] dark:text-white font-display leading-tight">
                           {event.day || format(d, "d")}
                         </p>
-                        <p className="text-[10px] font-semibold text-[#6b7c93]">{format(d, "yyyy")}</p>
+                        <p className="text-[10px] font-semibold text-[#6b7c93] dark:text-slate-400">{format(d, "yyyy")}</p>
                       </div>
                       <div className="hidden sm:block relative h-24 w-[180px] rounded-xl overflow-hidden">
                         <img
@@ -137,17 +137,17 @@ export default function PastEvents() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <h2 className="font-semibold text-base sm:text-lg text-[#0c1b33] line-clamp-1">
+                          <h2 className="font-semibold text-base sm:text-lg text-[#0c1b33] dark:text-white line-clamp-1">
                             {event.title}
                           </h2>
                           {event.isOnline && (
-                            <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#996515] text-[10px] font-bold flex items-center gap-1">
+                            <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#996515] dark:text-[#f6c873] text-[10px] font-bold flex items-center gap-1">
                               <Video className="w-3 h-3" />
                               Online
                             </span>
                           )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-[#6b7c93] mb-2">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-[#6b7c93] dark:text-slate-300 mb-2">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5 text-[#d4af37]" />
                             {event.dateRange || format(d, "EEEE, MMM d, yyyy")}
@@ -161,7 +161,7 @@ export default function PastEvents() {
                             {event.location}
                           </span>
                         </div>
-                        <p className="text-xs sm:text-sm text-[#6b7c93] line-clamp-2 leading-relaxed">
+                        <p className="text-xs sm:text-sm text-[#6b7c93] dark:text-slate-300 line-clamp-2 leading-relaxed">
                           {event.description}
                         </p>
                       </div>

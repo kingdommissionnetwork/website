@@ -29,14 +29,14 @@ export default function SermonPreviewSection() {
     );
 
   return (
-    <section className="bg-white section-padding">
+    <section className="bg-white dark:bg-[#071324] section-padding">
       <div className="container-main mx-auto">
         <ScrollReveal>
           <div className="text-center mb-10">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-[#0c1b33] mb-3">
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-[#0c1b33] dark:text-white mb-3">
               Sermon Library
             </h2>
-            <p className="text-[#6b7c93] text-lg max-w-xl mx-auto">
+            <p className="text-[#6b7c93] dark:text-slate-400 text-lg max-w-xl mx-auto">
               Searchable teachings from ministries worldwide.
             </p>
           </div>
@@ -45,13 +45,13 @@ export default function SermonPreviewSection() {
         <ScrollReveal delay={100}>
           <div className="flex flex-col sm:flex-row items-center gap-4 mb-8">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7c93]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7c93] dark:text-slate-400" />
               <input
                 type="text"
                 placeholder="Search sermons..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#0c1b33]/10 focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#0c1b33]/10 dark:border-white/10 dark:bg-[#0c1c33] dark:text-white dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm"
               />
             </div>
           </div>
@@ -65,8 +65,8 @@ export default function SermonPreviewSection() {
                 onClick={() => setActiveCategory(cat)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                   activeCategory === cat
-                    ? "bg-[#0c1b33] text-white"
-                    : "bg-[#e6eef7] text-[#0c1b33] hover:bg-[#0c1b33]/10"
+                    ? "bg-[#0c1b33] dark:bg-[#d4af37] text-white dark:text-[#0c1b33]"
+                    : "bg-[#e6eef7] dark:bg-white/8 text-[#0c1b33] dark:text-slate-300 hover:bg-[#0c1b33]/10 dark:hover:bg-white/12"
                 }`}
               >
                 {cat}
@@ -78,26 +78,26 @@ export default function SermonPreviewSection() {
         {loading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl overflow-hidden border border-[#0c1b33]/5">
-                <div className="aspect-video bg-[#e6eef7] animate-pulse" />
+              <div key={i} className="bg-white dark:bg-[#0a1628] rounded-2xl overflow-hidden border border-[#0c1b33]/5 dark:border-white/8">
+                <div className="aspect-video bg-[#e6eef7] dark:bg-white/6 animate-pulse" />
                 <div className="p-4 space-y-3">
-                  <div className="h-3 w-16 bg-[#e6eef7] rounded animate-pulse" />
-                  <div className="h-4 w-full bg-[#e6eef7] rounded animate-pulse" />
-                  <div className="h-4 w-3/4 bg-[#e6eef7] rounded animate-pulse" />
+                  <div className="h-3 w-16 bg-[#e6eef7] dark:bg-white/6 rounded animate-pulse" />
+                  <div className="h-4 w-full bg-[#e6eef7] dark:bg-white/6 rounded animate-pulse" />
+                  <div className="h-4 w-3/4 bg-[#e6eef7] dark:bg-white/6 rounded animate-pulse" />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredSermons.length === 0 ? (
           <div className="text-center py-12">
-            <Play className="w-10 h-10 text-[#6b7c93]/30 mx-auto mb-3" />
-            <p className="text-[#6b7c93]">No sermons found</p>
+            <Play className="w-10 h-10 text-[#6b7c93]/30 dark:text-slate-600 mx-auto mb-3" />
+            <p className="text-[#6b7c93] dark:text-slate-400">No sermons found</p>
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredSermons.slice(0, 6).map((sermon, index) => (
               <ScrollReveal key={sermon.id} delay={index * 100}>
-                <div className="group bg-white rounded-2xl overflow-hidden border border-[#0c1b33]/5 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                <div className="group bg-white dark:bg-[#0a1628] rounded-2xl overflow-hidden border border-[#0c1b33]/5 dark:border-white/8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                   <div className="relative aspect-video overflow-hidden">
                     <img
                       src={sermon.thumbnail}
@@ -115,18 +115,18 @@ export default function SermonPreviewSection() {
                     </span>
                   </div>
                   <div className="p-5">
-                    <span className="inline-block px-3 py-1 rounded-full bg-[#d4af37]/10 text-[#8b5e3c] text-xs font-medium mb-2">
+                    <span className="inline-block px-3 py-1 rounded-full bg-[#d4af37]/10 text-[#8b5e3c] dark:text-[#e6b87a] text-xs font-medium mb-2">
                       {sermon.category}
                     </span>
-                    <h3 className="font-semibold text-[#0c1b33] mb-1 line-clamp-2 group-hover:text-[#d4af37] transition-colors">
+                    <h3 className="font-semibold text-[#0c1b33] dark:text-white mb-1 line-clamp-2 group-hover:text-[#d4af37] transition-colors">
                       {sermon.title}
                     </h3>
-                    <p className="text-sm text-[#6b7c93]">{sermon.speaker}</p>
-                    <p className="text-xs text-[#6b7c93]/70 mt-1">{sermon.ministry}</p>
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#0c1b33]/5">
-                      <span className="text-xs text-[#6b7c93]">{sermon.date}</span>
-                      <button className="p-1.5 rounded-full hover:bg-[#e6eef7] transition-colors">
-                        <Bookmark className="w-4 h-4 text-[#6b7c93]" />
+                    <p className="text-sm text-[#6b7c93] dark:text-slate-400">{sermon.speaker}</p>
+                    <p className="text-xs text-[#6b7c93]/70 dark:text-slate-500 mt-1">{sermon.ministry}</p>
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#0c1b33]/5 dark:border-white/8">
+                      <span className="text-xs text-[#6b7c93] dark:text-slate-400">{sermon.date}</span>
+                      <button className="p-1.5 rounded-full hover:bg-[#e6eef7] dark:hover:bg-white/8 transition-colors">
+                        <Bookmark className="w-4 h-4 text-[#6b7c93] dark:text-slate-400" />
                       </button>
                     </div>
                   </div>
@@ -140,7 +140,7 @@ export default function SermonPreviewSection() {
           <div className="text-center mt-10">
             <Link
               to="/sermons"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-[#0c1b33]/20 text-[#0c1b33] font-medium hover:bg-[#0c1b33] hover:text-white transition-all duration-300"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-[#0c1b33]/20 dark:border-white/15 text-[#0c1b33] dark:text-white font-medium hover:bg-[#0c1b33] dark:hover:bg-[#d4af37] hover:text-white dark:hover:text-[#0c1b33] dark:hover:border-[#d4af37] transition-all duration-300"
             >
               View All Sermons
             </Link>

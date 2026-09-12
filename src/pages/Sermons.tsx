@@ -49,7 +49,7 @@ export default function Sermons() {
   };
 
   return (
-    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-white">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-white dark:bg-[#071324] text-[#0c1b33] dark:text-white">
       <SEO title="Sermons" description="Browse our collection of sermons on faith, hope, love, and discipleship." />
       
       <div className="relative overflow-hidden py-16 lg:py-20 px-4 bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107]">
@@ -93,8 +93,8 @@ export default function Sermons() {
                   onClick={() => setActiveCategory(cat)}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                     activeCategory === cat
-                      ? "bg-[#0c1b33] text-white"
-                      : "bg-[#e6eef7] text-[#0c1b33] hover:bg-[#0c1b33]/10"
+                      ? "bg-[#0c1b33] dark:bg-[#d4af37] text-white dark:text-[#0c1b33]"
+                      : "bg-[#e6eef7] dark:bg-white/8 text-[#0c1b33] dark:text-slate-300 hover:bg-[#0c1b33]/10 dark:hover:bg-white/12"
                   }`}
                 >
                   {cat}
@@ -103,11 +103,11 @@ export default function Sermons() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#6b7c93]" />
+              <Filter className="w-4 h-4 text-[#6b7c93] dark:text-slate-400" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as "recent" | "popular")}
-                className="px-3 py-2 rounded-lg border border-[#0c1b33]/10 bg-[#f8f6f3] text-sm text-[#0c1b33] focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+                className="px-3 py-2 rounded-lg border border-[#0c1b33]/10 dark:border-white/10 bg-[#f8f6f3] dark:bg-[#0c1c33] text-sm text-[#0c1b33] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
               >
                 <option value="recent">Most Recent</option>
                 <option value="popular">Most Popular</option>
@@ -119,15 +119,15 @@ export default function Sermons() {
         {loading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl overflow-hidden border border-[#0c1b33]/5">
-                <div className="aspect-video bg-[#e6eef7] animate-pulse" />
+              <div key={i} className="bg-white dark:bg-[#0a1628] rounded-2xl overflow-hidden border border-[#0c1b33]/5 dark:border-white/8">
+                <div className="aspect-video bg-[#e6eef7] dark:bg-white/6 animate-pulse" />
                 <div className="p-4 space-y-3">
-                  <div className="h-3 w-16 bg-[#e6eef7] rounded animate-pulse" />
-                  <div className="h-4 w-full bg-[#e6eef7] rounded animate-pulse" />
-                  <div className="h-4 w-3/4 bg-[#e6eef7] rounded animate-pulse" />
+                  <div className="h-3 w-16 bg-[#e6eef7] dark:bg-white/6 rounded animate-pulse" />
+                  <div className="h-4 w-full bg-[#e6eef7] dark:bg-white/6 rounded animate-pulse" />
+                  <div className="h-4 w-3/4 bg-[#e6eef7] dark:bg-white/6 rounded animate-pulse" />
                   <div className="flex items-center justify-between pt-2">
-                    <div className="h-3 w-24 bg-[#e6eef7] rounded animate-pulse" />
-                    <div className="h-3 w-16 bg-[#e6eef7] rounded animate-pulse" />
+                    <div className="h-3 w-24 bg-[#e6eef7] dark:bg-white/6 rounded animate-pulse" />
+                    <div className="h-3 w-16 bg-[#e6eef7] dark:bg-white/6 rounded animate-pulse" />
                   </div>
                 </div>
               </div>
@@ -135,8 +135,8 @@ export default function Sermons() {
           </div>
         ) : sortedSermons.length === 0 ? (
           <div className="text-center py-20">
-            <Headphones className="w-12 h-12 text-[#6b7c93] mx-auto mb-4" />
-            <p className="text-lg text-[#6b7c93]">No sermons found matching your criteria.</p>
+            <Headphones className="w-12 h-12 text-[#6b7c93] dark:text-slate-500 mx-auto mb-4" />
+            <p className="text-lg text-[#6b7c93] dark:text-slate-400">No sermons found matching your criteria.</p>
             <button
               onClick={() => {
                 setActiveCategory("All");
@@ -160,7 +160,7 @@ export default function Sermons() {
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                 >
                   <ScrollReveal delay={index * 80}>
-                    <div className="bg-white rounded-2xl overflow-hidden border border-[#0c1b33]/5 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+                    <div className="bg-white dark:bg-[#0a1628] rounded-2xl overflow-hidden border border-[#0c1b33]/5 dark:border-white/8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
                       <div className="relative aspect-video overflow-hidden">
                         <img
                           src={sermon.thumbnail}
@@ -209,22 +209,22 @@ export default function Sermons() {
                       )}
 
                       <div className="p-5">
-                        <span className="inline-block px-3 py-1 rounded-full bg-[#d4af37]/10 text-[#8b5e3c] text-xs font-medium mb-2">
+                        <span className="inline-block px-3 py-1 rounded-full bg-[#d4af37]/10 text-[#8b5e3c] dark:text-[#e6b87a] text-xs font-medium mb-2">
                           {sermon.category}
                         </span>
-                        <h3 className="font-semibold text-[#0c1b33] mb-1 line-clamp-2 group-hover:text-[#d4af37] transition-colors">
+                        <h3 className="font-semibold text-[#0c1b33] dark:text-white mb-1 line-clamp-2 group-hover:text-[#d4af37] transition-colors">
                           {sermon.title}
                         </h3>
-                        <p className="text-sm text-[#6b7c93]">{sermon.speaker}</p>
-                        <p className="text-xs text-[#6b7c93]/70 mt-1">{sermon.ministry}</p>
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#0c1b33]/5">
-                          <span className="text-xs text-[#6b7c93]">{sermon.date}</span>
+                        <p className="text-sm text-[#6b7c93] dark:text-slate-400">{sermon.speaker}</p>
+                        <p className="text-xs text-[#6b7c93]/70 dark:text-slate-500 mt-1">{sermon.ministry}</p>
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#0c1b33]/5 dark:border-white/8">
+                          <span className="text-xs text-[#6b7c93] dark:text-slate-400">{sermon.date}</span>
                           <button
                             onClick={() => toggleBookmark(sermon.id)}
                             className={`p-1.5 rounded-full transition-colors ${
                               bookmarkedSermons.has(sermon.id)
                                 ? "text-[#d4af37] bg-[#d4af37]/10"
-                                : "text-[#6b7c93] hover:bg-[#e6eef7]"
+                                : "text-[#6b7c93] dark:text-slate-400 hover:bg-[#e6eef7] dark:hover:bg-white/8"
                             }`}
                           >
                             <Bookmark

@@ -34,7 +34,7 @@ export default function ScriptureSection() {
 
   if (!scripture) {
     return (
-      <section className="bg-[#f5f0e8] section-padding">
+      <section className="bg-[#f5f0e8] dark:bg-[#0a1628] section-padding">
         <div className="container-main mx-auto text-center py-16">
           <BookOpen className="w-8 h-8 text-[#d4af37] mx-auto animate-spin" />
         </div>
@@ -43,7 +43,7 @@ export default function ScriptureSection() {
   }
 
   return (
-    <section className="bg-[#f5f0e8] section-padding">
+    <section className="bg-[#f5f0e8] dark:bg-[#0a1628] section-padding">
       <div className="container-main mx-auto text-center">
         <ScrollReveal>
           <p className="text-xs font-medium uppercase tracking-[0.8px] text-[#d4af37] mb-4">
@@ -52,7 +52,7 @@ export default function ScriptureSection() {
         </ScrollReveal>
 
         <ScrollReveal delay={100}>
-          <blockquote className="font-display text-2xl sm:text-3xl md:text-4xl italic text-[#0c1b33] max-w-3xl mx-auto leading-relaxed mb-4">
+          <blockquote className="font-display text-2xl sm:text-3xl md:text-4xl italic text-[#0c1b33] dark:text-white max-w-3xl mx-auto leading-relaxed mb-4">
             &ldquo;{scripture.text}&rdquo;
           </blockquote>
         </ScrollReveal>
@@ -72,7 +72,7 @@ export default function ScriptureSection() {
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                   activeTranslation === t.code
                     ? "bg-[#d4af37] text-[#0c1b33]"
-                    : "bg-[#0c1b33]/10 text-[#0c1b33] hover:bg-[#0c1b33]/20"
+                    : "bg-[#0c1b33]/10 dark:bg-white/8 text-[#0c1b33] dark:text-slate-300 hover:bg-[#0c1b33]/20 dark:hover:bg-white/12"
                 }`}
               >
                 {t.name}

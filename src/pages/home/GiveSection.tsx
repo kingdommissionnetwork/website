@@ -51,7 +51,7 @@ export default function GiveSection() {
   };
 
   return (
-    <section id="give" className="bg-[#fbfcfe] section-padding relative overflow-hidden py-16 sm:py-24">
+    <section id="give" className="bg-[#fbfcfe] dark:bg-[#071324] section-padding relative overflow-hidden py-16 sm:py-24">
       {/* Background radial highlights */}
       <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(212,175,55,0.08)_0%,transparent_70%)] pointer-events-none blur-3xl" />
       <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(12,27,51,0.05)_0%,transparent_70%)] pointer-events-none blur-3xl" />
@@ -59,14 +59,14 @@ export default function GiveSection() {
       <div className="container-main mx-auto max-w-4xl relative z-10">
         <ScrollReveal>
           <div className="text-center mb-8 sm:mb-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#d4af37]/15 text-[#856b12] border border-[#d4af37]/30 text-xs font-bold uppercase tracking-wider mb-3">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#d4af37]/15 text-[#856b12] dark:text-[#f6c873] border border-[#d4af37]/30 text-xs font-bold uppercase tracking-wider mb-3">
               <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
               Kingdom Stewardship & Mission Giving
             </div>
-            <h2 className="font-display text-3xl sm:text-5xl font-extrabold text-[#0c1b33] mb-3">
+            <h2 className="font-display text-3xl sm:text-5xl font-extrabold text-[#0c1b33] dark:text-white mb-3">
               Support the Mission
             </h2>
-            <p className="text-[#596980] text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+            <p className="text-[#596980] dark:text-slate-300 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
               Your giving directly powers gospel crusades, missionary deployments, Bible distribution,
               and humanitarian bread relief.
             </p>

@@ -95,7 +95,7 @@ const corePillars = [
 
 export default function AboutUs() {
   return (
-    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#FAF7F2] text-[#0c1b33]">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#FAF7F2] dark:bg-[#071324] text-[#0c1b33] dark:text-white">
       <SEO
         title="About Us & Statement of Faith"
         description="Learn about Kingdom Missions Network (kingdommissionsnetwork.org) — our global vision, core pillars, leadership commitment, and foundational Statement of Faith."
@@ -156,10 +156,10 @@ export default function AboutUs() {
       <section className="py-20 px-4 sm:px-6 container-main mx-auto">
         <ScrollReveal>
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="font-outfit text-xs font-bold tracking-[0.25em] text-[#996515] uppercase">
+            <span className="font-outfit text-xs font-bold tracking-[0.25em] text-[#996515] dark:text-[#f6c873] uppercase">
               Who We Are
             </span>
-            <h2 className="font-brand text-3xl sm:text-4xl font-bold text-[#0c1b33] mt-2 mb-4">
+            <h2 className="font-brand text-3xl sm:text-4xl font-bold text-[#0c1b33] dark:text-white mt-2 mb-4">
               Our Vision & Core Pillars
             </h2>
             <div className="w-16 h-1 bg-[#d4af37] mx-auto rounded-full" />
@@ -171,14 +171,14 @@ export default function AboutUs() {
             const Icon = pillar.icon;
             return (
               <ScrollReveal key={pillar.title} delay={idx * 0.1}>
-                <div className="h-full p-8 rounded-2xl bg-white border border-[#e5dccb] shadow-[0_4px_20px_rgba(12,27,51,0.06)] hover:border-[#d4af37] hover:shadow-[0_8px_30px_rgba(212,175,55,0.15)] transition-all flex flex-col items-start">
+                <div className="h-full p-8 rounded-2xl bg-white dark:bg-[#0c1c33] border border-[#e5dccb] dark:border-white/10 shadow-[0_4px_20px_rgba(12,27,51,0.06)] hover:border-[#d4af37] hover:shadow-[0_8px_30px_rgba(212,175,55,0.15)] transition-all flex flex-col items-start">
                   <div className="w-12 h-12 rounded-xl bg-[#0c1b33] text-[#d4af37] flex items-center justify-center mb-6 shadow-sm">
                     <Icon className="w-6 h-6" />
                   </div>
-                  <h3 className="font-brand text-lg font-bold text-[#0c1b33] mb-3">
+                  <h3 className="font-brand text-lg font-bold text-[#0c1b33] dark:text-white mb-3">
                     {pillar.title}
                   </h3>
-                  <p className="text-sm text-[#4a5568] leading-relaxed">
+                  <p className="text-sm text-[#4a5568] dark:text-slate-300 leading-relaxed">
                     {pillar.desc}
                   </p>
                 </div>
@@ -189,17 +189,17 @@ export default function AboutUs() {
       </section>
 
       {/* Statement of Faith Section */}
-      <section id="faith" className="py-20 px-4 sm:px-6 bg-[#f4eee4] border-y border-[#e2d7c5]">
+      <section id="faith" className="py-20 px-4 sm:px-6 bg-[#f4eee4] dark:bg-[#071324] border-y border-[#e2d7c5] dark:border-white/10">
         <div className="container-main mx-auto max-w-5xl">
           <ScrollReveal>
             <div className="text-center max-w-3xl mx-auto mb-16">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#0c1b33] text-[#d4af37] text-xs font-bold uppercase tracking-wider mb-4">
                 <ShieldCheck className="w-3.5 h-3.5" /> Foundational Tenets
               </div>
-              <h2 className="font-brand text-3xl sm:text-5xl font-bold text-[#0c1b33] mb-4">
+              <h2 className="font-brand text-3xl sm:text-5xl font-bold text-[#0c1b33] dark:text-white mb-4">
                 Statement of Faith
               </h2>
-              <p className="font-outfit text-base sm:text-lg text-[#5a6578]">
+              <p className="font-outfit text-base sm:text-lg text-[#5a6578] dark:text-slate-300">
                 Kingdom Missions Network stands firmly upon the uncompromised, historical truths of the Christian faith. These ten tenets define our doctrinal conviction and guiding mandate.
               </p>
             </div>
@@ -208,19 +208,19 @@ export default function AboutUs() {
           <div className="space-y-6">
             {faithStatements.map((item, index) => (
               <ScrollReveal key={item.number} delay={index * 0.05}>
-                <div className="p-6 sm:p-8 rounded-2xl bg-white border border-[#ded3be] shadow-sm hover:border-[#d4af37] transition-all">
+                <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-[#0c1c33] border border-[#ded3be] dark:border-white/10 shadow-sm hover:border-[#d4af37] transition-all">
                   <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4 mb-3">
                     <span className="font-brand text-2xl font-extrabold text-[#d4af37]">
                       {item.number}
                     </span>
-                    <h3 className="font-brand text-xl sm:text-2xl font-bold text-[#0c1b33]">
+                    <h3 className="font-brand text-xl sm:text-2xl font-bold text-[#0c1b33] dark:text-white">
                       {item.title}
                     </h3>
-                    <span className="text-xs font-semibold text-[#8b5e3c] italic sm:ml-auto">
+                    <span className="text-xs font-semibold text-[#8b5e3c] dark:text-[#f6c873] italic sm:ml-auto">
                       {item.scripture}
                     </span>
                   </div>
-                  <p className="text-[#3a4556] leading-relaxed text-sm sm:text-base pl-0 sm:pl-10">
+                  <p className="text-[#3a4556] dark:text-slate-300 leading-relaxed text-sm sm:text-base pl-0 sm:pl-10">
                     {item.text}
                   </p>
                 </div>
@@ -317,16 +317,16 @@ export default function AboutUs() {
       {/* Contact & Partnership CTA */}
       <section id="contact" className="pb-24 px-4 sm:px-6 container-main mx-auto text-center max-w-3xl">
         <ScrollReveal>
-          <div className="p-8 sm:p-12 rounded-3xl bg-white border border-[#e2d7c5] shadow-lg">
-            <h2 className="font-brand text-2xl sm:text-3xl font-bold text-[#0c1b33] mb-3">
+          <div className="p-8 sm:p-12 rounded-3xl bg-white dark:bg-[#0c1c33] border border-[#e2d7c5] dark:border-white/10 shadow-lg">
+            <h2 className="font-brand text-2xl sm:text-3xl font-bold text-[#0c1b33] dark:text-white mb-3">
               Partner With Us in the Gospel
             </h2>
-            <p className="text-[#5a6578] text-sm sm:text-base mb-8 max-w-xl mx-auto">
+            <p className="text-[#5a6578] dark:text-slate-300 text-sm sm:text-base mb-8 max-w-xl mx-auto">
               Have questions or want to partner with Kingdom Missions Network? Reach out to our global coordination team.
             </p>
 
-            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-[#f4eee4] border border-[#d4af37]/40 text-[#0c1b33] font-semibold text-sm mb-8">
-              <Mail className="w-4 h-4 text-[#996515]" />
+            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-[#f4eee4] dark:bg-white/10 border border-[#d4af37]/40 text-[#0c1b33] dark:text-white font-semibold text-sm mb-8">
+              <Mail className="w-4 h-4 text-[#996515] dark:text-[#f6c873]" />
               <span>giving@kingdommissionsnetwork.org</span>
             </div>
 
@@ -339,7 +339,7 @@ export default function AboutUs() {
               </Link>
               <Link
                 to="/bible"
-                className="px-8 py-3.5 rounded-full bg-[#0c1b33] text-white font-bold text-sm hover:bg-[#162a4a] transition-all"
+                className="px-8 py-3.5 rounded-full bg-[#0c1b33] dark:bg-white/10 text-white font-bold text-sm hover:bg-[#162a4a] dark:hover:bg-white/20 transition-all border border-transparent dark:border-white/15"
               >
                 Explore Bible Reader
               </Link>

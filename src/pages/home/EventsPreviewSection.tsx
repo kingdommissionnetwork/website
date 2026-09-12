@@ -20,18 +20,18 @@ export default function EventsPreviewSection() {
   }, []);
 
   return (
-    <section className="bg-[#f8f6f3] section-padding">
+    <section className="bg-[#f8f6f3] dark:bg-[#071324] section-padding">
       <div className="container-main mx-auto">
         <ScrollReveal>
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#0c1b33] text-xs font-bold uppercase tracking-wider mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#0c1b33] dark:text-[#f6c873] text-xs font-bold uppercase tracking-wider mb-3">
               <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
               <span>Gathering Nations For Global Awakening</span>
             </div>
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-[#0c1b33] mb-3">
-              Kingdom Events & Global Summits
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-[#0c1b33] dark:text-white mb-3">
+              Kingdom Events &amp; Global Summits
             </h2>
-            <p className="text-[#6b7c93] text-lg max-w-2xl mx-auto">
+            <p className="text-[#6b7c93] dark:text-slate-400 text-lg max-w-2xl mx-auto">
               Upcoming international conferences, gospel crusades, and revival worship nights uniting the global body of Christ.
             </p>
           </div>
@@ -40,26 +40,26 @@ export default function EventsPreviewSection() {
         {loading ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl overflow-hidden border border-[#0c1b33]/5">
-                <div className="h-48 bg-[#e6eef7] animate-pulse" />
+              <div key={i} className="bg-white dark:bg-[#0a1628] rounded-2xl overflow-hidden border border-[#0c1b33]/5 dark:border-white/8">
+                <div className="h-48 bg-[#e6eef7] dark:bg-white/6 animate-pulse" />
                 <div className="p-5 space-y-3">
-                  <div className="h-4 w-16 bg-[#e6eef7] rounded animate-pulse" />
-                  <div className="h-5 w-3/4 bg-[#e6eef7] rounded animate-pulse" />
-                  <div className="h-3 w-1/2 bg-[#e6eef7] rounded animate-pulse" />
+                  <div className="h-4 w-16 bg-[#e6eef7] dark:bg-white/6 rounded animate-pulse" />
+                  <div className="h-5 w-3/4 bg-[#e6eef7] dark:bg-white/6 rounded animate-pulse" />
+                  <div className="h-3 w-1/2 bg-[#e6eef7] dark:bg-white/6 rounded animate-pulse" />
                 </div>
               </div>
             ))}
           </div>
         ) : events.length === 0 ? (
           <div className="text-center py-12">
-            <Calendar className="w-10 h-10 text-[#6b7c93]/30 mx-auto mb-3" />
-            <p className="text-[#6b7c93]">No upcoming events</p>
+            <Calendar className="w-10 h-10 text-[#6b7c93]/30 dark:text-slate-600 mx-auto mb-3" />
+            <p className="text-[#6b7c93] dark:text-slate-400">No upcoming events</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map((event, index) => (
               <ScrollReveal key={event.id} delay={index * 100}>
-                <div className="bg-white rounded-2xl overflow-hidden border border-[#0c1b33]/10 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group flex flex-col h-full">
+                <div className="bg-white dark:bg-[#0a1628] rounded-2xl overflow-hidden border border-[#0c1b33]/10 dark:border-white/8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group flex flex-col h-full">
                   <div className="relative h-52 overflow-hidden">
                     <img
                       src={event.image}
@@ -111,31 +111,31 @@ export default function EventsPreviewSection() {
 
                   <div className="p-5 flex flex-col flex-1 justify-between">
                     <div>
-                      <h3 className="font-display text-xl font-bold text-[#0c1b33] mb-2 group-hover:text-[#d4af37] transition-colors line-clamp-2">
+                      <h3 className="font-display text-xl font-bold text-[#0c1b33] dark:text-white mb-2 group-hover:text-[#d4af37] transition-colors line-clamp-2">
                         {event.title}
                       </h3>
                       
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-[#6b7c93] mb-3">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-[#6b7c93] dark:text-slate-400 mb-3">
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5 text-[#d4af37]" />
                           {event.location}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-[#6b7c93]" />
+                          <Calendar className="w-3.5 h-3.5 text-[#6b7c93] dark:text-slate-500" />
                           {event.time} {event.timezone}
                         </span>
                       </div>
 
-                      <p className="text-xs sm:text-sm text-[#6b7c93] line-clamp-3 mb-4 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-[#6b7c93] dark:text-slate-400 line-clamp-3 mb-4 leading-relaxed">
                         {event.description}
                       </p>
                     </div>
 
                     {/* Dual Action CTAs */}
-                    <div className="pt-3 border-t border-[#0c1b33]/5 flex items-center justify-between gap-2">
+                    <div className="pt-3 border-t border-[#0c1b33]/5 dark:border-white/8 flex items-center justify-between gap-2">
                       <Link
                         to="/events"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-[#0c1b33] hover:text-[#d4af37] transition-colors"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-[#0c1b33] dark:text-white hover:text-[#d4af37] dark:hover:text-[#d4af37] transition-colors"
                       >
                         <span>RSVP / Register</span>
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -143,9 +143,9 @@ export default function EventsPreviewSection() {
 
                       <Link
                         to="/subscribe"
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#d4af37]/15 hover:bg-[#d4af37]/25 text-[#996515] hover:text-[#0c1b33] text-[11px] font-bold border border-[#d4af37]/40 transition-colors"
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#d4af37]/15 hover:bg-[#d4af37]/25 text-[#996515] dark:text-[#f6c873] hover:text-[#0c1b33] text-[11px] font-bold border border-[#d4af37]/40 transition-colors"
                       >
-                        <Crown className="w-3 h-3 text-[#996515]" />
+                        <Crown className="w-3 h-3 text-[#996515] dark:text-[#f6c873]" />
                         <span>Partner</span>
                       </Link>
                     </div>
@@ -160,7 +160,7 @@ export default function EventsPreviewSection() {
           <div className="text-center mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               to="/events"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-full bg-[#0c1b33] text-white font-semibold hover:bg-[#1a2d4d] transition-all shadow-md"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-full bg-[#0c1b33] dark:bg-[#d4af37] text-white dark:text-[#0c1b33] font-semibold hover:bg-[#1a2d4d] dark:hover:brightness-110 transition-all shadow-md"
             >
               <Calendar className="w-4 h-4 text-[#d4af37]" />
               Explore Event Calendar

@@ -218,7 +218,7 @@ export default function Events() {
   };
 
   return (
-    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-white">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-white dark:bg-[#071324] text-[#0c1b33] dark:text-white">
       <SEO
         title="Events & Global Summits"
         description="Join our global events — conferences, gospel missions, worship nights, and prayer summits. Browse upcoming gatherings, RSVP free, and add them to your calendar."
@@ -447,16 +447,16 @@ export default function Events() {
               <>
                 {/* ---------- UPCOMING LIST ---------- */}
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-display text-2xl font-semibold text-[#0c1b33]">
+                  <h2 className="font-display text-2xl font-semibold text-[#0c1b33] dark:text-white">
                     Upcoming gatherings
                   </h2>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-semibold text-[#6b7c93]">
+                    <span className="text-xs font-semibold text-[#6b7c93] dark:text-slate-400">
                       {upcoming.length} event{upcoming.length === 1 ? "" : "s"}
                     </span>
                     <Link
                       to="/events/past"
-                      className="inline-flex items-center gap-1 text-xs font-bold text-[#8b5e3c] hover:underline"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#8b5e3c] dark:text-[#f6c873] hover:underline"
                     >
                       Past gatherings
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -465,14 +465,14 @@ export default function Events() {
                 </div>
 
                 {upcoming.length === 0 ? (
-                  <div className="text-center py-14 bg-[#f8f6f3] rounded-3xl border border-[#0c1b33]/5 px-6">
-                    <Calendar className="w-12 h-12 text-[#6b7c93]/40 mx-auto mb-4" />
-                    <h3 className="font-display text-xl font-semibold text-[#0c1b33] mb-2">
+                  <div className="text-center py-14 bg-[#f8f6f3] dark:bg-white/5 rounded-3xl border border-[#0c1b33]/5 dark:border-white/10 px-6">
+                    <Calendar className="w-12 h-12 text-[#6b7c93]/40 dark:text-slate-500 mx-auto mb-4" />
+                    <h3 className="font-display text-xl font-semibold text-[#0c1b33] dark:text-white mb-2">
                       {query || formatFilter !== "all"
                         ? "No gatherings match your search"
                         : "New gatherings are on the way"}
                     </h3>
-                    <p className="text-sm text-[#6b7c93] max-w-md mx-auto mb-5">
+                    <p className="text-sm text-[#6b7c93] dark:text-slate-400 max-w-md mx-auto mb-5">
                       {query || formatFilter !== "all"
                         ? "Try a different keyword or clear the filters to see everything."
                         : "Check back soon — or partner with us to help bring the next mission to your city."}
@@ -483,7 +483,7 @@ export default function Events() {
                           setQuery("");
                           setFormatFilter("all");
                         }}
-                        className="px-5 py-2.5 rounded-full bg-[#0c1b33] text-white text-sm font-semibold hover:bg-[#1a2d4d] transition-colors"
+                        className="px-5 py-2.5 rounded-full bg-[#0c1b33] dark:bg-[#d4af37] text-white dark:text-[#0c1b33] text-sm font-semibold hover:bg-[#1a2d4d] dark:hover:brightness-110 transition-colors"
                       >
                         Clear search & filters
                       </button>
@@ -501,7 +501,7 @@ export default function Events() {
                             tabIndex={0}
                             role="button"
                             aria-label={`View details for ${event.title}`}
-                            className="group grid grid-cols-[auto_1fr] sm:grid-cols-[auto_180px_1fr_auto] items-center gap-4 bg-white rounded-2xl border border-[#0c1b33]/10 p-4 sm:p-5 cursor-pointer hover:shadow-lg hover:border-[#d4af37]/50 transition-all focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+                            className="group grid grid-cols-[auto_1fr] sm:grid-cols-[auto_180px_1fr_auto] items-center gap-4 bg-white dark:bg-[#0c1c33] rounded-2xl border border-[#0c1b33]/10 dark:border-white/10 p-4 sm:p-5 cursor-pointer hover:shadow-lg hover:border-[#d4af37]/50 transition-all focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
                           >
                             <div className="bg-gradient-to-b from-[#0c1b33] to-[#1a2d4d] rounded-xl px-3 py-2 text-center min-w-[62px] shadow-sm">
                               <p className="text-[10px] font-bold text-[#d4af37] uppercase tracking-wider">
@@ -537,16 +537,16 @@ export default function Events() {
                             </div>
                             <div className="min-w-0 col-span-1 sm:col-span-1">
                               <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-base sm:text-lg text-[#0c1b33] group-hover:text-[#8b5e3c] transition-colors line-clamp-1">
+                                <h3 className="font-semibold text-base sm:text-lg text-[#0c1b33] dark:text-white group-hover:text-[#d4af37] transition-colors line-clamp-1">
                                   {event.title}
                                 </h3>
                                 {event.badge && (
-                                  <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#996515] text-[10px] font-bold uppercase tracking-wide">
+                                  <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#996515] dark:text-[#f6c873] text-[10px] font-bold uppercase tracking-wide">
                                     {event.badge}
                                   </span>
                                 )}
                               </div>
-                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-[#6b7c93]">
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-[#6b7c93] dark:text-slate-300">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3.5 h-3.5 text-[#d4af37]" />
                                   {event.dateRange || format(d, "EEEE, MMM d, yyyy")} · {event.time}{" "}
@@ -558,7 +558,7 @@ export default function Events() {
                                 </span>
                               </div>
                             </div>
-                            <span className="hidden sm:inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#0c1b33] text-white text-xs font-bold group-hover:bg-[#d4af37] group-hover:text-[#0c1b33] transition-colors">
+                            <span className="hidden sm:inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#0c1b33] dark:bg-white/10 text-white dark:text-white text-xs font-bold group-hover:bg-[#d4af37] group-hover:text-[#0c1b33] transition-colors">
                               Details
                               <ArrowRight className="w-3.5 h-3.5" />
                             </span>
@@ -651,24 +651,24 @@ function CalendarPanel({
   return (
     <div className="grid lg:grid-cols-3 gap-8">
       <ScrollReveal className="lg:col-span-2">
-        <div className="bg-white rounded-3xl shadow-sm border border-[#0c1b33]/10 p-6">
+        <div className="bg-white dark:bg-[#0c1c33] rounded-3xl shadow-sm border border-[#0c1b33]/10 dark:border-white/10 p-6">
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-              className="p-2 rounded-lg hover:bg-[#e6eef7] transition-colors"
+              className="p-2 rounded-lg hover:bg-[#e6eef7] dark:hover:bg-white/10 transition-colors"
               aria-label="Previous month"
             >
-              <ChevronLeft className="w-5 h-5 text-[#0c1b33]" />
+              <ChevronLeft className="w-5 h-5 text-[#0c1b33] dark:text-white" />
             </button>
-            <h2 className="font-display text-2xl font-semibold text-[#0c1b33]">
+            <h2 className="font-display text-2xl font-semibold text-[#0c1b33] dark:text-white">
               {format(currentMonth, "MMMM yyyy")}
             </h2>
             <button
               onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-              className="p-2 rounded-lg hover:bg-[#e6eef7] transition-colors"
+              className="p-2 rounded-lg hover:bg-[#e6eef7] dark:hover:bg-white/10 transition-colors"
               aria-label="Next month"
             >
-              <ChevronRight className="w-5 h-5 text-[#0c1b33]" />
+              <ChevronRight className="w-5 h-5 text-[#0c1b33] dark:text-white" />
             </button>
           </div>
 
@@ -676,7 +676,7 @@ function CalendarPanel({
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div
                 key={d}
-                className="text-center text-xs font-medium text-[#6b7c93] uppercase tracking-wider py-2"
+                className="text-center text-xs font-medium text-[#6b7c93] dark:text-slate-400 uppercase tracking-wider py-2"
               >
                 {d}
               </div>
@@ -698,15 +698,15 @@ function CalendarPanel({
                     isSelected
                       ? "bg-[#d4af37]/20 ring-2 ring-[#d4af37]"
                       : isToday
-                      ? "bg-[#0c1b33] text-white"
+                      ? "bg-[#0c1b33] dark:bg-[#d4af37] text-white dark:text-[#0c1b33]"
                       : dayEvents.length > 0
-                      ? "bg-[#d4af37]/10 text-[#0c1b33] font-semibold hover:bg-[#d4af37]/20"
+                      ? "bg-[#d4af37]/10 dark:bg-[#d4af37]/20 text-[#0c1b33] dark:text-white font-semibold hover:bg-[#d4af37]/20"
                       : isCurrentMonth
-                      ? "hover:bg-[#f8f6f3] text-[#0c1b33]"
-                      : "text-[#6b7c93]/40"
+                      ? "hover:bg-[#f8f6f3] dark:hover:bg-white/5 text-[#0c1b33] dark:text-slate-200"
+                      : "text-[#6b7c93]/40 dark:text-slate-600"
                   }`}
                 >
-                  <span className={`text-sm font-medium ${isToday && !isSelected ? "text-white" : ""}`}>
+                  <span className={`text-sm font-medium ${isToday && !isSelected ? "text-white dark:text-[#0c1b33]" : ""}`}>
                     {format(d, "d")}
                   </span>
                   {dayEvents.length > 0 && (
@@ -726,13 +726,13 @@ function CalendarPanel({
       <div>
         <ScrollReveal>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display text-xl font-semibold text-[#0c1b33]">
+            <h3 className="font-display text-xl font-semibold text-[#0c1b33] dark:text-white">
               {selectedDate ? `Events — ${format(selectedDate, "MMM d, yyyy")}` : "All gatherings"}
             </h3>
             {selectedDate && (
               <button
                 onClick={() => setSelectedDate(null)}
-                className="text-xs text-[#8b5e3c] hover:underline font-medium"
+                className="text-xs text-[#8b5e3c] dark:text-[#f6c873] hover:underline font-medium"
               >
                 Show all
               </button>

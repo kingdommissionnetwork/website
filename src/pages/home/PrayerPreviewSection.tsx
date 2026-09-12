@@ -50,14 +50,14 @@ export default function PrayerPreviewSection() {
   };
 
   return (
-    <section className="bg-[#e6eef7] section-padding">
+    <section className="bg-[#e6eef7] dark:bg-[#071324] section-padding">
       <div className="container-main mx-auto">
         <ScrollReveal>
           <div className="text-center mb-12">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-[#0c1b33] mb-3">
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-[#0c1b33] dark:text-white mb-3">
               Prayer Wall
             </h2>
-            <p className="text-[#6b7c93] text-lg max-w-xl mx-auto">
+            <p className="text-[#6b7c93] dark:text-slate-400 text-lg max-w-xl mx-auto">
               Share your prayer requests and pray for others around the world.
             </p>
           </div>
@@ -65,13 +65,13 @@ export default function PrayerPreviewSection() {
 
         <div className="grid lg:grid-cols-5 gap-8">
           <ScrollReveal className="lg:col-span-2">
-            <div className="bg-[#f5f0e8] rounded-2xl p-6 lg:sticky lg:top-24">
-              <h3 className="font-display text-2xl font-semibold text-[#0c1b33] mb-4">
+            <div className="bg-[#f5f0e8] dark:bg-[#0a1628] rounded-2xl p-6 lg:sticky lg:top-24">
+              <h3 className="font-display text-2xl font-semibold text-[#0c1b33] dark:text-white mb-4">
                 Submit a Prayer Request
               </h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="prayer-name" className="block text-sm font-medium text-[#0c1b33] mb-1">
+                  <label htmlFor="prayer-name" className="block text-sm font-medium text-[#0c1b33] dark:text-slate-300 mb-1">
                     Your Name (optional)
                   </label>
                   <input
@@ -80,18 +80,18 @@ export default function PrayerPreviewSection() {
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     placeholder="Enter your name"
-                    className="w-full px-4 py-2.5 rounded-lg border border-[#0c1b33]/10 bg-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg border border-[#0c1b33]/10 dark:border-white/10 bg-white dark:bg-[#0c1c33] dark:text-white dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm"
                   />
                 </div>
                 <div>
-                  <label htmlFor="prayer-category" className="block text-sm font-medium text-[#0c1b33] mb-1">
+                  <label htmlFor="prayer-category" className="block text-sm font-medium text-[#0c1b33] dark:text-slate-300 mb-1">
                     Category
                   </label>
                   <select
                     id="prayer-category"
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-lg border border-[#0c1b33]/10 bg-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg border border-[#0c1b33]/10 dark:border-white/10 bg-white dark:bg-[#0c1c33] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm"
                   >
                     {["Healing", "Family", "Ministry", "Finances", "Guidance", "Salvation", "Relationships", "Other"].map((cat) => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -99,7 +99,7 @@ export default function PrayerPreviewSection() {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="prayer-text" className="block text-sm font-medium text-[#0c1b33] mb-1">
+                  <label htmlFor="prayer-text" className="block text-sm font-medium text-[#0c1b33] dark:text-slate-300 mb-1">
                     Prayer Request
                   </label>
                   <textarea
@@ -109,9 +109,9 @@ export default function PrayerPreviewSection() {
                     placeholder="Share your prayer request..."
                     rows={4}
                     maxLength={500}
-                    className="w-full px-4 py-2.5 rounded-lg border border-[#0c1b33]/10 bg-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm resize-none"
+                    className="w-full px-4 py-2.5 rounded-lg border border-[#0c1b33]/10 dark:border-white/10 bg-white dark:bg-[#0c1c33] dark:text-white dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm resize-none"
                   />
-                  <p className="text-xs text-[#6b7c93] mt-1 text-right">{form.text.length}/500</p>
+                  <p className="text-xs text-[#6b7c93] dark:text-slate-400 mt-1 text-right">{form.text.length}/500</p>
                 </div>
                 <button type="submit" className="w-full btn-gold flex items-center justify-center gap-2">
                   <Send className="w-4 h-4" />
@@ -125,19 +125,19 @@ export default function PrayerPreviewSection() {
             {loading ? (
               <div className="space-y-4 py-12">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="bg-[#f5f0e8] rounded-2xl p-5">
+                  <div key={i} className="bg-[#f5f0e8] dark:bg-[#0a1628] rounded-2xl p-5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#ddd5c8] animate-pulse" />
+                        <div className="w-9 h-9 rounded-full bg-[#ddd5c8] dark:bg-white/8 animate-pulse" />
                         <div className="space-y-2">
-                          <div className="h-3 w-20 bg-[#ddd5c8] rounded animate-pulse" />
-                          <div className="h-3 w-14 bg-[#ddd5c8] rounded animate-pulse" />
+                          <div className="h-3 w-20 bg-[#ddd5c8] dark:bg-white/8 rounded animate-pulse" />
+                          <div className="h-3 w-14 bg-[#ddd5c8] dark:bg-white/8 rounded animate-pulse" />
                         </div>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <div className="h-3 w-full bg-[#ddd5c8] rounded animate-pulse" />
-                      <div className="h-3 w-4/6 bg-[#ddd5c8] rounded animate-pulse" />
+                      <div className="h-3 w-full bg-[#ddd5c8] dark:bg-white/8 rounded animate-pulse" />
+                      <div className="h-3 w-4/6 bg-[#ddd5c8] dark:bg-white/8 rounded animate-pulse" />
                     </div>
                   </div>
                 ))}
@@ -154,38 +154,38 @@ export default function PrayerPreviewSection() {
                     initial={prayer.isNew ? { opacity: 0, y: 20, scale: 0.98 } : false}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.4 }}
-                    className={`bg-[#f5f0e8] rounded-2xl p-5 transition-shadow duration-300 hover:shadow-lg ${
+                    className={`bg-[#f5f0e8] dark:bg-[#0a1628] rounded-2xl p-5 transition-shadow duration-300 hover:shadow-lg ${
                       prayer.isNew ? "prayer-glow" : ""
                     }`}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#0c1b33]/10 flex items-center justify-center">
-                          <User className="w-4 h-4 text-[#0c1b33]" />
+                        <div className="w-9 h-9 rounded-full bg-[#0c1b33]/10 dark:bg-white/10 flex items-center justify-center">
+                          <User className="w-4 h-4 text-[#0c1b33] dark:text-white" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-[#0c1b33]">
+                          <p className="text-sm font-medium text-[#0c1b33] dark:text-white">
                             {prayer.anonymous ? "Anonymous" : prayer.name}
                           </p>
-                          <p className="text-xs text-[#6b7c93]">{prayer.timestamp}</p>
+                          <p className="text-xs text-[#6b7c93] dark:text-slate-400">{prayer.timestamp}</p>
                         </div>
                       </div>
-                      <span className="px-3 py-1 rounded-full bg-[#d4af37]/10 text-[#8b5e3c] text-xs font-medium">
+                      <span className="px-3 py-1 rounded-full bg-[#d4af37]/10 text-[#8b5e3c] dark:text-[#e6b87a] text-xs font-medium">
                         {prayer.category}
                       </span>
                     </div>
 
-                    <p className="text-[#0c1b33] leading-relaxed mb-4">{prayer.text}</p>
+                    <p className="text-[#0c1b33] dark:text-slate-200 leading-relaxed mb-4">{prayer.text}</p>
 
                     <div className="flex items-center gap-4">
                       <button
                         onClick={() => handlePray(prayer.id)}
-                        className="flex items-center gap-2 text-sm text-[#6b7c93] hover:text-[#d4af37] transition-colors"
+                        className="flex items-center gap-2 text-sm text-[#6b7c93] dark:text-slate-400 hover:text-[#d4af37] transition-colors"
                       >
                         <HandHeart className="w-4 h-4" />
                         <span>{prayer.prayers || 0} prayers</span>
                       </button>
-                      <span className="flex items-center gap-2 text-sm text-[#6b7c93]">
+                      <span className="flex items-center gap-2 text-sm text-[#6b7c93] dark:text-slate-400">
                         <MessageCircle className="w-4 h-4" />
                         <span>{prayer.comments || 0} comments</span>
                       </span>

@@ -121,7 +121,7 @@ export default function PrayerWall() {
   const paginatedPrayers = filteredPrayers.slice(0, visibleCount);
 
   return (
-    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#e6eef7]">
+    <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#e6eef7] dark:bg-[#071324] text-[#0c1b33] dark:text-white">
       <SEO title="Prayer Wall" description="Share your prayer requests and pray for others. Join our global prayer community." />
       
       {/* Hero Header with Orange Gradient and Ambient Particles */}
@@ -151,10 +151,10 @@ export default function PrayerWall() {
         <div className="relative z-10 grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
             <ScrollReveal>
-              <div className="bg-white rounded-2xl p-5 shadow-sm lg:sticky lg:top-24">
+              <div className="bg-white dark:bg-[#0c1c33] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/10 lg:sticky lg:top-24">
                 <div className="flex items-center gap-2 mb-4">
-                  <Filter className="w-4 h-4 text-[#6b7c93]" />
-                  <h3 className="font-display text-lg font-semibold text-[#0c1b33]">Categories</h3>
+                  <Filter className="w-4 h-4 text-[#6b7c93] dark:text-slate-400" />
+                  <h3 className="font-display text-lg font-semibold text-[#0c1b33] dark:text-white">Categories</h3>
                 </div>
                 <div className="space-y-1">
                   {(categories.length ? categories : ["All Prayers", "Healing", "Family", "Ministry", "Finances", "Guidance", "Salvation", "Relationships", "Other"]).map((cat) => {
@@ -165,15 +165,15 @@ export default function PrayerWall() {
                         onClick={() => { setActiveCategory(cat); setVisibleCount(10); }}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                           activeCategory === cat
-                            ? "bg-[#d4af37]/10 text-[#8b5e3c] font-medium"
-                            : "text-[#6b7c93] hover:bg-[#e6eef7]"
+                            ? "bg-[#d4af37]/10 dark:bg-[#d4af37]/20 text-[#8b5e3c] dark:text-[#f6c873] font-medium"
+                            : "text-[#6b7c93] dark:text-slate-400 hover:bg-[#e6eef7] dark:hover:bg-white/5"
                         }`}
                       >
                         <span>{cat}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
                           activeCategory === cat
-                            ? "bg-[#d4af37]/20 text-[#8b5e3c]"
-                            : "bg-[#e6eef7] text-[#6b7c93]"
+                            ? "bg-[#d4af37]/20 dark:bg-[#d4af37]/30 text-[#8b5e3c] dark:text-[#f6c873]"
+                            : "bg-[#e6eef7] dark:bg-white/10 text-[#6b7c93] dark:text-slate-400"
                         }`}>
                           {count}
                         </span>
@@ -182,8 +182,8 @@ export default function PrayerWall() {
                   })}
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-[#0c1b33]/5">
-                  <h3 className="font-display text-lg font-semibold text-[#0c1b33] mb-4">
+                <div className="mt-6 pt-6 border-t border-[#0c1b33]/5 dark:border-white/10">
+                  <h3 className="font-display text-lg font-semibold text-[#0c1b33] dark:text-white mb-4">
                     Submit Request
                   </h3>
                   <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-3">
@@ -191,11 +191,11 @@ export default function PrayerWall() {
                       type="text"
                       placeholder="Your Name (optional)"
                       {...register("name")}
-                      className="w-full px-3 py-2 rounded-lg border border-[#0c1b33]/10 bg-[#f8f6f3] focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm"
+                      className="w-full px-3 py-2 rounded-lg border border-[#0c1b33]/10 dark:border-white/15 bg-[#f8f6f3] dark:bg-white/5 text-[#0c1b33] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm"
                     />
                     <select
                       {...register("category")}
-                      className="w-full px-3 py-2 rounded-lg border border-[#0c1b33]/10 bg-[#f8f6f3] focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm"
+                      className="w-full px-3 py-2 rounded-lg border border-[#0c1b33]/10 dark:border-white/15 bg-[#f8f6f3] dark:bg-[#071324] text-[#0c1b33] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm"
                     >
                       {(categories.length ? categories : ["Healing", "Family", "Ministry", "Finances", "Guidance", "Salvation", "Relationships", "Other"]).filter((c) => c !== "All Prayers").map((cat) => (
                         <option key={cat} value={cat}>{cat}</option>
@@ -206,7 +206,7 @@ export default function PrayerWall() {
                         placeholder="Your prayer request..."
                         rows={3}
                         {...register("text")}
-                        className="w-full px-3 py-2 rounded-lg border border-[#0c1b33]/10 bg-[#f8f6f3] focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm resize-none"
+                        className="w-full px-3 py-2 rounded-lg border border-[#0c1b33]/10 dark:border-white/15 bg-[#f8f6f3] dark:bg-white/5 text-[#0c1b33] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm resize-none"
                       />
                       {errors.text && (
                         <p className="text-red-500 text-xs mt-1">{errors.text.message}</p>
@@ -270,40 +270,40 @@ export default function PrayerWall() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                    className={`bg-white rounded-2xl p-6 shadow-sm transition-shadow duration-300 hover:shadow-md ${
+                    className={`bg-white dark:bg-[#0c1c33] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/10 transition-shadow duration-300 hover:shadow-md ${
                       prayer.isNew ? "prayer-glow" : ""
                     }`}
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#f5f0e8] flex items-center justify-center">
-                          <User className="w-5 h-5 text-[#8b5e3c]" />
+                        <div className="w-10 h-10 rounded-full bg-[#f5f0e8] dark:bg-white/10 flex items-center justify-center">
+                          <User className="w-5 h-5 text-[#8b5e3c] dark:text-[#f6c873]" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-[#0c1b33]">
+                          <p className="text-sm font-semibold text-[#0c1b33] dark:text-white">
                             {prayer.anonymous ? "Anonymous" : prayer.name}
                           </p>
-                          <p className="text-xs text-[#6b7c93]">{prayer.timestamp}</p>
+                          <p className="text-xs text-[#6b7c93] dark:text-slate-400">{prayer.timestamp}</p>
                         </div>
                       </div>
-                      <span className="px-3 py-1 rounded-full bg-[#d4af37]/10 text-[#8b5e3c] text-xs font-medium">
+                      <span className="px-3 py-1 rounded-full bg-[#d4af37]/10 dark:bg-[#d4af37]/20 text-[#8b5e3c] dark:text-[#f6c873] text-xs font-medium">
                         {prayer.category}
                       </span>
                     </div>
 
-                    <p className="text-[#0c1b33] leading-relaxed mb-5">{prayer.text}</p>
+                    <p className="text-[#0c1b33] dark:text-slate-200 leading-relaxed mb-5">{prayer.text}</p>
 
-                    <div className="flex items-center gap-6 pt-4 border-t border-[#0c1b33]/5">
+                    <div className="flex items-center gap-6 pt-4 border-t border-[#0c1b33]/5 dark:border-white/10">
                       <button
                         onClick={() => handlePray(prayer.id)}
-                        className="flex items-center gap-2 text-sm text-[#6b7c93] hover:text-[#d4af37] transition-colors group"
+                        className="flex items-center gap-2 text-sm text-[#6b7c93] dark:text-slate-400 hover:text-[#d4af37] dark:hover:text-[#d4af37] transition-colors group"
                       >
                         <HandHeart className="w-4 h-4 group-hover:scale-110 transition-transform" />
                         <span>{prayer.prayers || 0} prayers</span>
                       </button>
                       <button
                         onClick={() => setExpandedPrayer(expandedPrayer === prayer.id ? null : prayer.id)}
-                        className="flex items-center gap-2 text-sm text-[#6b7c93] hover:text-[#d4af37] transition-colors"
+                        className="flex items-center gap-2 text-sm text-[#6b7c93] dark:text-slate-400 hover:text-[#d4af37] dark:hover:text-[#d4af37] transition-colors"
                       >
                         <MessageCircle className="w-4 h-4" />
                         <span>{prayer.comments || 0} comments</span>
@@ -313,7 +313,7 @@ export default function PrayerWall() {
                           <ChevronDown className="w-3 h-3" />
                         )}
                       </button>
-                      <button className="flex items-center gap-2 text-sm text-[#6b7c93] hover:text-[#d4af37] transition-colors ml-auto">
+                      <button className="flex items-center gap-2 text-sm text-[#6b7c93] dark:text-slate-400 hover:text-[#d4af37] dark:hover:text-[#d4af37] transition-colors ml-auto">
                         <Share2 className="w-4 h-4" />
                         Share
                       </button>
@@ -328,10 +328,10 @@ export default function PrayerWall() {
                           transition={{ duration: 0.2 }}
                           className="overflow-hidden"
                         >
-                          <div className="mt-4 pt-4 border-t border-[#0c1b33]/5">
+                          <div className="mt-4 pt-4 border-t border-[#0c1b33]/5 dark:border-white/10">
                             <div className="flex gap-3">
-                              <div className="w-8 h-8 rounded-full bg-[#f5f0e8] flex items-center justify-center flex-shrink-0">
-                                <User className="w-4 h-4 text-[#8b5e3c]" />
+                              <div className="w-8 h-8 rounded-full bg-[#f5f0e8] dark:bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <User className="w-4 h-4 text-[#8b5e3c] dark:text-[#f6c873]" />
                               </div>
                               <div className="flex-1">
                                 <textarea
@@ -339,12 +339,12 @@ export default function PrayerWall() {
                                   onChange={(e) => setReplyText(e.target.value)}
                                   placeholder="Write a prayerful reply..."
                                   rows={2}
-                                  className="w-full px-3 py-2 rounded-lg border border-[#0c1b33]/10 bg-[#f8f6f3] focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm resize-none"
+                                  className="w-full px-3 py-2 rounded-lg border border-[#0c1b33]/10 dark:border-white/15 bg-[#f8f6f3] dark:bg-white/5 text-[#0c1b33] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] text-sm resize-none"
                                 />
                                 <div className="flex justify-end mt-2">
                                   <button
                                     onClick={handleReply}
-                                    className="px-4 py-2 rounded-lg bg-[#0c1b33] text-white text-sm font-medium hover:bg-[#162a4a] transition-colors"
+                                    className="px-4 py-2 rounded-lg bg-[#0c1b33] dark:bg-[#d4af37] text-white dark:text-[#0c1b33] text-sm font-medium hover:bg-[#162a4a] dark:hover:brightness-110 transition-colors"
                                   >
                                     Post Reply
                                   </button>
@@ -363,7 +363,7 @@ export default function PrayerWall() {
               <div className="text-center pt-4">
                 <button
                   onClick={() => setVisibleCount(c => c + 10)}
-                  className="px-6 py-3 rounded-full bg-[#0c1b33] text-white text-sm font-medium hover:bg-[#162a4a] transition-all"
+                  className="px-6 py-3 rounded-full bg-[#0c1b33] dark:bg-[#d4af37] text-white dark:text-[#0c1b33] text-sm font-medium hover:bg-[#162a4a] dark:hover:brightness-110 transition-all"
                 >
                   Load More ({filteredPrayers.length - visibleCount} remaining)
                 </button>
