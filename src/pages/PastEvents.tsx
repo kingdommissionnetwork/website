@@ -33,23 +33,23 @@ export default function PastEvents() {
       />
 
       {/* ---------- HERO ---------- */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] px-4 pt-14 pb-10 lg:pt-16 lg:pb-12">
-        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.15)_0%,transparent_65%)] pointer-events-none blur-3xl" />
-        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#eef4fb] via-[#f8fafc] to-[#fdf8ee] dark:from-[#0c1b33] dark:via-[#071324] dark:to-[#1a1107] px-4 pt-14 pb-10 lg:pt-16 lg:pb-12 transition-colors duration-300">
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.08)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(249,115,22,0.15)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.10)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
         <AmbientParticles />
 
         <div className="container-main mx-auto relative z-10 max-w-4xl text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0c1b33]/5 dark:bg-white/10 border border-[#0c1b33]/15 dark:border-[#d4af37]/40 text-[#0c1b33] dark:text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
             <History className="w-3.5 h-3.5 text-[#d4af37]" />
             <span>Archive of concluded gatherings</span>
           </div>
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-            Recent &{" "}
-            <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">
+          <h1 className="font-display text-4xl md:text-5xl font-bold text-[#0c1b33] dark:text-white mb-4 tracking-tight">
+            Recent &amp;{" "}
+            <span className="bg-gradient-to-r from-[#996515] via-[#d4af37] to-[#8b5e3c] dark:from-[#d4af37] dark:via-[#f5e6b3] dark:to-[#c5961d] bg-clip-text text-transparent">
               Past Gatherings
             </span>
           </h1>
-          <p className="text-white/80 text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-7">
+          <p className="text-[#5a6578] dark:text-white/80 text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-7">
             Every concluded gathering moves here automatically. Relive what the Lord has done —
             and sow into the next mission.
           </p>

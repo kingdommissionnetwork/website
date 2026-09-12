@@ -103,19 +103,19 @@ export default function AboutUs() {
       />
 
       {/* Hero Header */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] text-white py-20 lg:py-28 px-4 sm:px-6">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#eef4fb] via-[#f8fafc] to-[#fdf8ee] dark:from-[#0c1b33] dark:via-[#071324] dark:to-[#1a1107] text-[#0c1b33] dark:text-white py-20 lg:py-28 px-4 sm:px-6 transition-colors duration-300">
         {/* Warm Orange & Gold Radiant Background Glows */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[radial-gradient(circle_at_top_center,rgba(212,175,55,0.20),transparent_70%)] pointer-events-none blur-2xl" />
-        <div className="absolute top-10 right-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
-        <div className="absolute bottom-5 left-10 w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(234,88,12,0.14)_0%,transparent_70%)] pointer-events-none blur-3xl" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[radial-gradient(circle_at_top_center,rgba(212,175,55,0.12),transparent_70%)] dark:bg-[radial-gradient(circle_at_top_center,rgba(212,175,55,0.20),transparent_70%)] pointer-events-none blur-2xl" />
+        <div className="absolute top-10 right-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(249,115,22,0.08)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-5 left-10 w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(234,88,12,0.06)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(234,88,12,0.14)_0%,transparent_70%)] pointer-events-none blur-3xl" />
 
         {/* Ambient Particles */}
         <AmbientParticles />
 
         <div className="container-main mx-auto relative z-10 text-center max-w-4xl">
-          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs sm:text-sm font-semibold mb-6 shadow-inner backdrop-blur-md">
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#0c1b33]/5 dark:bg-white/10 border border-[#0c1b33]/15 dark:border-[#d4af37]/40 text-[#0c1b33] dark:text-[#fbf5b7] text-xs sm:text-sm font-semibold mb-6 shadow-inner backdrop-blur-md">
             <ShieldCheck className="w-4 h-4 text-[#d4af37]" />
-            Official Platform & Ministry Foundation
+            Official Platform &amp; Ministry Foundation
           </div>
 
           <div className="flex justify-center mb-6">
@@ -126,12 +126,12 @@ export default function AboutUs() {
             />
           </div>
 
-          <h1 className="font-brand text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-6 leading-tight">
+          <h1 className="font-brand text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#0c1b33] dark:text-white mb-6 leading-tight">
             Advancing the Kingdom <br className="hidden sm:inline" />
-            <span className="text-[#d4af37]">Across Nations</span>
+            <span className="text-[#996515] dark:text-[#d4af37]">Across Nations</span>
           </h1>
 
-          <p className="font-outfit text-base sm:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed mb-8">
+          <p className="font-outfit text-base sm:text-xl text-[#5a6578] dark:text-white/80 max-w-2xl mx-auto leading-relaxed mb-8">
             Kingdom Missions Network is a worldwide fellowship of Christian believers dedicated to continuous intercession, deep scripture study, and global mission advancement.
           </p>
 

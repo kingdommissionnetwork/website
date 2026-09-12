@@ -124,22 +124,22 @@ export default function PrayerWall() {
     <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#e6eef7] dark:bg-[#071324] text-[#0c1b33] dark:text-white">
       <SEO title="Prayer Wall" description="Share your prayer requests and pray for others. Join our global prayer community." />
       
-      {/* Hero Header with Orange Gradient and Ambient Particles */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] py-16 lg:py-20 px-4">
+      {/* Hero Header with Responsive Light / Dark Palette */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#eef4fb] via-[#f8fafc] to-[#fdf8ee] dark:from-[#0c1b33] dark:via-[#071324] dark:to-[#1a1107] py-16 lg:py-20 px-4 transition-colors duration-300">
         {/* Dynamic Warm Orange & Gold Background Glows */}
-        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
-        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.08)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.10)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
 
         <AmbientParticles />
 
         <div className="container-main mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0c1b33]/5 dark:bg-white/10 border border-[#0c1b33]/15 dark:border-[#d4af37]/40 text-[#0c1b33] dark:text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
             <span>24/7 Global Intercession Sanctuary</span>
           </div>
-          <h1 className="font-brand text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight">
-            <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">Prayer Wall</span>
+          <h1 className="font-brand text-4xl md:text-5xl lg:text-6xl font-bold text-[#0c1b33] dark:text-white mb-4 tracking-tight">
+            <span className="bg-gradient-to-r from-[#996515] via-[#d4af37] to-[#8b5e3c] dark:from-[#d4af37] dark:via-[#f5e6b3] dark:to-[#c5961d] bg-clip-text text-transparent">Prayer Wall</span>
           </h1>
-          <p className="font-outfit text-white/80 text-base md:text-xl max-w-2xl mx-auto leading-relaxed">
+          <p className="font-outfit text-[#5a6578] dark:text-white/80 text-base md:text-xl max-w-2xl mx-auto leading-relaxed">
             Share your burdens and stand in agreement with believers across nations in round-the-clock prayer.
           </p>
         </div>

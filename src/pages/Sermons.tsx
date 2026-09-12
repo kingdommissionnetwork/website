@@ -52,32 +52,32 @@ export default function Sermons() {
     <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-white dark:bg-[#071324] text-[#0c1b33] dark:text-white">
       <SEO title="Sermons" description="Browse our collection of sermons on faith, hope, love, and discipleship." />
       
-      <div className="relative overflow-hidden py-16 lg:py-20 px-4 bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107]">
+      <div className="relative overflow-hidden py-16 lg:py-20 px-4 bg-gradient-to-br from-[#eef4fb] via-[#f8fafc] to-[#fdf8ee] dark:from-[#0c1b33] dark:via-[#071324] dark:to-[#1a1107] transition-colors duration-300">
         {/* Warm Orange & Golden Radiant Background Glows */}
-        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
-        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.08)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.10)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
 
         <AmbientParticles />
 
         <div className="container-main mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
-            <span>Anointed Teachings & Media Archive</span>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0c1b33]/5 dark:bg-white/10 border border-[#0c1b33]/15 dark:border-[#d4af37]/40 text-[#0c1b33] dark:text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
+            <span>Anointed Teachings &amp; Media Archive</span>
           </div>
-          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight">
-            Sermon <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">Library</span>
+          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-[#0c1b33] dark:text-white mb-4 tracking-tight">
+            Sermon <span className="bg-gradient-to-r from-[#996515] via-[#d4af37] to-[#8b5e3c] dark:from-[#d4af37] dark:via-[#f5e6b3] dark:to-[#c5961d] bg-clip-text text-transparent">Library</span>
           </h1>
-          <p className="text-white/80 text-base md:text-xl max-w-xl mx-auto mb-8 leading-relaxed">
+          <p className="text-[#5a6578] dark:text-white/80 text-base md:text-xl max-w-xl mx-auto mb-8 leading-relaxed">
             Searchable teachings and sound doctrine from ministries worldwide.
           </p>
 
           <div className="relative max-w-lg mx-auto">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6b7c93]" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6b7c93] dark:text-white/50" />
             <input
               type="text"
               placeholder="Search sermons by title, speaker, or scripture..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white text-[#0c1b33] placeholder-[#6b7c93] focus:outline-none focus:ring-2 focus:ring-[#d4af37] shadow-xl"
+              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white dark:bg-[#0c1c33] border border-[#0c1b33]/15 dark:border-white/20 text-[#0c1b33] dark:text-white placeholder-[#6b7c93] dark:placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-[#d4af37] shadow-sm dark:shadow-xl"
             />
           </div>
         </div>

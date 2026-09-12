@@ -568,15 +568,29 @@ html.dark .text-\[\#0c1b33\] {
   color: #f8fafc !important;
 }
 
-/* Ensure gold buttons and active gold pills retain readable dark text in both modes */
+/* Critical: Prevent any global rule from breaking text-transparent on bg-clip-text */
+.text-transparent,
+[class*="text-transparent"],
+[class*="bg-clip-text"],
+html.dark .text-transparent,
+html.dark [class*="text-transparent"],
+html.dark [class*="bg-clip-text"] {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* Ensure gold solid buttons retain readable dark text in both modes */
+.btn-gold,
+button.btn-gold,
+a.btn-gold,
 html.dark .btn-gold,
-html.dark [class*="bg-[#d4af37]"],
-html.dark [class*="from-[#d4af37]"] {
+html.dark button.btn-gold,
+html.dark a.btn-gold {
   color: #0c1b33 !important;
 }
 html.dark .btn-gold *,
-html.dark [class*="bg-[#d4af37]"] *,
-html.dark [class*="from-[#d4af37]"] * {
+html.dark button.btn-gold *,
+html.dark a.btn-gold * {
   color: #0c1b33 !important;
 }
 

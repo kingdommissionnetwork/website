@@ -10,23 +10,23 @@ export default function PrivacyPolicy() {
         description="Official Privacy Policy of Kingdom Missions Network. Understand how we protect your personal data, prayer requests, and donor information."
       />
 
-      {/* Header with Orange Gradient and Ambient Particles */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] text-white py-16 lg:py-20 px-4 sm:px-6">
+      {/* Header with Responsive Light / Dark Palette */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#eef4fb] via-[#f8fafc] to-[#fdf8ee] dark:from-[#0c1b33] dark:via-[#071324] dark:to-[#1a1107] text-[#0c1b33] dark:text-white py-16 lg:py-20 px-4 sm:px-6 transition-colors duration-300">
         {/* Dynamic Warm Orange & Gold Background Glows */}
-        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
-        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.08)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.10)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
 
         <AmbientParticles />
 
         <div className="container-main mx-auto max-w-4xl text-center space-y-4 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-[#fbf5b7] text-xs font-semibold uppercase tracking-wider border border-[#d4af37]/40 backdrop-blur-md">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#0c1b33]/5 dark:bg-white/10 text-[#0c1b33] dark:text-[#fbf5b7] text-xs font-semibold uppercase tracking-wider border border-[#0c1b33]/15 dark:border-[#d4af37]/40 backdrop-blur-md">
             <Shield className="w-3.5 h-3.5 text-[#d4af37]" />
-            Data Protection & Stewardship
+            Data Protection &amp; Stewardship
           </div>
-          <h1 className="font-brand text-3xl sm:text-5xl font-bold tracking-tight">
-            Privacy <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">Policy</span>
+          <h1 className="font-brand text-3xl sm:text-5xl font-bold tracking-tight text-[#0c1b33] dark:text-white">
+            Privacy <span className="bg-gradient-to-r from-[#996515] via-[#d4af37] to-[#8b5e3c] dark:from-[#d4af37] dark:via-[#f5e6b3] dark:to-[#c5961d] bg-clip-text text-transparent">Policy</span>
           </h1>
-          <p className="font-outfit text-white/80 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+          <p className="font-outfit text-[#5a6578] dark:text-white/80 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
             Last Updated: September 2026 • Kingdom Missions Network is committed to safeguarding the privacy and confidentiality of our global community.
           </p>
         </div>

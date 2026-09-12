@@ -53,23 +53,23 @@ export default function DonationHistory() {
     <div className="pt-16 md:pt-[92px] lg:pt-[108px] min-h-screen bg-[#e6eef7] dark:bg-[#071324] text-[#0c1b33] dark:text-white">
       <SEO title="Giving History" description="View your past donations to Kingdom Missions Network." />
       
-      {/* Hero Header with Orange Gradient and Ambient Particles */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] py-16 px-4">
+      {/* Hero Header with Responsive Light / Dark Palette */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#eef4fb] via-[#f8fafc] to-[#fdf8ee] dark:from-[#0c1b33] dark:via-[#071324] dark:to-[#1a1107] py-16 px-4 transition-colors duration-300">
         {/* Dynamic Warm Orange & Gold Background Glows */}
-        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
-        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.08)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.10)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
 
         <AmbientParticles />
 
         <div className="container-main mx-auto text-center relative z-10">
-          <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white text-xs sm:text-sm mb-4 transition-colors">
+          <Link to="/" className="inline-flex items-center gap-2 text-[#0c1b33]/70 dark:text-white/70 hover:text-[#d4af37] text-xs sm:text-sm mb-4 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </Link>
-          <h1 className="font-brand text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight">
-            Giving <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">Records & History</span>
+          <h1 className="font-brand text-3xl md:text-4xl lg:text-5xl font-bold text-[#0c1b33] dark:text-white tracking-tight">
+            Giving <span className="bg-gradient-to-r from-[#996515] via-[#d4af37] to-[#8b5e3c] dark:from-[#d4af37] dark:via-[#f5e6b3] dark:to-[#c5961d] bg-clip-text text-transparent">Records &amp; History</span>
           </h1>
-          <p className="font-outfit text-white/80 text-sm sm:text-base mt-2 max-w-lg mx-auto">
+          <p className="font-outfit text-[#5a6578] dark:text-white/80 text-sm sm:text-base mt-2 max-w-lg mx-auto">
             View your past seed gifts and kingdom partnership contributions.
           </p>
         </div>

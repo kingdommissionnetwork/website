@@ -225,23 +225,23 @@ export default function Events() {
       />
 
       {/* ---------- HERO ---------- */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#0c1b33] via-[#071324] to-[#1a1107] px-4 pt-14 pb-10 lg:pt-20 lg:pb-14">
-        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
-        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#eef4fb] via-[#f8fafc] to-[#fdf8ee] dark:from-[#0c1b33] dark:via-[#071324] dark:to-[#1a1107] px-4 pt-14 pb-10 lg:pt-20 lg:pb-14 transition-colors duration-300">
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(249,115,22,0.08)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(249,115,22,0.18)_0%,transparent_65%)] pointer-events-none blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(212,175,55,0.10)_0%,transparent_65%)] dark:bg-[radial-gradient(circle,rgba(212,175,55,0.20)_0%,transparent_65%)] pointer-events-none blur-3xl" />
         <AmbientParticles />
 
         <div className="container-main mx-auto relative z-10 max-w-4xl text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0c1b33]/5 dark:bg-white/10 border border-[#0c1b33]/15 dark:border-[#d4af37]/40 text-[#0c1b33] dark:text-[#fbf5b7] text-xs font-semibold mb-4 backdrop-blur-md">
             <Globe className="w-3.5 h-3.5 text-[#d4af37]" />
-            <span>Global Summits, International Missions & Revivals</span>
+            <span>Global Summits, International Missions &amp; Revivals</span>
           </div>
-          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight">
+          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-[#0c1b33] dark:text-white mb-4 tracking-tight">
             Kingdom{" "}
-            <span className="bg-gradient-to-r from-[#d4af37] via-[#f5e6b3] to-[#c5961d] bg-clip-text text-transparent">
-              Events & Missions
+            <span className="bg-gradient-to-r from-[#996515] via-[#d4af37] to-[#8b5e3c] dark:from-[#d4af37] dark:via-[#f5e6b3] dark:to-[#c5961d] bg-clip-text text-transparent">
+              Events &amp; Missions
             </span>
           </h1>
-          <p className="text-white/80 text-base md:text-xl max-w-2xl mx-auto leading-relaxed mb-8">
+          <p className="text-[#5a6578] dark:text-white/80 text-base md:text-xl max-w-2xl mx-auto leading-relaxed mb-8">
             Apostolic conferences, revival crusades, and worship gatherings around the world.
             Find a gathering near you — or join online — and RSVP in under a minute.
           </p>
@@ -249,18 +249,18 @@ export default function Events() {
           {/* search + view toggle */}
           <div className="flex flex-col sm:flex-row items-stretch gap-3 max-w-2xl mx-auto">
             <label className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6b7c93] dark:text-white/50" />
               <input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by title, city, or keyword…"
                 aria-label="Search events"
-                className="w-full pl-12 pr-4 py-3.5 rounded-full bg-white/10 border border-white/20 text-white placeholder:text-white/50 text-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37]/60"
+                className="w-full pl-12 pr-4 py-3.5 rounded-full bg-white dark:bg-white/10 border border-[#0c1b33]/15 dark:border-white/20 text-[#0c1b33] dark:text-white placeholder-[#6b7c93] dark:placeholder:text-white/50 text-sm shadow-sm dark:shadow-none backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37]/60"
               />
             </label>
             <div
-              className="flex items-center rounded-full bg-white/10 border border-white/20 p-1 backdrop-blur-md"
+              className="flex items-center rounded-full bg-[#0c1b33]/5 dark:bg-white/10 border border-[#0c1b33]/15 dark:border-white/20 p-1 backdrop-blur-md shadow-sm dark:shadow-none"
               role="tablist"
               aria-label="Change layout"
             >
