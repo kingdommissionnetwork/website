@@ -271,3 +271,75 @@ export function dunningReminderEmail(params: {
     <p style="font-family:monospace;font-size:11px;color:#ccc;word-break:break-all;">${safeLink}</p>`;
   return { subject: `Action needed: renew your ${safePlan} seed — ${BRAND_NAME}`, html: brandedWrapper(body, `Renew your ${safePlan} seed of ${formattedAmount}.`) };
 }
+
+function safeTrackUrl(trackUrl?: string): string {
+  if (trackUrl && (trackUrl.startsWith("/") || trackUrl.startsWith("https://kingdommissionsnetwork.org"))) return trackUrl;
+  return "https://kingdommissionsnetwork.org/track";
+}
+
+/** Acknowledgment: the code is queued for verification. Safe to close the page. */
+export function claimReceivedEmail(params: { name: string; reference: string; amount: number; planName: string; trackUrl?: string }): { subject: string; html: string } {
+  const { name, reference, amount, planName, trackUrl } = params;
+  const safeName = escapeHtml(name) || "Beloved Partner";
+  const safeRef = escapeHtml(reference);
+  const safePlan = escapeHtml(planName);
+  const link = safeTrackUrl(trackUrl);
+  const formattedAmount = `KES ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 2 })}`;
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:24px;color:${BRAND_DARK};">We Received Your M-Pesa Code ✅</h2>
+    <p style="margin:0 0 24px;font-size:14px;color:#555;font-family:Arial,sans-serif;">Hi <strong>${safeName}</strong>, your <strong>${safePlan}</strong> seed of <strong>${formattedAmount}</strong> (code <strong style="font-family:monospace;">${safeRef}</strong>) is now in the verification queue. You can safely close this page — we will email you the moment it is confirmed.</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+      <tr><td style="background:${BRAND_COLOR};border-radius:8px;padding:14px 28px;">
+        <a href="${link}" style="color:${BRAND_DARK};font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-decoration:none;">Track My Payment →</a>
+      </td></tr>
+    </table>
+    <p style="font-family:Arial,sans-serif;font-size:12px;color:#888;line-height:1.6;">Most codes confirm automatically within minutes once Safaricom posts the receipt. If manual review is needed, our finance team verifies every code against the M-Pesa statement — no action needed from you unless we write back.</p>
+    <p style="font-family:monospace;font-size:11px;color:#ccc;word-break:break-all;">${escapeHtml(link)}</p>`;
+  return { subject: `Payment received — verifying ${safeRef} | ${BRAND_NAME}`, html: brandedWrapper(body, `Your M-Pesa code ${reference} is in the verification queue.`) };
+}
+
+type ClaimDecision = "approved" | "rejected" | "amount_mismatch" | "expired";
+
+/** Terminal decision on a claim: approved, rejected, amount mismatch, or expired. */
+export function claimDecisionEmail(params: { name: string; reference: string; planName: string; decision: ClaimDecision; reason?: string; trackUrl?: string }): { subject: string; html: string } {
+  const { name, reference, planName, decision, reason, trackUrl } = params;
+  const safeName = escapeHtml(name) || "Beloved Partner";
+  const safeRef = escapeHtml(reference);
+  const safePlan = escapeHtml(planName);
+  const safeReason = escapeHtml(reason || "");
+  const link = safeTrackUrl(trackUrl);
+  if (decision === "approved") {
+    const body = `
+      <h2 style="margin:0 0 8px;font-size:24px;color:${BRAND_DARK};">Partnership Activated! 🎉</h2>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;font-family:Arial,sans-serif;">Hi <strong>${safeName}</strong>, your <strong>${safePlan}</strong> payment (code <strong style="font-family:monospace;">${safeRef}</strong>) is confirmed and your covenant partnership is now <strong>active</strong>.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+        <tr><td style="background:${BRAND_COLOR};border-radius:8px;padding:14px 28px;">
+          <a href="${link}" style="color:${BRAND_DARK};font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-decoration:none;">Open My Partner Hub →</a>
+        </td></tr>
+      </table>
+      <p style="font-family:Arial,sans-serif;font-size:12px;color:#888;line-height:1.6;">New here? Use the emailed ownership code on the Partner Hub page to secure your account — it takes a minute.</p>`;
+    return { subject: `Partnership activated — welcome! | ${BRAND_NAME}`, html: brandedWrapper(body, `Your ${planName} partnership is active.`) };
+  }
+  const headline = decision === "expired"
+    ? "Verification Window Expired ⏳"
+    : decision === "amount_mismatch"
+      ? "Amount Needs Your Attention 🔍"
+      : "Payment Could Not Be Confirmed ❌";
+  const guidance = decision === "expired"
+    ? "We could not confirm this code within the verification window. If the money left your M-Pesa, simply resubmit the same code — or reply with your M-Pesa SMS and our finance team will reconcile it manually."
+    : decision === "amount_mismatch"
+      ? "The confirmed Safaricom amount does not match the plan price on your claim. Check the amount in your M-Pesa SMS and resubmit with the matching plan — or contact us and we will reconcile it."
+      : "Our finance team reviewed this code against the M-Pesa statement and could not confirm it. Double-check the code from your M-Pesa SMS and resubmit — or reply so we can reconcile it manually.";
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:24px;color:${BRAND_DARK};">${headline}</h2>
+    <p style="margin:0 0 16px;font-size:14px;color:#555;font-family:Arial,sans-serif;">Hi <strong>${safeName}</strong>, regarding your <strong>${safePlan}</strong> claim (code <strong style="font-family:monospace;">${safeRef}</strong>):</p>
+    <p style="font-family:Arial,sans-serif;font-size:14px;color:#333;line-height:1.8;border-left:3px solid ${BRAND_COLOR};padding-left:16px;margin:16px 0;">${guidance}</p>
+    ${safeReason ? `<p style="font-family:Arial,sans-serif;font-size:13px;color:#555;">Reviewer note: <em>${safeReason}</em></p>` : ""}
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+      <tr><td style="background:${BRAND_COLOR};border-radius:8px;padding:14px 28px;">
+        <a href="${link}" style="color:${BRAND_DARK};font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-decoration:none;">Check Status / Resubmit →</a>
+      </td></tr>
+    </table>
+    <p style="font-family:Arial,sans-serif;font-size:12px;color:#888;">Questions? Reply to this email or write to <a href="mailto:${SUPPORT_EMAIL}" style="color:${BRAND_COLOR};">${SUPPORT_EMAIL}</a> with your code.</p>`;
+  return { subject: `${headline} — ${safeRef} | ${BRAND_NAME}`, html: brandedWrapper(body, `Update on your payment ${reference}.`) };
+}

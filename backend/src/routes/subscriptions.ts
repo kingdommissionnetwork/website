@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { computeKesToUsd } from "../lib/exchangeRate";
-import { sendDonationEmail, sendPartnerWelcomeEmail, sendClaimOtpEmail, sendDunningReminderEmail } from "../lib/email";
+import { sendDonationEmail, sendPartnerWelcomeEmail, sendClaimOtpEmail, sendClaimReceivedEmail, sendClaimDecisionEmail, sendDunningReminderEmail } from "../lib/email";
 import { signToken } from "../lib/jwt";
 import { setCookie } from "hono/cookie";
 import { requireAdmin } from "../lib/jwt";
@@ -579,13 +579,24 @@ subscriptionRoutes.post(
         planName: canonicalPlanName,
         amount: canonicalAmount,
       });
+      // Async-approval UX: acknowledge once (first submission) so the payer can
+      // close the page — status + decision arrive by email and /track.
+      if (claim && (claim.attempts || 0) <= 1) {
+        await sendClaimReceivedEmail(c, {
+          email: email.trim().toLowerCase(),
+          name: name.trim(),
+          reference: cleanRef,
+          amount: canonicalAmount,
+          planName: canonicalPlanName,
+        });
+      }
       return c.json(
         {
           status: "pending",
           code: "RECEIPT_NOT_FOUND",
           claimId: claim?.id || null,
           message:
-            "We have not yet received confirmation of this payment from Safaricom/KCB. If you just paid, wait 1–2 minutes and retry — your claim is saved. Double-check the code from your M-Pesa SMS.",
+            "We have not yet received confirmation of this payment from Safaricom/KCB. Your claim is saved — you can safely close this page. We will email you the moment it is confirmed, or track it anytime with your M-Pesa code.",
         },
         202
       );
@@ -609,6 +620,7 @@ subscriptionRoutes.post(
         phone: phone || null,
         mpesaMessage: (mpesaMessage || "").trim().slice(0, 1000) || null,
       });
+      const firstSeen = !claim || (claim.attempts || 0) <= 1;
       if (claim) {
         await setClaimStatus(supabase, claim.id, verdict.code === "ALREADY_CONSUMED" ? "rejected" : "amount_mismatch", {
           receipt_id: receipt.id,
@@ -620,6 +632,17 @@ subscriptionRoutes.post(
         receiptAmount: receipt.amount,
         claimedAmount: canonicalAmount,
       });
+      // Notify once so a closed page doesn't mean a silent dead-end.
+      if (firstSeen) {
+        await sendClaimDecisionEmail(c, {
+          email: email.trim().toLowerCase(),
+          name: name.trim(),
+          reference: cleanRef,
+          planName: canonicalPlanName,
+          decision: verdict.code === "ALREADY_CONSUMED" ? "rejected" : "amount_mismatch",
+          reason: verdict.reason,
+        });
+      }
       return c.json({ error: verdict.reason, code: verdict.code }, 409);
     }
 
@@ -721,6 +744,13 @@ async function tryAutoFulfillClaim(c: import("hono").Context, transId: string): 
     // Claim is stale (user never came back) — leave it for expiry sweeps.
     if (Date.now() - new Date(claim.created_at).getTime() > CLAIM_TTL_HOURS * 3600000) {
       await setClaimStatus(supabase, claim.id, "expired", { note: "Claim expired before receipt arrival." });
+      await sendClaimDecisionEmail(c, {
+        email: claim.email,
+        name: claim.name,
+        reference: transId,
+        planName: claim.plan_name || "Kingdom Partner",
+        decision: "expired",
+      });
       return;
     }
 
@@ -738,6 +768,14 @@ async function tryAutoFulfillClaim(c: import("hono").Context, transId: string): 
         note: verdict.reason,
       });
       await logBillingEvent(c.env as Record<string, string>, claim.email, "paybill_autofulfill_rejected", "payment_claim", transId, { reason: verdict.reason });
+      await sendClaimDecisionEmail(c, {
+        email: claim.email,
+        name: claim.name,
+        reference: transId,
+        planName: claim.plan_name || "Kingdom Partner",
+        decision: verdict.code === "ALREADY_CONSUMED" ? "rejected" : "amount_mismatch",
+        reason: verdict.reason,
+      });
       return;
     }
 

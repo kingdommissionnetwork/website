@@ -27,6 +27,7 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const Accessibility = lazy(() => import("./pages/Accessibility"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const VerificationPage = lazy(() => import("./pages/VerificationPage"));
+const TrackPaymentPage = lazy(() => import("./pages/TrackPaymentPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoader() {
@@ -83,6 +84,7 @@ export default function App() {
                   <Route path="/subscriber-dashboard" element={<SubscriberDashboard />} />
                   <Route path="/partner-portal" element={<SubscriberDashboard />} />
                   <Route path="/verify" element={<VerificationPage />} />
+                  <Route path="/track" element={<TrackPaymentPage />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route
                     path="/admin"

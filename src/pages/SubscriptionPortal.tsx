@@ -375,7 +375,7 @@ export default function SubscriptionPortal() {
       // Fail-closed: unknown codes return 202 pending until Safaricom/KCB
       // confirms the payment. Poll the claim; activate only on match.
       if (res.status === "pending") {
-        showToast("Code received — waiting for Safaricom confirmation. This usually takes under a minute.", "info");
+        showToast("Code received and saved — we will email you the moment it is confirmed. No need to keep this page open.", "info");
         setClaimPolling(true);
         const matched = await pollPaybillClaim(cleanRef, email);
         setClaimPolling(false);
@@ -439,7 +439,7 @@ export default function SubscriptionPortal() {
       }
     }
     showToast(
-      "Still awaiting Safaricom confirmation — your claim is saved. You will receive your receipt by email once confirmed.",
+      "Still awaiting Safaricom confirmation — your claim is saved and you can close this page. Track it anytime under Track Payment, and your receipt will arrive by email once confirmed.",
       "info"
     );
     return null;
@@ -1306,7 +1306,15 @@ export default function SubscriptionPortal() {
                       </button>
                       {claimPolling && (
                         <p className="text-center text-[11px] text-amber-300/80" role="status">
-                          Your code is saved — we are waiting for the provider confirmation. Please keep this page open.
+                          Your code is saved — we are waiting for the provider confirmation. You can safely close this
+                          page: we will email you the decision, or{" "}
+                          <Link
+                            to={`/track?ref=${encodeURIComponent(mpesaRefCode.trim().toUpperCase())}&email=${encodeURIComponent(subscriberEmail.trim())}`}
+                            className="underline font-bold"
+                          >
+                            track it here anytime
+                          </Link>
+                          .
                         </p>
                       )}
                       <PartnershipSupportCard className="mt-2" />

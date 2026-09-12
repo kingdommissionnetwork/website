@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
 import { requireAdmin, requireAdminScope } from "../lib/jwt";
 import { rateLimit } from "../lib/rateLimiter";
-import { sendAdminInviteEmail, sendPastoralBroadcastBatch } from "../lib/email";
+import { sendAdminInviteEmail, sendPastoralBroadcastBatch, sendClaimDecisionEmail, sendDonationEmail } from "../lib/email";
 import { fulfillPaybillRedemption } from "./subscriptions";
 
 export const adminRoutes = new Hono();
@@ -692,15 +692,45 @@ adminRoutes.post(
     const resolvedReceipt = (mpesa_receipt || "").trim() || undefined;
 
     if (action === "reject") {
+      // Load the payer first so the decision notice can reach them — a closed
+      // page must never mean a silent dead-end (best-practice notify-on-decision).
+      let payer = { email: "", name: "Kingdom Partner", reference: String(claimId), planName: "Kingdom Partner" };
       if (type === "subscription_claim") {
+        const { data: existing } = await supabase
+          .from("payment_claims")
+          .select("email, name, payment_reference, plan_name, amount")
+          .eq("id", claimId)
+          .maybeSingle();
+        if (existing) {
+          payer = {
+            email: String(existing.email || ""),
+            name: String(existing.name || "Kingdom Partner"),
+            reference: String(existing.payment_reference || claimId),
+            planName: String(existing.plan_name || "Kingdom Partner"),
+          };
+        }
         const { error: rejErr } = await supabase.from("payment_claims").update({ status: "rejected", note: resolvedNotes || "Rejected by admin" }).eq("id", claimId);
         if (rejErr) return c.json({ error: "Failed to reject claim: " + rejErr.message }, 500);
       } else {
+        const { data: existing } = await supabase
+          .from("donations")
+          .select("donor_email, donor_name, payment_reference")
+          .eq("id", claimId)
+          .maybeSingle();
+        if (existing) {
+          payer = {
+            email: String(existing.donor_email || ""),
+            name: String(existing.donor_name || "Kingdom Partner"),
+            reference: String(existing.payment_reference || claimId),
+            planName: "Kingdom Gift",
+          };
+        }
         // donations table has no notes column — only update status
         const { error: rejErr } = await supabase.from("donations").update({ status: "rejected" }).eq("id", claimId);
         if (rejErr) return c.json({ error: "Failed to reject donation: " + rejErr.message }, 500);
       }
       await logAuditEvent(supabase, actor, "MPESA_CLAIM_REJECTED", type, claimId, { notes: resolvedNotes });
+      await sendClaimDecisionEmail(c, { ...payer, decision: "rejected", reason: resolvedNotes });
       return c.json({ success: true, message: "Claim rejected successfully." });
     }
 
@@ -738,9 +768,23 @@ adminRoutes.post(
         return c.json({ success: true, message: "Subscription claim approved and activated.", result });
       } else {
         // Donation — mark as completed. donations table has no notes column.
+        const { data: donation } = await supabase
+          .from("donations")
+          .select("donor_email, donor_name, amount, currency, payment_reference")
+          .eq("id", claimId)
+          .maybeSingle();
         const { error: donErr } = await supabase.from("donations").update({ status: "completed" }).eq("id", claimId);
         if (donErr) throw new Error("Failed to update donation status: " + donErr.message);
         await logAuditEvent(supabase, actor, "MPESA_DONATION_APPROVED", type, claimId, { notes: resolvedNotes });
+        // The payer may have closed the page hours ago — the receipt email is
+        // their approval notice (mirrors fulfillPaybillRedemption for claims).
+        try {
+          if (donation?.donor_email) {
+            await sendDonationEmail(c, String(donation.donor_email), String(donation.donor_name || "Kingdom Partner"), Number(donation.amount) || 0, String(donation.currency || "KES"));
+          }
+        } catch (e) {
+          console.error("[ADMIN] donation approval receipt error:", e);
+        }
         return c.json({ success: true, message: "Donation verified and marked as completed." });
       }
     } catch (err) {

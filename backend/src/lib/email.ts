@@ -7,6 +7,8 @@ import {
   partnerWelcomeEmail,
   pastoralBroadcastEmail,
   claimOtpEmail,
+  claimReceivedEmail,
+  claimDecisionEmail,
   dunningReminderEmail,
 } from "./emailTemplates";
 
@@ -263,6 +265,83 @@ export async function sendClaimOtpEmail(
     await resend.emails.send({ from: fromAddress, to: email, subject, html });
   } else {
     console.log(`[CLAIM-OTP] ${email} code: ${code} (no RESEND_API_KEY configured)`);
+  }
+}
+
+function claimTrackUrl(email: string, reference: string): string {
+  return `https://kingdommissionsnetwork.org/track?ref=${encodeURIComponent(reference)}&email=${encodeURIComponent(email)}`;
+}
+
+/**
+ * Acknowledgment that a payment code entered the verification queue.
+ * Best-effort: never throws (webhooks and verify endpoints must ack fast).
+ */
+export async function sendClaimReceivedEmail(
+  c: { env?: unknown },
+  params: { email: string; name: string; reference: string; amount: number; planName: string }
+): Promise<void> {
+  if (!params.email) return;
+  try {
+    const resend = getResendClient(c);
+    const { subject, html } = claimReceivedEmail({
+      name: params.name,
+      reference: params.reference,
+      amount: params.amount,
+      planName: params.planName,
+      trackUrl: claimTrackUrl(params.email, params.reference),
+    });
+    if (!resend) {
+      console.log(`[CLAIM-ACK] ${params.email} ref ${params.reference} (no RESEND_API_KEY configured)`);
+      return;
+    }
+    const fromAddress =
+      getSecret(c, "RESEND_FROM_EMAIL") ||
+      "Kingdom Missions Network <partners@kingdommissionsnetwork.org>";
+    const res = await resend.emails.send({ from: fromAddress, to: params.email, subject, html });
+    if (res.error) console.error(`[CLAIM-ACK] Resend error for ${params.email}:`, res.error);
+  } catch (err) {
+    console.error("[CLAIM-ACK] dispatch error:", err);
+  }
+}
+
+/**
+ * Terminal decision notice for a claim (approved / rejected / mismatch / expired).
+ * Best-effort: never throws. Approved subscription claims already receive the
+ * donation receipt + welcome emails from fulfillment; this adds the hub CTA.
+ */
+export async function sendClaimDecisionEmail(
+  c: { env?: unknown },
+  params: {
+    email: string;
+    name: string;
+    reference: string;
+    planName: string;
+    decision: "approved" | "rejected" | "amount_mismatch" | "expired";
+    reason?: string;
+  }
+): Promise<void> {
+  if (!params.email) return;
+  try {
+    const resend = getResendClient(c);
+    const { subject, html } = claimDecisionEmail({
+      name: params.name,
+      reference: params.reference,
+      planName: params.planName,
+      decision: params.decision,
+      reason: params.reason,
+      trackUrl: claimTrackUrl(params.email, params.reference),
+    });
+    if (!resend) {
+      console.log(`[CLAIM-DECISION] ${params.email} ref ${params.reference} ${params.decision} (no RESEND_API_KEY configured)`);
+      return;
+    }
+    const fromAddress =
+      getSecret(c, "RESEND_FROM_EMAIL") ||
+      "Kingdom Missions Network <partners@kingdommissionsnetwork.org>";
+    const res = await resend.emails.send({ from: fromAddress, to: params.email, subject, html });
+    if (res.error) console.error(`[CLAIM-DECISION] Resend error for ${params.email}:`, res.error);
+  } catch (err) {
+    console.error("[CLAIM-DECISION] dispatch error:", err);
   }
 }
 

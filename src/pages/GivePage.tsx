@@ -289,7 +289,7 @@ export default function GivePage() {
       // Fail-closed: receipt is issued only after provider confirmation.
       // Poll the claim; the code stays saved server-side meanwhile.
       const email = (donorEmail || "partner@kingdommissionnetwork.org").trim();
-      setPaybillPending("Code received — waiting for Safaricom confirmation. Please keep this page open…");
+      setPaybillPending("Code received — waiting for Safaricom confirmation. You can safely close this page: we will email you the decision.");
       let hiddenWaits = 0;
       for (let i = 0; i < 12; i++) {
         await new Promise((r) => setTimeout(r, 5000));
@@ -315,7 +315,7 @@ export default function GivePage() {
           }
         } catch { /* keep polling through transient errors */ }
       }
-      setPaybillPending("Still awaiting confirmation — your code is saved. Your receipt will arrive by email once Safaricom confirms the payment.");
+      setPaybillPending("Still awaiting confirmation — your code is saved and you can close this page. Track it anytime under Track Payment; your receipt will arrive by email once confirmed.");
     } catch (err: unknown) {
       setPaybillPending(null);
       showToast(err instanceof Error ? err.message : "Could not submit code. Please try again.", "error");

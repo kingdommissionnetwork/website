@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { getSupabase } from "../lib/supabase";
-import { sendDonationEmail } from "../lib/email";
+import { sendDonationEmail, sendClaimReceivedEmail } from "../lib/email";
 import { fetchExchangeRate } from "../lib/exchangeRate";
 import { upsertPaymentClaim } from "../lib/paybill";
 import { rateLimit, strictRateLimit } from "../lib/rateLimiter";
@@ -287,6 +287,7 @@ paymentRoutes.post("/report-offline", strictRateLimit, zValidator("json", z.obje
   // provider receipt matches this code (fail-closed, same as subscriptions).
   // The receipt email below is a *submission* notice, not proof of payment.
   let claimStatus = "awaiting_receipt";
+  let firstSeen = false;
   try {
     const claim = await upsertPaymentClaim(supabase, {
       paymentReference: cleanRef,
@@ -300,8 +301,21 @@ paymentRoutes.post("/report-offline", strictRateLimit, zValidator("json", z.obje
       kind: "donation",
     });
     claimStatus = claim?.status || "awaiting_receipt";
+    firstSeen = (claim?.attempts || 0) <= 1;
   } catch (claimErr) {
     console.error("[Claim Pipeline Error]", claimErr);
+  }
+
+  // Async-approval UX: first submission gets the queue acknowledgment with a
+  // track link, so the giver can close the page while finance reviews.
+  if (firstSeen) {
+    await sendClaimReceivedEmail(c, {
+      email: donor_email,
+      name: donor_name,
+      reference: cleanRef,
+      amount,
+      planName: "Kingdom Gift",
+    });
   }
 
   // Attempt to dispatch receipt email

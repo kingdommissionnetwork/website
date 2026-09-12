@@ -159,6 +159,11 @@ export default function Footer() {
                   Giving History
                 </Link>
               </li>
+              <li>
+                <Link to="/track" className="text-sm text-white/70 hover:text-white transition-colors">
+                  Track My Payment
+                </Link>
+              </li>
             </ul>
           </div>
 
