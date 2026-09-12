@@ -392,6 +392,8 @@ export const api = {
         planName: string;
         amount: number;
         currency: string;
+        partnerNumber?: string | null;
+        verifyToken?: string | null;
         claimRequired?: boolean;
         user?: AuthUser | null;
         token?: string | null;
@@ -436,6 +438,8 @@ export const api = {
         planName?: string;
         amount?: number;
         currency?: string;
+        partnerNumber?: string | null;
+        verifyToken?: string | null;
         claimRequired?: boolean;
         user?: AuthUser | null;
         token?: string | null;
@@ -672,6 +676,25 @@ export const api = {
     if (params.statement) q.set("statement", params.statement);
     const qs = q.toString();
     return swrGet(`verify:${qs}`, DEFAULT_TTL_MS, () => request(`/donations/verify-receipt?${qs}`));
+  },
+  /** QR deep-link credential: opens holder details directly, no form. Public
+   *  data only (name/tier/status) behind the unguessable token. */
+  verifyCredential: async (token: string): Promise<{
+    verified: boolean;
+    type?: string;
+    name?: string;
+    tier?: string;
+    status?: string;
+    partnerNumber?: string | null;
+    joinedAt?: string;
+    validThrough?: string | null;
+    verifiedAt?: string;
+    error?: string;
+  }> => {
+    const clean = token.trim().toLowerCase();
+    return swrGet(`credential:${clean}`, DEFAULT_TTL_MS, () =>
+      request(`/donations/verify-credential/${encodeURIComponent(clean)}`)
+    );
   },
 };
 

@@ -42,6 +42,24 @@ export interface PartnerCardDetails {
   photoUrl?: string;
   phone?: string;
   expiryYear?: string;
+  /** Credential number (KMN-P-2026/4002) when issued; card id is the fallback. */
+  partnerNumber?: string | null;
+  /** Unguessable QR deep-link token (/v/<token> opens holder details directly). */
+  verifyToken?: string | null;
+}
+
+/** Canonical card number: issued partner numbers print as-is; legacy ids keep HKN- prefix. */
+export function toDisplayId(id: string | number): string {
+  const cardId = id ? String(id).toUpperCase() : "PTN-001";
+  if (cardId.startsWith("KMN-") || cardId.startsWith("HKN-")) return cardId;
+  return `HKN-${cardId}`;
+}
+
+/** QR target: unguessable credential link when available, else the manual verify page. */
+export function credentialVerifyUrl(origin: string, displayId: string, verifyToken?: string | null): string {
+  const token = String(verifyToken || "").trim().toLowerCase();
+  if (/^[0-9a-f]{48}$/.test(token)) return `${origin}/v/${token}`;
+  return `${origin}/verify?partner=${encodeURIComponent(displayId)}`;
 }
 
 export interface AnnualStatementDetails {
@@ -1009,12 +1027,11 @@ export async function buildInvoiceHtml(invoice: InvoiceDetails): Promise<string>
  * Standard CR80 ID Card dimensions (85.6mm x 54mm)
  */
 export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<string> {
-  const cardId = card.id ? String(card.id).toUpperCase() : `PTN-${Math.floor(1000 + Math.random() * 9000)}`;
-  // Keep the FULL credential id — truncating the suffix gave every member the same card number.
-  const displayId = cardId.startsWith("HKN-") ? cardId : `HKN-${cardId}`;
+  // Prefer the issued credential number; fall back to the legacy card id.
+  const displayId = toDisplayId(card.partnerNumber || card.id);
   const holderName = (card.name || "Covenant Partner").trim();
   
-  const verifyUrl = `${window.location.origin}/verify?partner=${encodeURIComponent(displayId)}`;
+  const verifyUrl = credentialVerifyUrl(window.location.origin, displayId, card.verifyToken);
   const qrDataUri = await generateQrDataUrl(verifyUrl);
 
   const expiry = card.expiryYear || "2027";
@@ -1071,10 +1088,10 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
       border-radius: 4mm;
       overflow: hidden;
       position: relative;
-      background: linear-gradient(135deg, #091528 0%, #0d1e38 45%, #182a4d 80%, #07101e 100%);
-      border: 1.2mm solid #d4af37;
+      background: linear-gradient(135deg, #fdfaf1 0%, #f6ecd4 45%, #efe0bd 80%, #faf4e4 100%);
+      border: 1.2mm solid #b8912a;
       box-shadow: 0 8px 30px rgba(0,0,0,0.35);
-      color: #ffffff;
+      color: #0c1b33;
       padding: 3mm 4mm;
       display: flex;
       flex-direction: column;
@@ -1136,7 +1153,7 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
       font-size: 7pt;
       font-weight: 800;
       letter-spacing: 0.5px;
-      color: #ffffff;
+      color: #0c1b33;
       line-height: 1;
       text-transform: uppercase;
     }
@@ -1144,7 +1161,7 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
     .brand-text-sub {
       font-size: 4.5pt;
       font-weight: 700;
-      color: #d4af37;
+      color: #8a6d1c;
       letter-spacing: 1px;
       text-transform: uppercase;
       display: block;
@@ -1152,9 +1169,9 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
     }
 
     .tier-badge {
-      background: linear-gradient(135deg, rgba(212,175,55,0.35), rgba(212,175,55,0.15));
-      border: 0.3mm solid #d4af37;
-      color: #fdf6d8;
+      background: linear-gradient(135deg, #0c1b33, #1a2d4d);
+      border: 0.3mm solid #b8912a;
+      color: #f6e9c8;
       font-family: 'Outfit', sans-serif;
       font-size: 5pt;
       font-weight: 800;
@@ -1235,7 +1252,7 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
       font-family: 'Outfit', sans-serif;
       font-size: 8.5pt;
       font-weight: 800;
-      color: #ffffff;
+      color: #0c1b33;
       margin: 0 0 0.8mm 0;
       white-space: nowrap;
       overflow: hidden;
@@ -1257,7 +1274,7 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
     .detail-label {
       font-size: 3.8pt;
       font-weight: 700;
-      color: rgba(255,255,255,0.5);
+      color: rgba(12,27,51,0.55);
       text-transform: uppercase;
       letter-spacing: 0.3px;
     }
@@ -1265,12 +1282,12 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
     .detail-val {
       font-size: 5.5pt;
       font-weight: 700;
-      color: #ffffff;
+      color: #0c1b33;
       white-space: nowrap;
     }
 
     .detail-val.gold {
-      color: #fdf6d8;
+      color: #7c6116;
       font-family: 'Courier New', monospace;
       font-weight: 800;
     }
@@ -1281,9 +1298,9 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
       gap: 1mm;
       font-size: 4.2pt;
       font-weight: 800;
-      color: #34d399;
-      background: rgba(16, 185, 129, 0.15);
-      border: 0.2mm solid rgba(16, 185, 129, 0.4);
+      color: #047857;
+      background: rgba(4, 120, 87, 0.12);
+      border: 0.2mm solid rgba(4, 120, 87, 0.4);
       padding: 0.3mm 1.5mm;
       border-radius: 1mm;
       margin-top: 0.5mm;
@@ -1310,7 +1327,7 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
 
     /* Card Footer Bar */
     .card-footer {
-      border-top: 0.3mm solid rgba(255, 255, 255, 0.15);
+      border-top: 0.3mm solid rgba(12, 27, 51, 0.15);
       padding-top: 1mm;
       display: flex;
       align-items: center;
@@ -1327,12 +1344,12 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
 
     .oversight-sig {
       font-size: 4.5pt;
-      color: rgba(255,255,255,0.7);
+      color: rgba(12,27,51,0.65);
       line-height: 1.1;
     }
 
     .oversight-sig strong {
-      color: #fdf6d8;
+      color: #0c1b33;
       font-size: 5pt;
     }
 
@@ -1340,13 +1357,13 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
       font-size: 3.5pt;
       font-weight: 800;
       letter-spacing: 0.8px;
-      color: #d4af37;
+      color: #8a6d1c;
       text-transform: uppercase;
     }
 
     .microtext-bar {
       font-size: 3pt;
-      color: rgba(212, 175, 55, 0.6);
+      color: rgba(138, 109, 28, 0.8);
       text-align: center;
       letter-spacing: 0.5px;
       margin-top: 0.5mm;
@@ -1357,7 +1374,7 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
     /* Card Back (for dual-sided printing) */
     .card-back {
       margin-top: 10mm;
-      background: linear-gradient(135deg, #07101e 0%, #0d1e38 50%, #060e1a 100%);
+      background: linear-gradient(135deg, #faf4e4 0%, #f3e7c9 50%, #efe0bd 100%);
     }
 
     .mag-stripe {
@@ -1371,6 +1388,7 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
     .sig-panel {
       height: 6mm;
       background: #ffffff;
+      border: 0.2mm solid rgba(12, 27, 51, 0.25);
       border-radius: 1mm;
       display: flex;
       align-items: center;
@@ -1400,9 +1418,12 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
 
     .covenant-terms {
       font-size: 3.8pt;
-      color: rgba(255, 255, 255, 0.7);
+      color: rgba(12, 27, 51, 0.75);
       line-height: 1.3;
       text-align: justify;
+    }
+    .covenant-terms em {
+      color: #7c6116;
     }
 
     @media print {
@@ -1491,14 +1512,14 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
       <div class="footer-left">
         <div class="oversight-sig">
           Spiritual Oversight:<br>
-          <img src="${BISHOP_SIGNATURE_BASE64}" style="height: 10px; width: auto; max-width: 42px; object-fit: contain; display: block; margin: 0.4mm 0; filter: brightness(1.3) contrast(1.1);" alt="Official Signature" />
+          <img src="${BISHOP_SIGNATURE_BASE64}" style="height: 10px; width: auto; max-width: 42px; object-fit: contain; display: block; margin: 0.4mm 0; filter: contrast(1.05);" alt="Official Signature" />
           <strong>Bishop Dr. George Githinji</strong>
         </div>
       </div>
       <div class="hologram-strip">★ HOLO-SECURE PASS ★</div>
       <div style="text-align: right;">
-        <span style="font-size: 3.5pt; color: rgba(255,255,255,0.4); display: block;">AUTH CODE</span>
-        <span style="font-family: monospace; font-size: 4.5pt; color: #d4af37; font-weight: 700;">
+        <span style="font-size: 3.5pt; color: rgba(12,27,51,0.45); display: block;">AUTH CODE</span>
+        <span style="font-family: monospace; font-size: 4.5pt; color: #8a6d1c; font-weight: 700;">
           ${displayId.slice(-6)}
         </span>
       </div>
@@ -1515,8 +1536,8 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
     <div class="mag-stripe"></div>
 
     <div style="position: relative; z-index: 1;">
-      <div style="font-size: 4pt; color: rgba(255,255,255,0.5); margin-bottom: 0.5mm; text-transform: uppercase;">
-        Authorized Holder Signature:
+      <div style="font-size: 4pt; color: rgba(12,27,51,0.55); margin-bottom: 0.5mm; text-transform: uppercase;">
+        Authorized Holder Signature: <em style="text-transform: none;">(digital facsimile — no wet signature required)</em>
       </div>
       <div class="sig-panel">
         <span class="sig-holder">${escapeHtmlAttr(holderName)}</span>
@@ -1532,7 +1553,7 @@ export async function buildPartnerIdCardHtml(card: PartnerCardDetails): Promise<
     </div>
 
     <div class="card-footer" style="margin-top: 2mm;">
-      <div style="font-size: 4pt; color: rgba(255,255,255,0.6); line-height: 1.2;">
+      <div style="font-size: 4pt; color: rgba(12,27,51,0.65); line-height: 1.2;">
         <strong>Secretariat:</strong> Nairobi, Kenya<br>
         <strong>Hotline:</strong> +254 700 000 000 | kingdommissions.org
       </div>

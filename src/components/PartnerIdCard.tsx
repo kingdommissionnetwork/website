@@ -23,6 +23,8 @@ import {
   generateQrDataUrl,
   getSmartChipSvg,
   getBarcodeSvg,
+  toDisplayId,
+  credentialVerifyUrl,
 } from "../lib/printEngine";
 import { useToast } from "../lib/toast";
 import bishopSignature from "../assets/bishop-signature.png";
@@ -57,9 +59,8 @@ export default function PartnerIdCard({
     return localStorage.getItem(photoStorageKey) || card.photoUrl || "";
   });
 
-  const cardId = card.id ? String(card.id).toUpperCase() : `PTN-001`;
-  // Keep the FULL credential id — truncating the suffix gave every member the same card number.
-  const displayId = cardId.startsWith("HKN-") ? cardId : `HKN-${cardId}`;
+  // Prefer the issued credential number (KMN-P-2026/4002); legacy ids kept whole.
+  const displayId = toDisplayId(card.partnerNumber || card.id);
   const holderName = (card.name || "Covenant Partner").trim();
   const expiry = card.expiryYear || "2027";
   const joined = card.joinedAt || "2026";
@@ -71,17 +72,20 @@ export default function PartnerIdCard({
     .slice(0, 2)
     .toUpperCase();
 
+  // QR deep link: unguessable /v/<token> opens the holder's details directly
+  // (no form, no code entry). Legacy cards without a token fall back to the
+  // manual verify page.
   useEffect(() => {
-    const verifyUrl = `${window.location.origin}/verify?partner=${encodeURIComponent(displayId)}`;
+    const verifyUrl = credentialVerifyUrl(window.location.origin, displayId, card.verifyToken);
     generateQrDataUrl(verifyUrl).then(setQrCodeUrl);
-  }, [displayId]);
+  }, [displayId, card.verifyToken]);
 
   // Load print preview iframe whenever switching to that view or photo changes
   useEffect(() => {
     if (view !== "print-preview") return;
     setPreviewLoading(true);
 
-    buildPartnerIdCardHtml({ ...card, id: displayId, photoUrl: photoUrl || undefined }).then((html) => {
+    buildPartnerIdCardHtml({ ...card, id: displayId, partnerNumber: displayId, verifyToken: card.verifyToken, photoUrl: photoUrl || undefined }).then((html) => {
       const iframe = previewIframeRef.current;
       if (!iframe) return;
       const doc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -117,10 +121,18 @@ export default function PartnerIdCard({
     reader.readAsDataURL(file);
   };
 
+  // Passport photo is mandatory: an ID credential must never print faceless.
+  const photoMissing = !photoUrl;
+
   const handlePrint = async () => {
+    if (photoMissing) {
+      showToast("Please upload the holder's passport photo first — the credential cannot print without it.", "error");
+      setView("interactive");
+      return;
+    }
     setPrinting(true);
     try {
-      await printPartnerIdCard({ ...card, id: displayId, photoUrl: photoUrl || undefined });
+      await printPartnerIdCard({ ...card, id: displayId, partnerNumber: displayId, verifyToken: card.verifyToken, photoUrl: photoUrl || undefined });
       showToast("Partner Credential Pass sent to printer!", "success");
     } catch (err) {
       console.error(err);
@@ -242,23 +254,23 @@ export default function PartnerIdCard({
             /* ── FRONT ── */
             <div
               id="printable-partner-id-card"
-              className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-br from-[#081225] via-[#0c1b33] to-[#172745] border-2 border-[#d4af37] p-5 sm:p-7 shadow-[0_0_50px_rgba(212,175,55,0.3)] text-white select-none transition-all duration-300"
+              className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-br from-[#fdfaf1] via-[#f6ecd4] to-[#efe0bd] border-2 border-[#b8912a] p-5 sm:p-7 shadow-[0_10px_40px_rgba(138,109,28,0.25)] text-[#0c1b33] select-none transition-all duration-300"
             >
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#d4af37] via-[#fdf6d8] to-[#aa7c11] opacity-90" />
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#b8912a] via-[#f3dfa0] to-[#8a6d1c] opacity-90" />
               <div className="absolute right-2 -bottom-6 opacity-10 pointer-events-none">
                 <img src={brandLogo} alt="" className="w-52 h-52 object-contain" />
               </div>
 
-              <div className="flex items-center justify-between border-b border-[#d4af37]/30 pb-3 mb-4 relative z-10">
+              <div className="flex items-center justify-between border-b border-[#b8912a]/40 pb-3 mb-4 relative z-10">
                 <div className="flex items-center gap-3">
-                  <img src={brandLogo} alt="Kingdom Missions Network" className="w-11 h-11 rounded-xl object-contain border border-[#d4af37] p-0.5 bg-white shadow-md" />
+                  <img src={brandLogo} alt="Kingdom Missions Network" className="w-11 h-11 rounded-xl object-contain border border-[#b8912a] p-0.5 bg-white shadow-md" />
                   <div>
-                    <h4 className="font-brand font-bold text-xs sm:text-sm tracking-wider text-white uppercase leading-tight">KINGDOM MISSIONS NETWORK</h4>
-                    <span className="text-[9px] uppercase tracking-[0.2em] text-[#d4af37] font-bold block mt-0.5">Global Apostolic Partner Credential</span>
+                    <h4 className="font-brand font-bold text-xs sm:text-sm tracking-wider text-[#0c1b33] uppercase leading-tight">KINGDOM MISSIONS NETWORK</h4>
+                    <span className="text-[9px] uppercase tracking-[0.2em] text-[#8a6d1c] font-bold block mt-0.5">Global Apostolic Partner Credential</span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="px-2.5 py-1 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/50 text-[#fbf5b7] text-[10px] font-extrabold uppercase tracking-wide">
+                  <span className="px-2.5 py-1 rounded-full bg-[#0c1b33] border border-[#b8912a] text-[#f6e9c8] text-[10px] font-extrabold uppercase tracking-wide">
                     {card.planName || "Covenant Partner"}
                   </span>
                 </div>
@@ -288,22 +300,22 @@ export default function PartnerIdCard({
 
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <div>
-                    <h3 className="font-brand font-bold text-base sm:text-xl text-white truncate leading-tight">{card.name || "Covenant Partner"}</h3>
-                    <p className="text-[11px] font-mono text-white/70 truncate">{card.email}</p>
+                    <h3 className="font-brand font-bold text-base sm:text-xl text-[#0c1b33] truncate leading-tight">{card.name || "Covenant Partner"}</h3>
+                    <p className="text-[11px] font-mono text-[#0c1b33]/60 truncate">{card.email}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs pt-1">
                     <div>
-                      <span className="text-[8px] uppercase tracking-wider text-white/50 block font-bold">Credential ID No.</span>
-                      <span className="font-mono text-xs sm:text-sm font-bold text-[#fbf5b7] tracking-wider">{displayId}</span>
+                      <span className="text-[8px] uppercase tracking-wider text-[#0c1b33]/45 block font-bold">Credential ID No.</span>
+                      <span className="font-mono text-xs sm:text-sm font-bold text-[#7c6116] tracking-wider">{displayId}</span>
                     </div>
                     <div>
-                      <span className="text-[8px] uppercase tracking-wider text-white/50 block font-bold">Validity Period</span>
-                      <span className="font-semibold text-white/90 text-xs">{joined} – {expiry}</span>
+                      <span className="text-[8px] uppercase tracking-wider text-[#0c1b33]/45 block font-bold">Validity Period</span>
+                      <span className="font-semibold text-[#0c1b33]/85 text-xs">{joined} – {expiry}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 pt-1">
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold uppercase inline-flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-600/10 text-emerald-700 border border-emerald-600/30 text-[10px] font-bold uppercase inline-flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-700" />
                       Verified Active Partner
                     </span>
                   </div>
@@ -317,33 +329,35 @@ export default function PartnerIdCard({
                 </div>
               </div>
 
-              <div className="border-t border-white/10 pt-2.5 flex items-center justify-between text-[10px] text-white/50 relative z-10">
+              <div className="border-t border-[#0c1b33]/15 pt-2.5 flex items-center justify-between text-[10px] text-[#0c1b33]/50 relative z-10">
                 <div>
-                  <span className="block text-[8px] uppercase tracking-widest text-white/40">Spiritual Oversight</span>
-                  <img src={bishopSignature} alt="Bishop Dr. George Githinji Official Signature" className="h-4 sm:h-5 w-auto object-contain my-0.5 filter brightness-125" />
-                  <span className="font-bold text-white/90 block">Bishop Dr. George Githinji</span>
+                  <span className="block text-[8px] uppercase tracking-widest text-[#0c1b33]/40">Spiritual Oversight</span>
+                  <img src={bishopSignature} alt="Bishop Dr. George Githinji Official Signature" className="h-4 sm:h-5 w-auto object-contain my-0.5" />
+                  <span className="font-bold text-[#0c1b33]/90 block">Bishop Dr. George Githinji</span>
                 </div>
                 <div className="text-center">
-                  <span className="font-mono text-[8px] text-[#d4af37] tracking-widest block font-bold">★ HOLO-SECURE PASS ★</span>
-                  <span className="text-[8px] text-white/40">AUTH: {displayId.slice(-6)}</span>
+                  <span className="font-mono text-[8px] text-[#8a6d1c] tracking-widest block font-bold">★ HOLO-SECURE PASS ★</span>
+                  <span className="text-[8px] text-[#0c1b33]/40">AUTH: {displayId.slice(-6)}</span>
                 </div>
                 <div className="text-right">
-                  <span className="block text-[8px] uppercase tracking-widest text-white/40">Secretariat</span>
-                  <span className="font-brand font-bold text-[#fbf5b7]">Nairobi, Kenya</span>
+                  <span className="block text-[8px] uppercase tracking-widest text-[#0c1b33]/40">Secretariat</span>
+                  <span className="font-brand font-bold text-[#0c1b33]">Nairobi, Kenya</span>
                 </div>
               </div>
 
-              <div className="text-[7px] text-[#d4af37]/60 text-center tracking-widest uppercase mt-2 border-t border-white/5 pt-1 truncate">
+              <div className="text-[7px] text-[#8a6d1c]/70 text-center tracking-widest uppercase mt-2 border-t border-[#0c1b33]/10 pt-1 truncate">
                 KINGDOM MISSIONS NETWORK • APOSTOLIC CREDENTIAL • VERIFIED IN HEAVEN & EARTH • OFFICIAL COVENANT PASS
               </div>
             </div>
           ) : (
             /* ── BACK ── */
-            <div className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-br from-[#060e1a] via-[#0c1b33] to-[#081225] border-2 border-[#d4af37] p-5 sm:p-7 shadow-[0_0_50px_rgba(212,175,55,0.3)] text-white select-none space-y-4">
-              <div className="h-8 bg-[#111111] border-y border-white/10 -mx-5 sm:-mx-7 mb-2" />
+            <div className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-br from-[#faf4e4] via-[#f3e7c9] to-[#efe0bd] border-2 border-[#b8912a] p-5 sm:p-7 shadow-[0_10px_40px_rgba(138,109,28,0.25)] text-[#0c1b33] select-none space-y-4">
+              <div className="h-8 bg-[#111111] border-y border-[#b8912a]/40 -mx-5 sm:-mx-7 mb-2" />
               <div>
-                <span className="text-[8px] uppercase tracking-widest text-white/50 block mb-1">Authorized Holder Signature:</span>
-                <div className="h-9 bg-white rounded-lg flex items-center justify-between gap-2 px-3">
+                <span className="text-[8px] uppercase tracking-widest text-[#0c1b33]/50 block mb-1">
+                  Authorized Holder Signature: <em className="normal-case font-normal">(digital facsimile — no wet signature required)</em>
+                </span>
+                <div className="h-9 bg-white rounded-lg border border-[#0c1b33]/20 flex items-center justify-between gap-2 px-3">
                   <span
                     className="text-[#16294d] text-lg leading-none italic truncate"
                     style={{ fontFamily: "'Brush Script MT','Segoe Script','Snell Roundhand','Apple Chancery',cursive" }}
@@ -353,18 +367,18 @@ export default function PartnerIdCard({
                   <span className="text-gray-500 text-[10px] font-mono font-bold whitespace-nowrap">{displayId}</span>
                 </div>
               </div>
-              <div className="text-[10px] text-white/70 leading-relaxed space-y-1.5">
+              <div className="text-[10px] text-[#0c1b33]/70 leading-relaxed space-y-1.5">
                 <p><strong>COVENANT DEPLOYMENT STATEMENT:</strong> This credential certifies that the bearer is a fully consecrated global covenant partner supporting frontline evangelism, church planting, and humanitarian relief under Kingdom Missions Network.</p>
-                <blockquote className="italic text-[#fbf5b7] text-[10px] border-l-2 border-[#d4af37] pl-2 my-1">
+                <blockquote className="italic text-[#7c6116] text-[10px] border-l-2 border-[#b8912a] pl-2 my-1">
                   "And the twelve were with him, and certain women... which ministered unto him of their substance." — Luke 8:1-3
                 </blockquote>
               </div>
-              <div className="border-t border-white/10 pt-3 flex items-center justify-between">
-                <div className="text-[9px] text-white/60 leading-relaxed">
+              <div className="border-t border-[#0c1b33]/15 pt-3 flex items-center justify-between">
+                <div className="text-[9px] text-[#0c1b33]/60 leading-relaxed">
                   <span><strong>Secretariat:</strong> Nairobi, Kenya</span><br />
                   <span><strong>Hotline:</strong> +254 700 000 000 | kingdommissions.org</span>
                 </div>
-                <div dangerouslySetInnerHTML={{ __html: getBarcodeSvg(displayId) }} className="bg-white p-1 rounded-md" />
+                <div dangerouslySetInnerHTML={{ __html: getBarcodeSvg(displayId) }} className="bg-white p-1 rounded-md border border-[#0c1b33]/10" />
               </div>
             </div>
           )}
@@ -379,9 +393,15 @@ export default function PartnerIdCard({
       {/* ── Print Preview (WYSIWYG iframe) ─────────────────────────── */}
       {view === "print-preview" && (
         <div className="rounded-2xl bg-[#1a1a2e] border border-white/10 overflow-hidden">
-          <div className="bg-[#12122b] border-b border-white/10 px-4 py-2 text-white/40 text-xs flex items-center gap-2">
+          <div className="bg-[#12122b] border-b border-white/10 px-4 py-2 text-white/40 text-xs flex items-center gap-2 flex-wrap">
             <Eye className="w-3.5 h-3.5" />
             <span>CR80 card (85.6 × 54 mm) — exact printed output at {Math.round(zoom * 100)}% zoom</span>
+            {photoMissing && (
+              <span className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[11px] font-bold">
+                <Camera className="w-3.5 h-3.5" />
+                Passport photo required before printing
+              </span>
+            )}
           </div>
           <div className="bg-[#2a2a3e] flex items-center justify-center p-8 overflow-auto" style={{ minHeight: "280px" }}>
             <div

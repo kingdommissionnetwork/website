@@ -126,6 +126,8 @@ export default function SubscriberDashboard() {
     amount?: number;
     currency?: string;
     subscription?: Record<string, unknown>;
+    partnerNumber?: string | null;
+    verifyToken?: string | null;
     claimRequired?: boolean;
   } | null;
 
@@ -165,6 +167,8 @@ export default function SubscriberDashboard() {
     interval?: string;
     retry_count?: number;
     next_retry_at?: string;
+    partner_number?: string;
+    verify_token?: string;
   } | null>(() => {
     if (navState?.subscription) {
       const s = navState.subscription;
@@ -176,6 +180,8 @@ export default function SubscriberDashboard() {
         current_period_end: String(s.current_period_end || ""),
         payment_provider: String(s.payment_provider || navState.paymentProvider || "mpesa_paybill"),
         payment_reference: String(s.payment_reference || navState.paymentReference || ""),
+        partner_number: String(s.partner_number || navState.partnerNumber || ""),
+        verify_token: String(s.verify_token || navState.verifyToken || ""),
       };
     }
     if (navState?.paymentReference) {
@@ -405,7 +411,7 @@ export default function SubscriberDashboard() {
 
         if (subRes.subscription) {
           const sub = subRes.subscription as Record<string, unknown>;
-          setSubscriptionData({
+          setSubscriptionData((prev) => ({
             status: String(sub.status || "active"),
             amount: Number(sub.amount) || 3000,
             currency: String(sub.currency || "KES"),
@@ -417,7 +423,11 @@ export default function SubscriberDashboard() {
             interval: String(sub.interval || "monthly"),
             retry_count: Number(sub.retry_count) || 0,
             next_retry_at: String(sub.next_retry_at || ""),
-          });
+            // Issued credential identifiers (owner-only from the API); keep
+            // checkout-provided values when the redacted response omits them.
+            partner_number: String(sub.partner_number || prev?.partner_number || ""),
+            verify_token: String(sub.verify_token || prev?.verify_token || ""),
+          }));
           if (subRes.lifecycle) {
             setLifecycle(subRes.lifecycle as { status: string; renewable: boolean; renewLink: string });
           }
@@ -900,7 +910,7 @@ export default function SubscriberDashboard() {
                 {/* Interactive High-Security ID Card Display */}
                 <PartnerIdCard
                   card={{
-                    id: partnerIdNumber,
+                    id: subscriptionData?.partner_number || partnerIdNumber,
                     name: partnerName,
                     email: partnerEmail,
                     role: currentTier.name,
@@ -909,6 +919,8 @@ export default function SubscriberDashboard() {
                     amount: subscriptionData?.amount,
                     currency: subscriptionData?.currency,
                     joinedAt: "2026",
+                    partnerNumber: subscriptionData?.partner_number || null,
+                    verifyToken: subscriptionData?.verify_token || null,
                   }}
                 />
               </div>

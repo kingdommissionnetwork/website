@@ -130,13 +130,18 @@ export default function SubscriptionPortal() {
   // Seamless Onboarding Handshake Sequence (Stripe/Patreon Benchmark)
   // claimRequired: payment succeeded for a KNOWN email — the hub session is
   // minted only after the emailed ownership code is verified (anti-takeover).
+  // Issued credential identifiers travel alongside onboarding so the hub card
+  // and QR render the canonical KMN-P-2026/4002 number (never a random id).
+  const [credentialIds, setCredentialIds] = useState<{ partnerNumber?: string | null; verifyToken?: string | null }>({});
+
   const runOnboardingTransition = async (
     planTitle: string,
     verifiedUser?: unknown | null,
     _token?: string | null,
     subscription?: Record<string, unknown> | null,
     refCode?: string | null,
-    claimRequired?: boolean
+    claimRequired?: boolean,
+    credentials?: { partnerNumber?: string | null; verifyToken?: string | null } | null
   ) => {
     setIsSubscribed(true);
     setOnboardingStage(1);
@@ -157,6 +162,14 @@ export default function SubscriptionPortal() {
     setOnboardingStage(4);
     await new Promise((r) => setTimeout(r, 500));
     const sessionUser = verifiedUser ? normalizeAuthUser(verifiedUser) : null;
+    const creds = credentials || credentialIds;
+    const mergedSubscription = subscription
+      ? {
+          ...subscription,
+          partner_number: subscription.partner_number || creds?.partnerNumber || null,
+          verify_token: subscription.verify_token || creds?.verifyToken || null,
+        }
+      : null;
     navigate("/partner-portal", {
       state: {
         justSubscribed: true,
@@ -167,7 +180,9 @@ export default function SubscriptionPortal() {
         paymentProvider: "mpesa_paybill",
         amount: activeAmountKes,
         currency: "KES",
-        subscription: subscription || null,
+        subscription: mergedSubscription,
+        partnerNumber: creds?.partnerNumber || (mergedSubscription?.partner_number as string) || null,
+        verifyToken: creds?.verifyToken || (mergedSubscription?.verify_token as string) || null,
         claimRequired: Boolean(claimRequired),
       },
     });
@@ -290,13 +305,16 @@ export default function SubscriptionPortal() {
             setStkPending(false);
             setStkStatusMessage("Payment confirmed! Opening your partner dashboard...");
             showToast("Payment verified! Opening your partner covenant dashboard...", "success");
+            const stkCreds = { partnerNumber: qRes.partnerNumber ?? null, verifyToken: qRes.verifyToken ?? null };
+            setCredentialIds(stkCreds);
             await runOnboardingTransition(
               qRes.planName || activePlan.name,
               qRes.user,
               qRes.token,
               qRes.subscription,
               qRes.receiptCode,
-              qRes.claimRequired
+              qRes.claimRequired,
+              stkCreds
             );
           } else if (qRes.status === "failed") {
             stopPolling();
@@ -381,25 +399,34 @@ export default function SubscriptionPortal() {
         setClaimPolling(false);
         if (!matched) return;
         const matchedSub = (matched.subscription as Record<string, unknown>) || null;
+        const pollCreds = {
+          partnerNumber: (matchedSub?.partner_number as string) || null,
+          verifyToken: (matchedSub?.verify_token as string) || null,
+        };
+        setCredentialIds(pollCreds);
         await runOnboardingTransition(
           (matchedSub?.plan_name as string) || activePlan.name,
           null,
           null,
           matchedSub,
           cleanRef,
-          true
+          true,
+          pollCreds
         );
         return;
       }
 
       showToast("M-Pesa payment verified! Activating your partner covenant dashboard...", "success");
+      const verifyCreds = { partnerNumber: res.partnerNumber ?? null, verifyToken: res.verifyToken ?? null };
+      setCredentialIds(verifyCreds);
       await runOnboardingTransition(
         res.planName || activePlan.name,
         res.user,
         res.token,
         res.subscription,
         cleanRef,
-        res.claimRequired
+        res.claimRequired,
+        verifyCreds
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "M-Pesa verification failed. Please try again.";
@@ -1451,7 +1478,7 @@ export default function SubscriptionPortal() {
 
             <PartnerIdCard
               card={{
-                id: mpesaRefCode || `KMN-${Math.floor(10000 + Math.random() * 90000)}`,
+                id: credentialIds.partnerNumber || mpesaRefCode || `KMN-${Math.floor(10000 + Math.random() * 90000)}`,
                 name: subscriberName || user?.name || "Covenant Partner",
                 email: subscriberEmail || user?.email || "",
                 role: isCustomAmount ? "Custom Covenant Partner" : activePlan.name,
@@ -1460,6 +1487,8 @@ export default function SubscriptionPortal() {
                 amount: activeAmountKes,
                 currency: "KES",
                 joinedAt: "2026",
+                partnerNumber: credentialIds.partnerNumber || null,
+                verifyToken: credentialIds.verifyToken || null,
               }}
               onClose={() => setShowIdCardModal(false)}
             />

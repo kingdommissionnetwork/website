@@ -26,6 +26,7 @@ function chainFor(result: { data: Row[] | null; error: { message: string } | nul
     chain[method] = vi.fn(() => chain);
   }
   chain.limit = vi.fn(() => Promise.resolve(result));
+  chain.maybeSingle = vi.fn(() => Promise.resolve({ data: result.data?.[0] ?? null, error: result.error }));
   return chain;
 }
 
@@ -194,6 +195,51 @@ describe('GET /verify-receipt (fail-closed verification)', () => {
   test('returns verified:false for a statement whose partner is not in the registry', async () => {
     vi.mocked(getSupabase).mockReturnValue(chainFor({ data: [], error: null }) as never);
     const res = await app.request('/verify-receipt?statement=2026&partner=HKN-PTN-4029');
+    const body = await res.json();
+    expect(body.verified).toBe(false);
+  });
+});
+
+describe('GET /verify-credential/:token (QR deep link)', () => {
+  const token = 'a'.repeat(48);
+  const credentialRow: Row = {
+    subscriber_name: 'Jane Partner',
+    subscriber_email: 'jane@example.com',
+    plan_name: 'Harvest Partner',
+    status: 'active',
+    partner_number: 'KMN-P-2026/4002',
+    created_at: '2026-02-01T09:00:00Z',
+    current_period_end: '2026-03-01T09:00:00Z',
+  };
+
+  test('opens holder details directly with no email leaked', async () => {
+    vi.mocked(getSupabase).mockReturnValue(chainFor({ data: [credentialRow], error: null }) as never);
+    const res = await app.request(`/verify-credential/${token}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.verified).toBe(true);
+    expect(body.type).toBe('credential');
+    expect(body.name).toBe('Jane Partner');
+    expect(body.tier).toBe('Harvest Partner');
+    expect(body.partnerNumber).toBe('KMN-P-2026/4002');
+    expect(body.donorEmail).toBeUndefined();
+    expect(body.email).toBeUndefined();
+  });
+
+  test('rejects malformed tokens without touching the registry', async () => {
+    const chain = chainFor({ data: [credentialRow], error: null });
+    vi.mocked(getSupabase).mockReturnValue(chain as never);
+    const res = await app.request('/verify-credential/not-a-token');
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.verified).toBe(false);
+    expect(chain.from).not.toHaveBeenCalled();
+  });
+
+  test('returns verified:false for unknown tokens', async () => {
+    vi.mocked(getSupabase).mockReturnValue(chainFor({ data: [], error: null }) as never);
+    const res = await app.request(`/verify-credential/${'b'.repeat(48)}`);
+    expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.verified).toBe(false);
   });

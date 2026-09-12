@@ -9,6 +9,7 @@ import { setCookie } from "hono/cookie";
 import { requireAdmin } from "../lib/jwt";
 import { rateLimit, strictRateLimit } from "../lib/rateLimiter";
 import { publicCache } from "../lib/httpCache";
+import { issuePartnerNumber, randomVerifyToken } from "../lib/partnerNumber";
 import {
   CLAIM_TTL_HOURS,
   consumeReceipt,
@@ -404,6 +405,13 @@ export async function fulfillPaybillRedemption(
   }
   const usdAmount = Number((r.amount * kesToUsdRate).toFixed(2));
 
+  // Credential number (KMN-P-2026/4002): allocated atomically by the database.
+  // Null when the counter migration hasn't run yet — fulfillment must not fail.
+  const partnerNumber = await issuePartnerNumber(supabase as never, {}).catch(() => null);
+  // QR deep-link token (unguessable): holder details are served behind this,
+  // never behind the enumerable sequential number.
+  const verifyToken = randomVerifyToken();
+
   const { data: subData, error: subError } = await supabase
     .from("subscriptions")
     .insert({
@@ -411,6 +419,8 @@ export async function fulfillPaybillRedemption(
       subscriber_email: normEmail,
       plan_name: r.planName,
       plan_id: r.planId,
+      partner_number: partnerNumber,
+      verify_token: verifyToken,
       amount: r.amount,
       currency: "KES",
       usd_amount: usdAmount,
@@ -482,7 +492,61 @@ export async function fulfillPaybillRedemption(
     console.error("[EMAIL] Partner welcome error:", e);
   }
 
-  return { subData, authSession, periodEnd };
+  return { subData, authSession, periodEnd, partnerNumber, verifyToken };
+}
+
+/**
+ * Lazy backfill for rows created before the credential migration (or via
+ * admin inserts): stamps partner_number + verify_token exactly once and
+ * patches the in-memory copy. Gaps from lost races are acceptable (like
+ * invoice numbering); duplicates are impossible (atomic counter + UNIQUE
+ * indexes). Never throws — callers degrade to legacy identifiers.
+ */
+export async function ensureCredentialIds(
+  supabase: ReturnType<typeof getSupabase>,
+  sub: Record<string, unknown> | null
+): Promise<{ partnerNumber: string | null; verifyToken: string | null }> {
+  const empty = { partnerNumber: null as string | null, verifyToken: null as string | null };
+  try {
+    if (!sub) return empty;
+    const row = sub as Record<string, unknown>;
+    let partnerNumber = String(row.partner_number || "");
+    let verifyToken = String(row.verify_token || "");
+    const id = row.id;
+    if (id === undefined || id === null) {
+      return { partnerNumber: partnerNumber || null, verifyToken: verifyToken || null };
+    }
+    const patch: Record<string, string> = {};
+    if (!partnerNumber) {
+      const issued = await issuePartnerNumber(supabase as never, {}).catch(() => null);
+      if (issued) {
+        patch.partner_number = issued;
+        partnerNumber = issued;
+      }
+    }
+    if (!verifyToken) {
+      patch.verify_token = randomVerifyToken();
+      verifyToken = patch.verify_token;
+    }
+    if (Object.keys(patch).length > 0) {
+      const { error } = await supabase.from("subscriptions").update(patch).eq("id", id as number);
+      if (error) {
+        const { data: fresh } = await supabase
+          .from("subscriptions")
+          .select("partner_number, verify_token")
+          .eq("id", id as number)
+          .maybeSingle();
+        const f = (fresh as Record<string, unknown> | null) || {};
+        partnerNumber = String(f.partner_number || "");
+        verifyToken = String(f.verify_token || "");
+      } else {
+        Object.assign(row, patch);
+      }
+    }
+    return { partnerNumber: partnerNumber || null, verifyToken: verifyToken || null };
+  } catch {
+    return empty;
+  }
 }
 
 // M-Pesa Paybill code redemption (FAIL-CLOSED).
@@ -659,7 +723,7 @@ subscriptionRoutes.post(
 
     // 6. Approved: fulfill into the ledger.
     try {
-      const { subData, authSession, periodEnd } = await fulfillPaybillRedemption(c, cleanRef, {
+      const { subData, authSession, periodEnd, partnerNumber, verifyToken } = await fulfillPaybillRedemption(c, cleanRef, {
         name: name.trim(),
         email: email.trim(),
         amount: canonicalAmount,
@@ -692,6 +756,8 @@ subscriptionRoutes.post(
           planName: canonicalPlanName,
           amount: canonicalAmount,
           currency: "KES",
+          partnerNumber: partnerNumber || (subData as Record<string, unknown> | null)?.partner_number || null,
+          verifyToken: verifyToken || (subData as Record<string, unknown> | null)?.verify_token || null,
           claimRequired: authSession?.claimRequired || false,
           user: authSession?.user || {
             id: "p-" + Date.now(),
@@ -1126,6 +1192,11 @@ async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCh
     // fallback rate above
   }
 
+  // Credential identifiers: fresh rows get them inline; rows already present
+  // (idempotent retry) are backfilled below via ensureCredentialIds.
+  const stkPartnerNumber = await issuePartnerNumber(supabase as never, {}).catch(() => null);
+  const stkVerifyToken = randomVerifyToken();
+
   // Register into subscriptions
   const { data: subData } = await supabase
     .from("subscriptions")
@@ -1135,6 +1206,8 @@ async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCh
         subscriber_email: checkout.email,
         plan_name: checkout.planName,
         plan_id: checkout.planId,
+        partner_number: stkPartnerNumber,
+        verify_token: stkVerifyToken,
         amount: checkout.amount,
         currency: "KES",
         usd_amount: Number((checkout.amount * checkoutRate).toFixed(2)),
@@ -1182,12 +1255,15 @@ async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCh
     claimRequired: authSession?.claimRequired || false,
   });
 
+  const ensured = await ensureCredentialIds(supabase, (subData as Record<string, unknown> | null) || null);
   const result = {
     status: "completed",
     receiptCode,
     planName: checkout.planName,
     amount: checkout.amount,
     currency: "KES",
+    partnerNumber: ensured.partnerNumber || stkPartnerNumber,
+    verifyToken: ensured.verifyToken || stkVerifyToken,
     claimRequired: authSession?.claimRequired || false,
     user: authSession?.user || {
       id: "p-" + Date.now(),
@@ -1200,6 +1276,8 @@ async function fulfillMpesaCheckout(c: import("hono").Context, checkout: MpesaCh
       subscriber_name: checkout.name,
       subscriber_email: checkout.email,
       plan_name: checkout.planName,
+      partner_number: ensured.partnerNumber || stkPartnerNumber,
+      verify_token: ensured.verifyToken || stkVerifyToken,
       amount: checkout.amount,
       currency: "KES",
       payment_provider: "mpesa_paybill",
@@ -1816,7 +1894,7 @@ subscriptionRoutes.get("/status/:email", rateLimit, async (c) => {
     const supabase = getSupabase(c.env as Record<string, string>);
     const { data, error } = await supabase
       .from("subscriptions")
-      .select("status, plan_name, plan_id, interval")
+      .select("id, status, plan_name, plan_id, interval, partner_number, verify_token")
       .eq("subscriber_email", email)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -1857,9 +1935,20 @@ subscriptionRoutes.get("/status/:email", rateLimit, async (c) => {
     }
 
     if (isOwner) {
+      // Owner-proven read: lazily stamp credential identifiers so legacy rows
+      // converge without a separate backfill job. verify_token is a bearer
+      // secret — returned ONLY here, never to anonymous callers.
+      await ensureCredentialIds(supabase, sub);
       return c.json({
         hasActiveSubscription: isActive,
-        subscription: { status, plan_name: sub.plan_name, plan_id: sub.plan_id, interval },
+        subscription: {
+          status,
+          plan_name: sub.plan_name,
+          plan_id: sub.plan_id,
+          interval,
+          partner_number: sub.partner_number || null,
+          verify_token: sub.verify_token || null,
+        },
         lifecycle,
       });
     }
@@ -2161,8 +2250,14 @@ subscriptionRoutes.get("/mpesa/claim/:reference", rateLimit, async (c) => {
     const healOpenClaim = async (id: number) => {
       await setClaimStatus(supabase, id, "matched", { note: "Reconciled at lookup: ledger record exists." });
     };
-    const asMatched = (claimRow: ClaimRow | null, sub: unknown, extra?: Record<string, unknown>) =>
-      c.json({ status: "matched", claim: claimRow ? { ...claimRow, status: "matched" } : null, subscription: sub || null, ...(extra || {}) });
+    const asMatched = async (claimRow: ClaimRow | null, sub: unknown, extra?: Record<string, unknown>) => {
+      // Legacy rows predate credential identifiers — stamp them on first sight
+      // so every surface (track page, hub card, QR) has number + token.
+      if (sub && typeof sub === "object") {
+        await ensureCredentialIds(supabase, sub as Record<string, unknown>);
+      }
+      return c.json({ status: "matched", claim: claimRow ? { ...claimRow, status: "matched" } : null, subscription: sub || null, ...(extra || {}) });
+    };
 
     // Terminal success, incl. legacy "approved" rows written by admin resolve.
     if (claim && (claim.status === "matched" || claim.status === "approved")) {

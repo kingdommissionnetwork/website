@@ -6,6 +6,7 @@ import { requireAdmin, verifyToken } from "../lib/jwt";
 import { getCookie } from "hono/cookie";
 import { rateLimit } from "../lib/rateLimiter";
 import { publicCache } from "../lib/httpCache";
+import { isValidVerifyToken } from "../lib/partnerNumber";
 import { sendDonationEmail } from "../lib/email";
 
 export const donationRoutes = new Hono();
@@ -217,5 +218,47 @@ donationRoutes.get("/verify-receipt", rateLimit, async (c) => {
   }
 
   return respond({ verified: false, error: "Invalid verification parameters." }, 404);
+});
+
+// QR deep-link verification: /v/<token> opens the holder's public credential
+// DIRECTLY — no form, no code entry (best practice for verifiable IDs).
+// The 48-hex-char token is unguessable, so this link is safe to print and
+// share; sequential partner numbers alone never unlock holder details.
+// PII-minimized: name + tier + status only, never email.
+donationRoutes.get("/verify-credential/:token", rateLimit, async (c) => {
+  const token = (c.req.param("token") || "").trim().toLowerCase();
+  if (!isValidVerifyToken(token)) {
+    return c.json({ verified: false, error: "This credential link is invalid." }, 404);
+  }
+  let supabase = null;
+  try {
+    supabase = getSupabase(c.env as Record<string, string>);
+  } catch {
+    return c.json({ verified: false, error: "Verification registry is temporarily unavailable." }, 503);
+  }
+  try {
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .select("subscriber_name, plan_name, status, partner_number, created_at, current_period_end")
+      .eq("verify_token", token)
+      .maybeSingle();
+    if (error || !data) {
+      return c.json({ verified: false, error: "Credential not found." }, 404);
+    }
+    publicCache(c, 60, 300);
+    return c.json({
+      verified: true,
+      type: "credential",
+      name: data.subscriber_name || "Covenant Partner",
+      tier: data.plan_name || "Kingdom Partner",
+      status: data.status === "active" ? "Active" : String(data.status || "Active"),
+      partnerNumber: data.partner_number || null,
+      joinedAt: data.created_at,
+      validThrough: data.current_period_end || null,
+      verifiedAt: new Date().toISOString(),
+    });
+  } catch {
+    return c.json({ verified: false, error: "Verification registry is temporarily unavailable." }, 503);
+  }
 });
 
