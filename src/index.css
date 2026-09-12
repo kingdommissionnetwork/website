@@ -577,3 +577,297 @@ html.dark .border-gray-200 {
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
+/* ===== 2b. Extended Dark Mode: Public Site Pages (Home, About, Events, Sermons, Prayer, Bible, Give, etc.) ===== */
+
+/* Additional section/page backgrounds */
+html.dark .bg-\[\#fbfcfe\] {
+  background-color: #050d1c !important;
+  color: #f8fafc !important;
+}
+html.dark .bg-\[\#f4eee4\] {
+  background-color: #0a1628 !important;
+  color: #f8fafc !important;
+}
+
+/* All text-* color tokens used on public pages */
+html.dark .text-\[\#6b7c93\],
+html.dark .text-storm-gray {
+  color: #94a3b8 !important;
+}
+html.dark .text-\[\#5a6578\],
+html.dark .text-\[\#596980\],
+html.dark .text-\[\#4a5568\],
+html.dark .text-\[\#3a4556\] {
+  color: #cbd5e1 !important;
+}
+html.dark .text-\[\#8b5e3c\],
+html.dark .text-bronze {
+  color: #e6b87a !important;
+}
+html.dark .text-\[\#996515\],
+html.dark .text-\[\#856b12\] {
+  color: #f6c873 !important;
+}
+
+/* Cream / pale gold text that only appears in dark hero sections stays unchanged;
+   but if it ever lands on a light-themed container it becomes invisible. In dark
+   mode we keep it as-is, while the light-mode correction below handles reverse. */
+html:not(.dark) .bg-white .text-\[\#fbf5b7\],
+html:not(.dark) .bg-\[\#FAF7F2\] .text-\[\#fbf5b7\],
+html:not(.dark) .bg-\[\#f5f0e8\] .text-\[\#fbf5b7\],
+html:not(.dark) .bg-\[\#f8f6f3\] .text-\[\#fbf5b7\],
+html:not(.dark) .bg-\[\#e6eef7\] .text-\[\#fbf5b7\],
+html:not(.dark) .bg-\[\#fbfcfe\] .text-\[\#fbf5b7\],
+html:not(.dark) .bg-\[\#f4eee4\] .text-\[\#fbf5b7\] {
+  color: #996515 !important;
+}
+
+/* Text inside dark-card components (e.g., the dark gradient Give card) keep text-white — no rule needed */
+
+/* Light mode: inputs / selects / textareas inside cards should keep dark text */
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
+  color: #0c1b33 !important;
+}
+
+/* Dark mode: inputs / selects / textareas on public pages */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0c1c33 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #f8fafc !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder,
+html.dark select {
+  color: rgba(248, 250, 252, 0.55) !important;
+}
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #d4af37 !important;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25) !important;
+}
+
+/* Category / filter pill buttons (default unselected state) */
+html.dark .bg-\[\#e6eef7\].text-\[\#0c1b33\],
+html.dark .bg-\[\#0c1b33\]\/10.text-\[\#0c1b33\],
+html.dark .bg-\[\#e6eef7\] {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: #f8fafc !important;
+}
+html.dark .bg-\[\#0c1b33\]\/10 {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+html.dark .bg-\[\#0c1b33\]\/5 {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+html.dark .bg-\[\#e6eef7\]:hover.text-\[\#0c1b33\],
+html.dark .bg-\[\#0c1b33\]\/10:hover.text-\[\#0c1b33\] {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Category tag badges (pill style: amber tint bg + bronze text) */
+html.dark .bg-\[\#d4af37\]\/10.text-\[\#8b5e3c\],
+html.dark .bg-\[\#d4af37\]\/15.text-\[\#996515\] {
+  background-color: rgba(212, 175, 55, 0.15) !important;
+  color: #f6c873 !important;
+  border-color: rgba(212, 175, 55, 0.3) !important;
+}
+
+/* Partner pill: bg-[#d4af37]/15 + text-[#996515] + border + hover text-[#0c1b33] */
+html.dark .border-\[\#d4af37\]\/40 {
+  border-color: rgba(212, 175, 55, 0.4) !important;
+}
+html.dark .bg-\[\#d4af37\]\/20,
+html.dark .bg-\[\#d4af37\]\/15 {
+  background-color: rgba(212, 175, 55, 0.15) !important;
+}
+html.dark .bg-\[\#d4af37\]\/25:hover {
+  background-color: rgba(212, 175, 55, 0.25) !important;
+}
+
+/* About Us: border-[#e5dccb], border-[#ded3be], border-[#e2d7c5] — light parchment borders */
+html.dark .border-\[\#e5dccb\],
+html.dark .border-\[\#ded3be\],
+html.dark .border-\[\#e2d7c5\] {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* About Us: border borders divider w-16 h-1 gold bar — stays gold, good */
+
+/* Hover: group-hover:text-[#d4af37] and hover:text-[#d4af37] already works in both modes */
+
+/* Outline / ghost "View All Sermons" style buttons with border color */
+html.dark .border-\[\#0c1b33\]\/20 {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #f8fafc !important;
+}
+html.dark .border-\[\#0c1b33\]\/20:hover {
+  background-color: #d4af37 !important;
+  color: #0c1b33 !important;
+  border-color: #d4af37 !important;
+}
+
+/* Bookmark / icon hover buttons */
+html.dark .hover\:bg-\[\#e6eef7\]:hover,
+html.dark .hover\:bg-\[\#0c1b33\]\/5:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Event card date badge white overlay on image — keep light bg */
+/* (bg-white/95 is intentionally over the image so it stays readable) */
+
+/* Pill / search container inside light pages: bg-[#f8f6f3] in selects */
+html.dark .bg-\[\#f8f6f3\] {
+  background-color: #0a1628 !important;
+}
+
+/* Bible reader sidebar & book list items */
+html.dark .hover\:bg-\[\#e6eef7\]:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+html.dark .bg-\[\#f8f6f3\].text-\[\#6b7c93\] {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #94a3b8 !important;
+}
+html.dark .hover\:bg-\[\#f8f6f3\]:hover,
+html.dark .hover\:bg-\[\#f5f0e8\]:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Bible search result items */
+html.dark .hover\:bg-\[\#f8f6f3\].text-\[\#0c1b33\]:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: #f8fafc !important;
+}
+
+/* Prayer submit form skeleton placeholders (animated) */
+html.dark .bg-\[\#ddd5c8\] {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Cornerstone "bg-[#d4af37]/15 border-[#d4af37]/40 text-[#0c1b33]" chip used in EventsPreview heading */
+html.dark .bg-\[\#d4af37\]\/15.border-\[\#d4af37\]\/40.text-\[\#0c1b33\],
+html.dark .bg-\[\#d4af37\]\/15.border-\[\#d4af37\]\/40.text-\[\#856b12\] {
+  background-color: rgba(212, 175, 55, 0.15) !important;
+  color: #f6c873 !important;
+}
+
+/* "RSVP / Register" — inline dark link text-[#0c1b33] hover:text-[#d4af37] */
+/* (the general .text-[#0c1b33] rule already handles it, stays fine) */
+
+/* User avatar chip bg-[#0c1b33]/10 + text-[#0c1b33] icon */
+html.dark .bg-\[\#0c1b33\]\/10 .text-\[\#0c1b33\] {
+  color: #f8fafc !important;
+}
+
+/* Scrollbar dark mode */
+html.dark ::-webkit-scrollbar-track {
+  background: #071324;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #2a3c5a;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #d4af37;
+}
+
+/* Selection in dark mode */
+html.dark ::selection {
+  background: rgba(212, 175, 55, 0.35) !important;
+  color: #f8fafc !important;
+}
+
+/* About page: bg-white card + border in Statement of Faith */
+html.dark .bg-\[\#0c1b33\].text-white + .bg-white,
+html.dark section#faith .bg-white,
+html.dark section#contact .bg-white {
+  background-color: #0c1c33 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+}
+
+/* About page: bg-[#0c1b33] icon boxes in light pillars section — these intentionally stay dark (good contrast) */
+
+/* Core pillars section w-16 h-1 bg-[#d4af37] gold divider stays gold in both modes */
+
+/* "Support via Partnership" chip bg-[#f4eee4] border + Mail icon text-[#996515] */
+html.dark .bg-\[\#f4eee4\].border-\[\#d4af37\]\/40 {
+  background-color: rgba(212, 175, 55, 0.1) !important;
+  border-color: rgba(212, 175, 55, 0.35) !important;
+  color: #f8fafc !important;
+}
+
+/* Give Section section title tag text-[#856b12] */
+html.dark .text-\[\#856b12\] {
+  color: #f6c873 !important;
+}
+
+/* Events page list view cards */
+html.dark .shadow-\[0_4px_20px_rgba\(12\,27\,51\,0\.06\)\],
+html.dark .shadow-\[0_8px_30px_rgba\(212\,175\,55\,0\.15\)\] {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* BibleReader active tab "bg-[#d4af37] text-[#0c1b33]" — intentional high contrast, leave alone */
+/* BibleReader translation buttons: "bg-[#d4af37]/10 text-[#8b5e3c] font-medium" — handled above */
+
+/* ===== 2c. Public legal / 404 content pages: text-black/<alpha> and border-black/<alpha> ===== */
+html.dark .text-black\/75,
+html.dark .text-black\/70,
+html.dark .text-black\/65,
+html.dark .text-black\/60,
+html.dark .text-black\/50,
+html.dark .text-black\/40 {
+  color: rgba(248, 250, 252, 0.8) !important;
+}
+html.dark .text-black\/30,
+html.dark .text-black\/20 {
+  color: rgba(248, 250, 252, 0.55) !important;
+}
+html.dark .border-black\/5 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+html.dark .border-black\/10 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ===== 2d. Loading Skeletons: dual-mode ===== */
+/* Base pulse: dark mode keeps white/5, light mode needs black/5 */
+html:not(.dark) .animate-pulse.bg-white\/5,
+html:not(.dark) .bg-white\/5 {
+  background-color: rgba(12, 27, 51, 0.08) !important;
+}
+/* Card / Prayer / Table skeleton wrappers: hardcoded dark bg #0f2240 → light parchment */
+html:not(.dark) .bg-\[\#0f2240\] {
+  background-color: #ffffff !important;
+  border-color: rgba(12, 27, 51, 0.06) !important;
+}
+html:not(.dark) .bg-\[\#0f2240\].border-white\/5 {
+  border-color: rgba(12, 27, 51, 0.06) !important;
+}
+
+/* ===== 2e. Light mode: reverse correction for cream/gold text on light page wrappers (legal/404) ===== */
+html:not(.dark) .bg-white .text-\[\#fbf5b7\],
+html:not(.dark) .bg-\[\#FAF7F2\] .text-\[\#fbf5b7\] {
+  color: #996515 !important;
+}
+
+/* ===== 2f. Dark mode: About Us hero badge chip text-whites and cream colors inside intentionally dark sections ===== */
+/* (intentionally dark gradient hero backgrounds already carry text-white / text-[#fbf5b7] — left alone) */
+
+/* ===== 2g. Prayer preview + Events + Sermon sections: nested card text corrections ===== */
+html.dark .bg-\[\#f5f0e8\].rounded-2xl,
+html.dark .bg-\[\#f8f6f3\].rounded-2xl,
+html.dark .bg-\[\#FAF7F2\].rounded-2xl {
+  background-color: #0a1628 !important;
+  color: #f8fafc !important;
+}
+
+/* Event/Partner "pill" link text-[#fbf5b7] inside nested chips is handled by global rule when outside hero */
+
+/* "View All Prayer Requests →" style text-[#8b5e3c] handled above */
+

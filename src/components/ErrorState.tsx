@@ -8,9 +8,9 @@ interface ErrorStateProps {
 export default function ErrorState({ message = "Something went wrong", onRetry }: ErrorStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
-      <h3 className="font-display text-xl font-semibold text-[#0c1b33] mb-2">Error</h3>
-      <p className="text-sm text-[#6b7c93] max-w-sm mb-4">{message}</p>
+      <AlertTriangle className="w-12 h-12 text-red-500 dark:text-red-400 mb-4" />
+      <h3 className="font-display text-xl font-semibold text-[#0c1b33] dark:text-slate-100 mb-2">Error</h3>
+      <p className="text-sm text-[#6b7c93] dark:text-slate-400 max-w-sm mb-4">{message}</p>
       {onRetry && (
         <button
           onClick={onRetry}

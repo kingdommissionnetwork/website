@@ -311,7 +311,7 @@ export default function HeroSection() {
       </div>
 
       {/* Bottom transition blend */}
-      <div className="absolute bottom-0 left-0 right-0 h-12 md:h-16 bg-gradient-to-t from-[#e6eef7] to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-12 md:h-16 bg-gradient-to-t from-[#e6eef7] dark:from-[#071324] to-transparent pointer-events-none" />
     </section>
   );
 }
